@@ -1,5 +1,3 @@
-# banking.py
-
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
@@ -29,24 +27,24 @@ CHAPTER_NAMES = {
 
 def banking_menu():
 
+    icons = {
+        1: "📘",
+        2: "💰",
+        3: "💳",
+        4: "📑",
+        5: "⚖️",
+        6: "🧾",
+        7: "🔐",
+        8: "📊",
+        9: "💻",
+        10: "📈",
+        11: "🏛️",
+        12: "🕌",
+    }
+
     keyboard = []
 
     for chapter, name in CHAPTER_NAMES.items():
-
-        icons = {
-            1: "📘",
-            2: "💰",
-            3: "💳",
-            4: "📑",
-            5: "⚖️",
-            6: "🧾",
-            7: "🔐",
-            8: "📊",
-            9: "💻",
-            10: "📈",
-            11: "🏛️",
-            12: "🕌",
-        }
 
         keyboard.append([
             InlineKeyboardButton(
@@ -55,6 +53,7 @@ def banking_menu():
             )
         ])
 
+
     keyboard.append([
         InlineKeyboardButton(
             "🏆 آزمون جامع بانکداری",
@@ -62,12 +61,14 @@ def banking_menu():
         )
     ])
 
+
     keyboard.append([
         InlineKeyboardButton(
             "🏠 منوی اصلی",
             callback_data="home"
         )
     ])
+
 
     return InlineKeyboardMarkup(keyboard)
 
@@ -79,18 +80,21 @@ def banking_menu():
 def banking_back_menu():
 
     keyboard = [
+
         [
             InlineKeyboardButton(
                 "🔙 بانکداری",
                 callback_data="banking"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🏠 منوی اصلی",
                 callback_data="home"
             )
         ]
+
     ]
 
     return InlineKeyboardMarkup(keyboard)
@@ -816,35 +820,46 @@ Anti-Money Laundering
 def banking_chapter_text(chapter):
 
     if chapter not in BANKING_CHAPTER_TEXTS:
+
         return (
             "❌ فصل موردنظر پیدا نشد.",
             banking_back_menu()
         )
 
+
     text = BANKING_CHAPTER_TEXTS[chapter]
 
+
     keyboard = [
+
         [
             InlineKeyboardButton(
                 "📝 آزمون این فصل",
                 callback_data=f"banking_exam_menu_{chapter}"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🔙 بانکداری",
                 callback_data="banking"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🏠 منوی اصلی",
                 callback_data="home"
             )
         ]
+
     ]
 
-    return text, InlineKeyboardMarkup(keyboard)
+
+    return (
+        text,
+        InlineKeyboardMarkup(keyboard)
+    )
 
 
 # =========================================================
@@ -1498,28 +1513,16 @@ BANKING_CHAPTER_QUESTIONS = {
 
 def chapter_exam_menu(chapter):
 
-    name = CHAPTER_NAMES.get(chapter, "بانکداری")
+    name = CHAPTER_NAMES.get(
+        chapter,
+        "بانکداری"
+    )
 
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                f"📝 شروع آزمون فصل {chapter}",
-                callback_data=f"banking_exam_{chapter}_0_0"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "📖 بازگشت به درسنامه",
-                callback_data=f"banking_chapter_{chapter}"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🔙 بانکداری",
-                callback_data="banking"
-            )
-        ]
-    ]
+    questions = BANKING_CHAPTER_QUESTIONS.get(
+        chapter,
+        []
+    )
+
 
     text = f"""
 📝 آزمون پایان فصل {chapter}
@@ -1528,12 +1531,14 @@ def chapter_exam_menu(chapter):
 
 ━━━━━━━━━━━━━━━━━━
 
-تعداد سؤالات:
-{len(BANKING_CHAPTER_QUESTIONS.get(chapter, []))}
+🎯 آزمون تخصصی و مفهومی
+
+📝 تعداد سؤالات:
+{len(questions)} سؤال
 
 ━━━━━━━━━━━━━━━━━━
 
-🎯 هر سؤال چهار گزینه دارد.
+📌 هر سؤال چهار گزینه دارد.
 
 ✅ پاسخ صحیح امتیاز می‌گیرد.
 
@@ -1544,172 +1549,41 @@ def chapter_exam_menu(chapter):
 👇 برای شروع آزمون روی دکمه زیر بزنید.
 """
 
-    return text, InlineKeyboardMarkup(keyboard)
 
+    keyboard = [
 
-# =========================================================
-# 📝 نمایش سؤال
-# =========================================================
-
-def banking_exam_question(chapter, index=0, score=0):
-
-    questions = BANKING_CHAPTER_QUESTIONS.get(chapter, [])
-
-    if not questions:
-        return (
-            "❌ سوالی برای این فصل وجود ندارد.",
-            banking_back_menu()
-        )
-
-    if index >= len(questions):
-        index = 0
-
-    question = questions[index]
-
-    text = f"""
-📝 آزمون بانکداری
-
-📘 فصل {chapter}
-🏦 {CHAPTER_NAMES.get(chapter, "بانکداری")}
-
-━━━━━━━━━━━━━━━━━━
-
-سؤال {index + 1} از {len(questions)}
-
-⭐ امتیاز فعلی: {score}
-
-━━━━━━━━━━━━━━━━━━
-
-{question["question"]}
-
-━━━━━━━━━━━━━━━━━━
-
-👇 گزینه صحیح را انتخاب کنید:
-"""
-
-    keyboard = []
-
-    for i, option in enumerate(question["options"]):
-
-        keyboard.append([
+        [
             InlineKeyboardButton(
-                option,
-                callback_data=(
-                    f"banking_answer_"
-                    f"{chapter}_"
-                    f"{index}_"
-                    f"{i}_"
-                    f"{score}"
-                )
+                "🚀 شروع آزمون",
+                callback_data=f"banking_exam_{chapter}_0_0"
             )
-        ])
+        ],
 
-    return text, InlineKeyboardMarkup(keyboard)
-
-
-# =========================================================
-# 🏁 نتیجه آزمون
-# =========================================================
-
-def banking_exam_result(chapter, score):
-
-    questions = BANKING_CHAPTER_QUESTIONS.get(chapter, [])
-
-    total = len(questions)
-
-    if total == 0:
-        return (
-            "❌ آزمونی برای این فصل وجود ندارد.",
-            banking_back_menu()
-        )
-
-    wrong = total - score
-    percentage = round((score / total) * 100)
-
-    if percentage >= 90:
-        evaluation = "🏆 فوق‌العاده"
-        message = "تسلط شما بر این فصل بسیار عالی است."
-
-    elif percentage >= 80:
-        evaluation = "🥇 عالی"
-        message = "تسلط بسیار خوبی روی مباحث فصل دارید."
-
-    elif percentage >= 70:
-        evaluation = "🥈 خوب"
-        message = "تسلط مناسبی دارید، اما مرور فصل پیشنهاد می‌شود."
-
-    elif percentage >= 50:
-        evaluation = "🥉 متوسط"
-        message = "بعضی مفاهیم نیاز به مرور و تمرین بیشتری دارند."
-
-    else:
-        evaluation = "📚 نیازمند مطالعه"
-        message = "پیشنهاد می‌شود درسنامه فصل را دوباره مطالعه کنید."
-
-    keyboard = []
-
-    if chapter < 12:
-
-        keyboard.append([
+        [
             InlineKeyboardButton(
-                f"📘 ورود به فصل {chapter + 1}",
-                callback_data=f"banking_chapter_{chapter + 1}"
+                "📖 بازگشت به درسنامه",
+                callback_data=f"banking_chapter_{chapter}"
             )
-        ])
+        ],
 
-    keyboard.append([
-        InlineKeyboardButton(
-            "🔁 مطالعه دوباره فصل",
-            callback_data=f"banking_chapter_{chapter}"
-        )
-    ])
+        [
+            InlineKeyboardButton(
+                "🏦 بانکداری",
+                callback_data="banking"
+            )
+        ]
 
-    keyboard.append([
-        InlineKeyboardButton(
-            "🏦 بازگشت به بانکداری",
-            callback_data="banking"
-        )
-    ])
+    ]
 
-    keyboard.append([
-        InlineKeyboardButton(
-            "🏠 منوی اصلی",
-            callback_data="home"
-        )
-    ])
 
-    text = f"""
-🏁 آزمون فصل {chapter} به پایان رسید.
-
-🏦 {CHAPTER_NAMES.get(chapter, "بانکداری")}
-
-━━━━━━━━━━━━━━━━━━
-
-📊 نتیجه آزمون
-
-📝 تعداد سؤالات: {total}
-
-✅ پاسخ صحیح: {score}
-
-❌ پاسخ غلط: {wrong}
-
-📈 درصد: {percentage}٪
-
-🎯 ارزیابی:
-{evaluation}
-
-━━━━━━━━━━━━━━━━━━
-
-💡 {message}
-
-━━━━━━━━━━━━━━━━━━
-"""
-
-    return text, InlineKeyboardMarkup(keyboard)
+    return (
+        text,
+        InlineKeyboardMarkup(keyboard)
+    )
 
 
 # =========================================================
-# 🏆 آزمون جامع
+# 🏆 متن آزمون جامع
 # =========================================================
 
 def banking_full_exam_text():
@@ -1756,37 +1630,39 @@ def banking_full_exam_text():
 آزمون جامع
 
 ━━━━━━━━━━━━━━━━━━
-
-⚠️ بخش‌های قانونی و مقرراتی
-باید با آخرین منابع رسمی تطبیق داده شوند.
-
-━━━━━━━━━━━━━━━━━━
-
-👇 برای شروع آزمون جامع آماده شوید.
 """
 
+
     keyboard = [
+
         [
             InlineKeyboardButton(
                 "🏆 شروع آزمون جامع",
                 callback_data="banking_full_exam_start"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🏦 بازگشت به بانکداری",
                 callback_data="banking"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🏠 منوی اصلی",
                 callback_data="home"
             )
         ]
+
     ]
 
-    return text, InlineKeyboardMarkup(keyboard)
+
+    return (
+        text,
+        InlineKeyboardMarkup(keyboard)
+    )
 
 
 # =========================================================
@@ -1847,16 +1723,11 @@ def banking_intro_text():
 
 ━━━━━━━━━━━━━━━━━━
 
-⚠️ نکته مهم
-
-قوانین و مقررات بانکی ممکن است
-تغییر کنند؛ بنابراین برای مباحث
-حقوقی و مقرراتی، آخرین منابع رسمی
-باید ملاک قرار بگیرند.
-
-━━━━━━━━━━━━━━━━━━
-
 👇 فصل موردنظر را انتخاب کنید.
 """
 
-    return text, banking_menu()
+
+    return (
+        text,
+        banking_menu()
+    )
