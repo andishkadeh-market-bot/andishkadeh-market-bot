@@ -12,10 +12,24 @@ from support import support_text, support_menu
 
 from banking import (
     banking_menu,
+    banking_back_menu,
+    banking_intro_text,
+    CHAPTER_NAMES,
+    BANKING_CHAPTER_QUESTIONS,
     banking_chapter_1_text,
-    chapter_1_exam_menu,
-    chapter_1_exam_text,
-    BANKING_CHAPTER_1_QUESTIONS,
+    banking_chapter_2_text,
+    banking_chapter_3_text,
+    banking_chapter_4_text,
+    banking_chapter_5_text,
+    banking_chapter_6_text,
+    banking_chapter_7_text,
+    banking_chapter_8_text,
+    banking_chapter_9_text,
+    banking_chapter_10_text,
+    banking_chapter_11_text,
+    banking_chapter_12_text,
+    banking_exam_result,
+    banking_full_exam_text,
 )
 
 
@@ -138,6 +152,7 @@ def welcome_text():
 📝 آزمون‌های استخدامی
 🎲 سوالات تصادفی
 🧠 روانشناسی و مددکاری
+🏦 بانکداری تخصصی
 📖 منابع آموزشی
 🚀 توسعه مهارت‌های حرفه‌ای
 
@@ -184,7 +199,7 @@ async def start(
 
 
 # =========================================================
-# منوی اصلی
+# HOME
 # =========================================================
 
 async def home_callback(
@@ -203,7 +218,7 @@ async def home_callback(
 
 
 # =========================================================
-# حمایت از اندیشکده
+# SUPPORT
 # =========================================================
 
 async def support_callback(
@@ -222,7 +237,7 @@ async def support_callback(
 
 
 # =========================================================
-# منوی بانکداری
+# BANKING MENU
 # =========================================================
 
 async def banking_callback(
@@ -234,57 +249,39 @@ async def banking_callback(
 
     await query.answer()
 
-    text = """
-🏦 بانکداری تخصصی
-
-مرکز آموزش تخصصی بانکداری و آمادگی
-آزمون‌های استخدامی بانک‌ها
-
-━━━━━━━━━━━━━━━━━━
-
-📚 ساختار آموزشی:
-
-هر فصل شامل:
-
-📖 درسنامه تخصصی
-🧠 نکات مهم
-💡 مثال‌های کاربردی
-⭐ نکات آزمونی
-📝 آزمون پایان فصل
-
-━━━━━━━━━━━━━━━━━━
-
-🎯 مسیر پیشنهادی:
-
-فصل ۱
-⬇️
-مطالعه درسنامه
-⬇️
-آزمون فصل
-⬇️
-ارزیابی نتیجه
-⬇️
-فصل بعد
-
-━━━━━━━━━━━━━━━━━━
-
-🏆 در پایان:
-آزمون جامع بانکداری
-
-👇 فصل موردنظر را انتخاب کنید.
-"""
-
     await query.edit_message_text(
-        text,
+        banking_intro_text(),
         reply_markup=banking_menu()
     )
 
 
 # =========================================================
-# فصل اول بانکداری
+# متن فصل‌ها
 # =========================================================
 
-async def banking_chapter_1_callback(
+CHAPTER_TEXT_FUNCTIONS = {
+
+    1: banking_chapter_1_text,
+    2: banking_chapter_2_text,
+    3: banking_chapter_3_text,
+    4: banking_chapter_4_text,
+    5: banking_chapter_5_text,
+    6: banking_chapter_6_text,
+    7: banking_chapter_7_text,
+    8: banking_chapter_8_text,
+    9: banking_chapter_9_text,
+    10: banking_chapter_10_text,
+    11: banking_chapter_11_text,
+    12: banking_chapter_12_text,
+
+}
+
+
+# =========================================================
+# نمایش فصل
+# =========================================================
+
+async def banking_chapter_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
@@ -293,20 +290,47 @@ async def banking_chapter_1_callback(
 
     await query.answer()
 
-    text = banking_chapter_1_text()
+    try:
+
+        chapter = int(
+            query.data.split("_")[-1]
+        )
+
+    except (ValueError, IndexError):
+
+        await query.edit_message_text(
+            "⚠️ خطا در شناسایی فصل.",
+            reply_markup=banking_back_menu()
+        )
+
+        return
+
+
+    if chapter not in CHAPTER_TEXT_FUNCTIONS:
+
+        await query.edit_message_text(
+            "❌ این فصل وجود ندارد.",
+            reply_markup=banking_back_menu()
+        )
+
+        return
+
+
+    text = CHAPTER_TEXT_FUNCTIONS[chapter]()
+
 
     keyboard = [
 
         [
             InlineKeyboardButton(
-                "📝 آزمون پایان فصل ۱",
-                callback_data="banking_ch1_exam"
+                f"📝 آزمون پایان فصل {chapter}",
+                callback_data=f"banking_exam_intro_{chapter}"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "🔙 بانکداری",
+                "🏦 بانکداری",
                 callback_data="banking"
             )
         ],
@@ -320,6 +344,7 @@ async def banking_chapter_1_callback(
 
     ]
 
+
     await query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard)
@@ -327,10 +352,10 @@ async def banking_chapter_1_callback(
 
 
 # =========================================================
-# معرفی آزمون فصل اول
+# معرفی آزمون فصل
 # =========================================================
 
-async def banking_ch1_exam_callback(
+async def banking_exam_intro_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
@@ -339,17 +364,117 @@ async def banking_ch1_exam_callback(
 
     await query.answer()
 
+    try:
+
+        chapter = int(
+            query.data.split("_")[-1]
+        )
+
+    except (ValueError, IndexError):
+
+        await query.edit_message_text(
+            "⚠️ خطا در شناسایی فصل.",
+            reply_markup=banking_back_menu()
+        )
+
+        return
+
+
+    questions = BANKING_CHAPTER_QUESTIONS.get(
+        chapter,
+        []
+    )
+
+    if not questions:
+
+        await query.edit_message_text(
+            "❌ برای این فصل آزمونی ثبت نشده است.",
+            reply_markup=banking_back_menu()
+        )
+
+        return
+
+
+    name = CHAPTER_NAMES.get(
+        chapter,
+        "بانکداری"
+    )
+
+
+    text = f"""
+📝 آزمون پایان فصل {chapter}
+
+🏦 {name}
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 آزمون تخصصی و مفهومی
+
+📝 تعداد سؤالات:
+{len(questions)} سؤال
+
+━━━━━━━━━━━━━━━━━━
+
+📌 قوانین آزمون
+
+• هر سؤال چهار گزینه دارد.
+• فقط یک گزینه صحیح است.
+• پاسخ هر سؤال بررسی می‌شود.
+• امتیاز در پایان محاسبه می‌شود.
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 پیشنهاد:
+
+قبل از شروع آزمون،
+درسنامه فصل را کامل مطالعه کنید.
+
+هدف فقط حفظ کردن نیست؛
+باید مفهوم را یاد بگیرید.
+
+━━━━━━━━━━━━━━━━━━
+
+👇 برای شروع آزمون روی دکمه زیر بزنید.
+"""
+
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                f"🚀 شروع آزمون فصل {chapter}",
+                callback_data=f"banking_exam_start_{chapter}"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📖 مرور درسنامه",
+                callback_data=f"banking_chapter_{chapter}"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏦 بانکداری",
+                callback_data="banking"
+            )
+        ],
+
+    ]
+
+
     await query.edit_message_text(
-        chapter_1_exam_text(),
-        reply_markup=chapter_1_exam_menu()
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
 # =========================================================
-# شروع واقعی آزمون فصل اول
+# شروع آزمون
 # =========================================================
 
-async def banking_ch1_start_callback(
+async def banking_exam_start_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
@@ -358,8 +483,25 @@ async def banking_ch1_start_callback(
 
     await query.answer()
 
-    await show_banking_ch1_question(
-        query,
+    try:
+
+        chapter = int(
+            query.data.split("_")[-1]
+        )
+
+    except (ValueError, IndexError):
+
+        await query.edit_message_text(
+            "⚠️ خطا در شروع آزمون.",
+            reply_markup=banking_back_menu()
+        )
+
+        return
+
+
+    await show_banking_question(
+        query=query,
+        chapter=chapter,
         index=0,
         score=0
     )
@@ -369,19 +511,34 @@ async def banking_ch1_start_callback(
 # نمایش سؤال
 # =========================================================
 
-async def show_banking_ch1_question(
+async def show_banking_question(
     query,
+    chapter,
     index,
     score
 ):
 
-    questions = BANKING_CHAPTER_1_QUESTIONS
+    questions = BANKING_CHAPTER_QUESTIONS.get(
+        chapter,
+        []
+    )
 
-    # جلوگیری از خطای شماره سؤال
+
+    if not questions:
+
+        await query.edit_message_text(
+            "❌ سوالی برای این فصل وجود ندارد.",
+            reply_markup=banking_back_menu()
+        )
+
+        return
+
+
     if index >= len(questions):
 
-        await show_banking_ch1_result(
+        await show_banking_result(
             query,
+            chapter,
             score
         )
 
@@ -390,10 +547,11 @@ async def show_banking_ch1_question(
 
     question = questions[index]
 
-    text = f"""
-📝 آزمون پایان فصل ۱
 
-🏦 مبانی بانکداری
+    text = f"""
+📝 آزمون بانکداری
+
+📘 فصل {chapter} | {CHAPTER_NAMES.get(chapter, "بانکداری")}
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -413,6 +571,7 @@ async def show_banking_ch1_question(
 
     keyboard = []
 
+
     for option_index, option in enumerate(
         question["options"]
     ):
@@ -422,7 +581,8 @@ async def show_banking_ch1_question(
                 InlineKeyboardButton(
                     option,
                     callback_data=(
-                        f"banking_ch1_answer:"
+                        f"banking_answer:"
+                        f"{chapter}:"
                         f"{index}:"
                         f"{option_index}:"
                         f"{score}"
@@ -439,10 +599,10 @@ async def show_banking_ch1_question(
 
 
 # =========================================================
-# پاسخ سؤال
+# پاسخ آزمون
 # =========================================================
 
-async def banking_ch1_answer_callback(
+async def banking_answer_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
@@ -451,13 +611,15 @@ async def banking_ch1_answer_callback(
 
     await query.answer()
 
+
     try:
 
         data = query.data.split(":")
 
-        index = int(data[1])
-        selected = int(data[2])
-        score = int(data[3])
+        chapter = int(data[1])
+        index = int(data[2])
+        selected = int(data[3])
+        score = int(data[4])
 
     except (IndexError, ValueError):
 
@@ -471,14 +633,14 @@ async def banking_ch1_answer_callback(
                 [
                     [
                         InlineKeyboardButton(
-                            "🔄 شروع دوباره آزمون",
-                            callback_data="banking_ch1_start"
+                            "🔄 شروع دوباره",
+                            callback_data="banking"
                         )
                     ],
                     [
                         InlineKeyboardButton(
-                            "🔙 بانکداری",
-                            callback_data="banking"
+                            "🏠 منوی اصلی",
+                            callback_data="home"
                         )
                     ],
                 ]
@@ -488,13 +650,29 @@ async def banking_ch1_answer_callback(
         return
 
 
-    question = BANKING_CHAPTER_1_QUESTIONS[index]
+    questions = BANKING_CHAPTER_QUESTIONS.get(
+        chapter,
+        []
+    )
+
+
+    if index < 0 or index >= len(questions):
+
+        await query.edit_message_text(
+            "⚠️ شماره سؤال نامعتبر است.",
+            reply_markup=banking_back_menu()
+        )
+
+        return
+
+
+    question = questions[index]
 
     correct = question["correct"]
 
 
     # =====================================================
-    # پاسخ صحیح
+    # بررسی پاسخ
     # =====================================================
 
     if selected == correct:
@@ -513,9 +691,6 @@ async def banking_ch1_answer_callback(
 آفرین، به سؤال بعدی بروید.
 """
 
-    # =====================================================
-    # پاسخ غلط
-    # =====================================================
 
     else:
 
@@ -543,9 +718,7 @@ async def banking_ch1_answer_callback(
     # سؤال بعدی
     # =====================================================
 
-    if next_index < len(
-        BANKING_CHAPTER_1_QUESTIONS
-    ):
+    if next_index < len(questions):
 
         keyboard = [
 
@@ -553,7 +726,8 @@ async def banking_ch1_answer_callback(
                 InlineKeyboardButton(
                     "➡️ سؤال بعدی",
                     callback_data=(
-                        f"banking_ch1_next:"
+                        f"banking_next:"
+                        f"{chapter}:"
                         f"{next_index}:"
                         f"{score}"
                     )
@@ -569,20 +743,18 @@ async def banking_ch1_answer_callback(
 
         ]
 
+
         await query.edit_message_text(
             result_text,
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
 
-    # =====================================================
-    # پایان آزمون
-    # =====================================================
-
     else:
 
-        await show_banking_ch1_result(
+        await show_banking_result(
             query,
+            chapter,
             score
         )
 
@@ -591,7 +763,7 @@ async def banking_ch1_answer_callback(
 # سؤال بعدی
 # =========================================================
 
-async def banking_ch1_next_callback(
+async def banking_next_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
@@ -600,26 +772,30 @@ async def banking_ch1_next_callback(
 
     await query.answer()
 
+
     try:
 
         data = query.data.split(":")
 
-        index = int(data[1])
-        score = int(data[2])
+        chapter = int(data[1])
+        index = int(data[2])
+        score = int(data[3])
 
     except (IndexError, ValueError):
 
         await query.edit_message_text(
-            "⚠️ خطا در ادامه آزمون."
+            "⚠️ خطا در ادامه آزمون.",
+            reply_markup=banking_back_menu()
         )
 
         return
 
 
-    await show_banking_ch1_question(
-        query,
-        index,
-        score
+    await show_banking_question(
+        query=query,
+        chapter=chapter,
+        index=index,
+        score=score
     )
 
 
@@ -627,64 +803,476 @@ async def banking_ch1_next_callback(
 # نتیجه آزمون
 # =========================================================
 
-async def show_banking_ch1_result(
+async def show_banking_result(
     query,
+    chapter,
     score
 ):
 
-    total = len(
-        BANKING_CHAPTER_1_QUESTIONS
+    questions = BANKING_CHAPTER_QUESTIONS.get(
+        chapter,
+        []
     )
+
+    total = len(questions)
+
+
+    if total == 0:
+
+        await query.edit_message_text(
+            "❌ آزمونی برای این فصل وجود ندارد.",
+            reply_markup=banking_back_menu()
+        )
+
+        return
+
+
+    text, keyboard = banking_exam_result(
+        chapter,
+        score
+    )
+
+
+    await query.edit_message_text(
+        text,
+        reply_markup=keyboard
+    )
+
+
+# =========================================================
+# آزمون جامع
+# =========================================================
+
+async def banking_full_exam_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+
+    text = banking_full_exam_text()
+
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🚀 شروع آزمون جامع",
+                callback_data="banking_full_exam_start"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏦 بانکداری",
+                callback_data="banking"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
+# آزمون جامع
+# =========================================================
+
+async def banking_full_exam_start_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+
+    # فعلاً آزمون جامع از فصل‌ها به صورت ترکیبی
+    # ساخته می‌شود.
+
+    all_questions = []
+
+
+    for chapter in range(1, 13):
+
+        questions = BANKING_CHAPTER_QUESTIONS.get(
+            chapter,
+            []
+        )
+
+        for question in questions:
+
+            all_questions.append(
+                {
+                    "chapter": chapter,
+                    "question": question
+                }
+            )
+
+
+    if not all_questions:
+
+        await query.edit_message_text(
+            "❌ سوالی برای آزمون جامع وجود ندارد.",
+            reply_markup=banking_back_menu()
+        )
+
+        return
+
+
+    # ذخیره آزمون جامع در user_data
+
+    context.user_data["full_exam_questions"] = all_questions
+    context.user_data["full_exam_index"] = 0
+    context.user_data["full_exam_score"] = 0
+
+
+    await show_full_exam_question(
+        query,
+        context
+    )
+
+
+# =========================================================
+# نمایش سؤال آزمون جامع
+# =========================================================
+
+async def show_full_exam_question(
+    query,
+    context
+):
+
+    questions = context.user_data.get(
+        "full_exam_questions",
+        []
+    )
+
+    index = context.user_data.get(
+        "full_exam_index",
+        0
+    )
+
+    score = context.user_data.get(
+        "full_exam_score",
+        0
+    )
+
+
+    if index >= len(questions):
+
+        await show_full_exam_result(
+            query,
+            context
+        )
+
+        return
+
+
+    item = questions[index]
+
+    chapter = item["chapter"]
+
+    question = item["question"]
+
+
+    text = f"""
+🏆 آزمون جامع بانکداری
+
+━━━━━━━━━━━━━━━━━━
+
+📘 فصل: {chapter} | {CHAPTER_NAMES.get(chapter, "بانکداری")}
+
+❓ سؤال {index + 1} از {len(questions)}
+
+⭐ امتیاز: {score}
+
+━━━━━━━━━━━━━━━━━━
+
+{question["question"]}
+
+━━━━━━━━━━━━━━━━━━
+
+👇 گزینه صحیح را انتخاب کنید:
+"""
+
+
+    keyboard = []
+
+
+    for option_index, option in enumerate(
+        question["options"]
+    ):
+
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    option,
+                    callback_data=(
+                        f"full_answer:"
+                        f"{index}:"
+                        f"{option_index}"
+                    )
+                )
+            ]
+        )
+
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
+# پاسخ آزمون جامع
+# =========================================================
+
+async def full_exam_answer_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+
+    try:
+
+        data = query.data.split(":")
+
+        index = int(data[1])
+        selected = int(data[2])
+
+    except (IndexError, ValueError):
+
+        await query.edit_message_text(
+            "⚠️ خطا در پردازش آزمون جامع.",
+            reply_markup=banking_back_menu()
+        )
+
+        return
+
+
+    questions = context.user_data.get(
+        "full_exam_questions",
+        []
+    )
+
+
+    if index < 0 or index >= len(questions):
+
+        await query.edit_message_text(
+            "⚠️ سؤال نامعتبر است.",
+            reply_markup=banking_back_menu()
+        )
+
+        return
+
+
+    item = questions[index]
+
+    question = item["question"]
+
+    correct = question["correct"]
+
+
+    score = context.user_data.get(
+        "full_exam_score",
+        0
+    )
+
+
+    if selected == correct:
+
+        score += 1
+
+        result_text = """
+✅ پاسخ صحیح است.
+
+🎯 +۱ امتیاز
+"""
+
+
+    else:
+
+        correct_option = question["options"][correct]
+
+        result_text = f"""
+❌ پاسخ صحیح نیست.
+
+✅ پاسخ صحیح:
+
+{correct_option}
+"""
+
+
+    context.user_data["full_exam_score"] = score
+
+    next_index = index + 1
+
+    context.user_data["full_exam_index"] = next_index
+
+
+    if next_index < len(questions):
+
+        keyboard = [
+
+            [
+                InlineKeyboardButton(
+                    "➡️ سؤال بعدی",
+                    callback_data="full_exam_next"
+                )
+            ],
+
+            [
+                InlineKeyboardButton(
+                    "🏦 خروج از آزمون",
+                    callback_data="banking"
+                )
+            ],
+
+        ]
+
+
+        await query.edit_message_text(
+            result_text,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+
+    else:
+
+        await show_full_exam_result(
+            query,
+            context
+        )
+
+
+# =========================================================
+# سؤال بعدی جامع
+# =========================================================
+
+async def full_exam_next_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+
+    await show_full_exam_question(
+        query,
+        context
+    )
+
+
+# =========================================================
+# نتیجه آزمون جامع
+# =========================================================
+
+async def show_full_exam_result(
+    query,
+    context
+):
+
+    questions = context.user_data.get(
+        "full_exam_questions",
+        []
+    )
+
+    score = context.user_data.get(
+        "full_exam_score",
+        0
+    )
+
+
+    total = len(questions)
+
+
+    if total == 0:
+
+        await query.edit_message_text(
+            "❌ آزمون جامع وجود ندارد.",
+            reply_markup=banking_back_menu()
+        )
+
+        return
+
 
     percentage = round(
         (score / total) * 100
     )
 
 
-    if percentage >= 80:
+    if percentage >= 90:
 
-        level = "🏆 عالی"
-
-        message = (
-            "تسلط بسیار خوبی روی مباحث فصل دارید."
-        )
-
-    elif percentage >= 60:
-
-        level = "🥈 خوب"
+        evaluation = "🏆 فوق‌العاده"
 
         message = (
-            "مفاهیم اصلی را یاد گرفته‌اید، "
-            "اما مرور بیشتر باعث تسلط شما می‌شود."
+            "تسلط شما بر مباحث بانکداری بسیار عالی است."
         )
 
-    elif percentage >= 40:
 
-        level = "🟡 نیاز به مرور"
+    elif percentage >= 80:
+
+        evaluation = "🥇 عالی"
 
         message = (
-            "پیشنهاد می‌شود درسنامه فصل را دوباره "
-            "مطالعه کنید و سپس آزمون را تکرار کنید."
+            "سطح آمادگی شما بسیار خوب است."
         )
+
+
+    elif percentage >= 70:
+
+        evaluation = "🥈 خوب"
+
+        message = (
+            "تسلط مناسبی دارید، اما مرور بعضی فصل‌ها مفید است."
+        )
+
+
+    elif percentage >= 50:
+
+        evaluation = "🥉 متوسط"
+
+        message = (
+            "برای آزمون استخدامی، مرور و تست‌زنی بیشتر پیشنهاد می‌شود."
+        )
+
 
     else:
 
-        level = "🔴 نیاز به مطالعه مجدد"
+        evaluation = "📚 نیازمند مطالعه"
 
         message = (
-            "پیشنهاد می‌شود ابتدا درسنامه فصل را "
-            "به‌طور کامل مرور کنید."
+            "پیشنهاد می‌شود فصل‌های بانکداری را دوباره مطالعه کنید."
         )
 
 
     text = f"""
-🏁 آزمون فصل اول به پایان رسید.
-
-🏦 مبانی بانکداری
+🏆 آزمون جامع بانکداری به پایان رسید.
 
 ━━━━━━━━━━━━━━━━━━
 
-📊 نتیجه آزمون
+📊 نتیجه نهایی
 
 📝 تعداد سؤالات: {total}
 
@@ -694,7 +1282,7 @@ async def show_banking_ch1_result(
 
 📈 درصد: {percentage}٪
 
-🎯 ارزیابی: {level}
+🎯 ارزیابی: {evaluation}
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -702,8 +1290,7 @@ async def show_banking_ch1_result(
 
 ━━━━━━━━━━━━━━━━━━
 
-📚 بعد از تسلط بر این فصل،
-می‌توانید وارد فصل بعدی شوید.
+🏛️ اندیشکده مدیریت و بازار
 """
 
 
@@ -711,15 +1298,8 @@ async def show_banking_ch1_result(
 
         [
             InlineKeyboardButton(
-                "🔄 تکرار آزمون",
-                callback_data="banking_ch1_start"
-            )
-        ],
-
-        [
-            InlineKeyboardButton(
-                "📖 مرور فصل",
-                callback_data="banking_chapter_1"
+                "🔄 آزمون دوباره",
+                callback_data="banking_full_exam_start"
             )
         ],
 
@@ -759,6 +1339,7 @@ async def temporary_section(
 
     await query.answer()
 
+
     await query.edit_message_text(
 
         """
@@ -797,9 +1378,9 @@ def main():
     )
 
 
-    # -----------------------------------------------------
-    # /start
-    # -----------------------------------------------------
+    # =====================================================
+    # START
+    # =====================================================
 
     application.add_handler(
         CommandHandler(
@@ -809,9 +1390,9 @@ def main():
     )
 
 
-    # -----------------------------------------------------
+    # =====================================================
     # HOME
-    # -----------------------------------------------------
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -821,9 +1402,9 @@ def main():
     )
 
 
-    # -----------------------------------------------------
+    # =====================================================
     # SUPPORT
-    # -----------------------------------------------------
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -833,9 +1414,9 @@ def main():
     )
 
 
-    # -----------------------------------------------------
+    # =====================================================
     # BANKING
-    # -----------------------------------------------------
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -845,69 +1426,105 @@ def main():
     )
 
 
-    # -----------------------------------------------------
-    # CHAPTER 1
-    # -----------------------------------------------------
+    # =====================================================
+    # BANKING CHAPTERS
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
-            banking_chapter_1_callback,
-            pattern=r"^banking_chapter_1$"
+            banking_chapter_callback,
+            pattern=r"^banking_chapter_\d+$"
         )
     )
 
 
-    # -----------------------------------------------------
-    # CHAPTER 1 EXAM INTRO
-    # -----------------------------------------------------
+    # =====================================================
+    # EXAM INTRO
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
-            banking_ch1_exam_callback,
-            pattern=r"^banking_ch1_exam$"
+            banking_exam_intro_callback,
+            pattern=r"^banking_exam_intro_\d+$"
         )
     )
 
 
-    # -----------------------------------------------------
-    # CHAPTER 1 EXAM START
-    # -----------------------------------------------------
+    # =====================================================
+    # EXAM START
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
-            banking_ch1_start_callback,
-            pattern=r"^banking_ch1_start$"
+            banking_exam_start_callback,
+            pattern=r"^banking_exam_start_\d+$"
         )
     )
 
 
-    # -----------------------------------------------------
-    # CHAPTER 1 ANSWERS
-    # -----------------------------------------------------
+    # =====================================================
+    # EXAM ANSWER
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
-            banking_ch1_answer_callback,
-            pattern=r"^banking_ch1_answer:"
+            banking_answer_callback,
+            pattern=r"^banking_answer:"
         )
     )
 
 
-    # -----------------------------------------------------
-    # CHAPTER 1 NEXT
-    # -----------------------------------------------------
+    # =====================================================
+    # EXAM NEXT
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
-            banking_ch1_next_callback,
-            pattern=r"^banking_ch1_next:"
+            banking_next_callback,
+            pattern=r"^banking_next:"
         )
     )
 
 
-    # -----------------------------------------------------
+    # =====================================================
+    # FULL EXAM
+    # =====================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            banking_full_exam_callback,
+            pattern=r"^banking_full_exam$"
+        )
+    )
+
+
+    application.add_handler(
+        CallbackQueryHandler(
+            banking_full_exam_start_callback,
+            pattern=r"^banking_full_exam_start$"
+        )
+    )
+
+
+    application.add_handler(
+        CallbackQueryHandler(
+            full_exam_answer_callback,
+            pattern=r"^full_answer:"
+        )
+    )
+
+
+    application.add_handler(
+        CallbackQueryHandler(
+            full_exam_next_callback,
+            pattern=r"^full_exam_next$"
+        )
+    )
+
+
+    # =====================================================
     # TEMPORARY SECTIONS
-    # -----------------------------------------------------
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -927,9 +1544,9 @@ def main():
     )
 
 
-    # -----------------------------------------------------
+    # =====================================================
     # RUN
-    # -----------------------------------------------------
+    # =====================================================
 
     print(
         "🏛️ Andishkadeh Market Bot is running..."
