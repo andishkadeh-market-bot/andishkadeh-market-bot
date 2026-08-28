@@ -24,12 +24,11 @@ CHAPTER_NAMES = {
     10: "مدیریت منابع انسانی",
 }
 
-
 MANAGEMENT_CHAPTER_NAMES = CHAPTER_NAMES
 
 
 # =========================================================
-# 🧠 درسنامه‌های مدیریت
+# 📖 درسنامه‌ها
 # =========================================================
 
 CHAPTER_CONTENT = {
@@ -42,7 +41,7 @@ CHAPTER_CONTENT = {
 📚 مدیریت چیست؟
 
 مدیریت فرایند برنامه‌ریزی، سازماندهی،
-هدایت و کنترل منابع سازمان برای رسیدن
+هدایت و کنترل منابع سازمان برای دستیابی
 به اهداف مشخص است.
 
 ━━━━━━━━━━━━━━━━━━
@@ -56,7 +55,7 @@ CHAPTER_CONTENT = {
 
 ━━━━━━━━━━━━━━━━━━
 
-💡 نکته مهم آزمونی:
+💡 نکته آزمونی:
 
 مدیریت یعنی استفاده مؤثر و کارآمد
 از منابع برای دستیابی به اهداف.
@@ -84,7 +83,7 @@ CHAPTER_CONTENT = {
 """,
 
     2: """
-🧠 فصل دوم: مکاتب مدیریت
+🧠 فصل دوم: مکاتب مدیریت و سیر تحول اندیشه‌های مدیریتی
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -98,10 +97,10 @@ CHAPTER_CONTENT = {
 
 1️⃣ مدیریت علمی
 
-مهم‌ترین نام:
 👤 فردریک تیلور
 
 تمرکز:
+
 🔹 افزایش بهره‌وری
 🔹 مطالعه زمان و حرکت
 🔹 استانداردسازی کار
@@ -111,10 +110,10 @@ CHAPTER_CONTENT = {
 
 2️⃣ نظریه اداری
 
-مهم‌ترین نام:
 👤 هنری فایول
 
 اصول مهم:
+
 🔹 تقسیم کار
 🔹 وحدت فرماندهی
 🔹 انضباط
@@ -125,10 +124,10 @@ CHAPTER_CONTENT = {
 
 3️⃣ بوروکراسی
 
-مهم‌ترین نام:
 👤 ماکس وبر
 
 ویژگی‌ها:
+
 🔹 قوانین رسمی
 🔹 سلسله مراتب
 🔹 تخصص‌گرایی
@@ -136,12 +135,12 @@ CHAPTER_CONTENT = {
 
 ━━━━━━━━━━━━━━━━━━
 
-4️⃣ مکتب روابط انسانی
+4️⃣ روابط انسانی
 
-مهم‌ترین نام:
 👤 التون مایو
 
 توجه به:
+
 🔹 روابط اجتماعی
 🔹 روحیه کارکنان
 🔹 گروه‌های غیررسمی
@@ -227,7 +226,7 @@ CHAPTER_CONTENT = {
 """,
 
     5: """
-🧠 فصل پنجم: رهبری
+🧠 فصل پنجم: هدایت و رهبری
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -373,12 +372,10 @@ CHAPTER_CONTENT = {
 
 ━━━━━━━━━━━━━━━━━━
 
-📌 تصمیم‌های سازمانی می‌توانند:
+📌 تصمیم‌های سازمانی:
 
 🔹 برنامه‌ریزی‌شده
 🔹 برنامه‌ریزی‌نشده
-
-باشند.
 """,
 
     10: """
@@ -692,55 +689,49 @@ def management_menu():
 
     for chapter, name in CHAPTER_NAMES.items():
 
-        keyboard.append(
-            [
-                InlineKeyboardButton(
-                    f"📘 فصل {chapter} | {name}",
-                    callback_data=f"management_chapter_{chapter}"
-                )
-            ]
-        )
-
-    keyboard.append(
-        [
+        keyboard.append([
             InlineKeyboardButton(
-                "🏠 منوی اصلی",
-                callback_data="home"
+                f"📘 فصل {chapter} | {name}",
+                callback_data=f"management_chapter_{chapter}"
             )
-        ]
-    )
+        ])
+
+    keyboard.append([
+        InlineKeyboardButton(
+            "🏠 منوی اصلی",
+            callback_data="home"
+        )
+    ])
 
     return InlineKeyboardMarkup(keyboard)
 
 
 # =========================================================
-# 🔙 منوی بازگشت مدیریت
+# 🔙 منوی بازگشت
 # =========================================================
 
 def management_back_menu():
 
-    return InlineKeyboardMarkup(
+    return InlineKeyboardMarkup([
         [
-            [
-                InlineKeyboardButton(
-                    "🧠 مدیریت",
-                    callback_data="management"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "📚 آموزش تخصصی",
-                    callback_data="education"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "🏠 منوی اصلی",
-                    callback_data="home"
-                )
-            ],
-        ]
-    )
+            InlineKeyboardButton(
+                "🧠 مدیریت",
+                callback_data="management"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "📚 آموزش تخصصی",
+                callback_data="education"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+    ])
 
 
 # =========================================================
@@ -800,15 +791,9 @@ def management_chapter_text(chapter):
 
 def management_exam_intro_text(chapter):
 
-    questions = MANAGEMENT_QUESTIONS.get(
-        chapter,
-        []
-    )
+    questions = MANAGEMENT_QUESTIONS.get(chapter, [])
 
-    name = CHAPTER_NAMES.get(
-        chapter,
-        "مدیریت"
-    )
+    name = CHAPTER_NAMES.get(chapter, "مدیریت")
 
     return f"""
 📝 آزمون فصل {chapter}
@@ -842,66 +827,53 @@ def management_exam_intro_text(chapter):
 
 
 # =========================================================
-# 📝 منوی آزمون مدیریت
+# 📝 منوی آزمون
 # =========================================================
 
 def management_exam_menu(chapter):
 
-    return InlineKeyboardMarkup(
+    return InlineKeyboardMarkup([
         [
-            [
-                InlineKeyboardButton(
-                    "🚀 شروع آزمون",
-                    callback_data=f"management_exam_{chapter}_0_0"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "📖 مشاهده درسنامه",
-                    callback_data=f"management_chapter_{chapter}"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "🧠 مدیریت",
-                    callback_data="management"
-                ]
-            ],
-            [
-                InlineKeyboardButton(
-                    "🏠 منوی اصلی",
-                    callback_data="home"
-                )
-            ],
-        ]
-    )
+            InlineKeyboardButton(
+                "🚀 شروع آزمون",
+                callback_data=f"management_exam_{chapter}_0_0"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "📖 مشاهده درسنامه",
+                callback_data=f"management_chapter_{chapter}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🧠 مدیریت",
+                callback_data="management"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+    ])
 
 
 # =========================================================
 # 📝 اطلاعات سؤال
 # =========================================================
 
-def management_question_data(
-    chapter,
-    index,
-    score
-):
+def management_question_data(chapter, index, score):
 
-    questions = MANAGEMENT_QUESTIONS.get(
-        chapter,
-        []
-    )
+    questions = MANAGEMENT_QUESTIONS.get(chapter, [])
 
     if index < 0 or index >= len(questions):
-
         return None
 
     question = questions[index]
 
-    name = CHAPTER_NAMES.get(
-        chapter,
-        "مدیریت"
-    )
+    name = CHAPTER_NAMES.get(chapter, "مدیریت")
 
     text = f"""
 📝 آزمون مدیریت
@@ -926,38 +898,29 @@ def management_question_data(
 
     keyboard = []
 
-    for option_index, option in enumerate(
-        question["options"]
-    ):
+    for option_index, option in enumerate(question["options"]):
 
-        keyboard.append(
-            [
-                InlineKeyboardButton(
-                    option,
-                    callback_data=(
-                        f"management_answer_"
-                        f"{chapter}_"
-                        f"{index}_"
-                        f"{option_index}_"
-                        f"{score}"
-                    )
-                )
-            ]
-        )
-
-    keyboard.append(
-        [
+        keyboard.append([
             InlineKeyboardButton(
-                "🧠 خروج از آزمون",
-                callback_data="management"
+                option,
+                callback_data=(
+                    f"management_answer_"
+                    f"{chapter}_"
+                    f"{index}_"
+                    f"{option_index}_"
+                    f"{score}"
+                )
             )
-        ]
-    )
+        ])
 
-    return (
-        text,
-        InlineKeyboardMarkup(keyboard)
-    )
+    keyboard.append([
+        InlineKeyboardButton(
+            "🧠 خروج از آزمون",
+            callback_data="management"
+        )
+    ])
+
+    return text, InlineKeyboardMarkup(keyboard)
 
 
 # =========================================================
@@ -971,17 +934,12 @@ def management_answer_data(
     score
 ):
 
-    questions = MANAGEMENT_QUESTIONS.get(
-        chapter,
-        []
-    )
+    questions = MANAGEMENT_QUESTIONS.get(chapter, [])
 
     if index < 0 or index >= len(questions):
-
         return None
 
     question = questions[index]
-
     correct = question["correct"]
 
     if selected == correct:
@@ -1020,7 +978,6 @@ def management_answer_data(
 """
 
     next_index = index + 1
-
     finished = next_index >= len(questions)
 
     return {
@@ -1035,72 +992,43 @@ def management_answer_data(
 # 🏁 نتیجه آزمون
 # =========================================================
 
-def management_result_text(
-    chapter,
-    score
-):
+def management_result_text(chapter, score):
 
-    questions = MANAGEMENT_QUESTIONS.get(
-        chapter,
-        []
-    )
-
+    questions = MANAGEMENT_QUESTIONS.get(chapter, [])
     total = len(questions)
 
     if total == 0:
-
         return "❌ آزمونی برای این فصل وجود ندارد."
 
     wrong = total - score
-
-    percentage = round(
-        (score / total) * 100
-    )
+    percentage = round((score / total) * 100)
 
     if percentage >= 90:
 
         evaluation = "🏆 فوق‌العاده"
-
-        message = (
-            "تسلط شما بر این فصل بسیار عالی است."
-        )
+        message = "تسلط شما بر این فصل بسیار عالی است."
 
     elif percentage >= 80:
 
         evaluation = "🥇 عالی"
-
-        message = (
-            "تسلط بسیار خوبی روی مباحث فصل دارید."
-        )
+        message = "تسلط بسیار خوبی روی مباحث فصل دارید."
 
     elif percentage >= 70:
 
         evaluation = "🥈 خوب"
-
-        message = (
-            "تسلط مناسبی دارید، اما مرور بیشتر مفید است."
-        )
+        message = "تسلط مناسبی دارید، اما مرور بیشتر مفید است."
 
     elif percentage >= 50:
 
         evaluation = "🟡 متوسط"
-
-        message = (
-            "بعضی مفاهیم نیاز به مطالعه و تمرین بیشتری دارند."
-        )
+        message = "بعضی مفاهیم نیاز به مطالعه و تمرین بیشتری دارند."
 
     else:
 
         evaluation = "📚 نیازمند مطالعه"
+        message = "پیشنهاد می‌شود ابتدا درسنامه را دوباره مطالعه کنید."
 
-        message = (
-            "پیشنهاد می‌شود ابتدا درسنامه را دوباره مطالعه کنید."
-        )
-
-    name = CHAPTER_NAMES.get(
-        chapter,
-        "مدیریت"
-    )
+    name = CHAPTER_NAMES.get(chapter, "مدیریت")
 
     return f"""
 🏁 آزمون فصل {chapter} به پایان رسید.
@@ -1147,14 +1075,12 @@ def management_result_text(
 def management_result_menu(chapter):
 
     keyboard = [
-
         [
             InlineKeyboardButton(
                 "🔄 تکرار آزمون",
                 callback_data=f"management_exam_{chapter}_0_0"
             )
         ],
-
         [
             InlineKeyboardButton(
                 "📖 مرور فصل",
@@ -1165,31 +1091,27 @@ def management_result_menu(chapter):
 
     if chapter < len(CHAPTER_NAMES):
 
-        keyboard.append(
-            [
-                InlineKeyboardButton(
-                    f"📘 فصل {chapter + 1}",
-                    callback_data=f"management_chapter_{chapter + 1}"
-                )
-            ]
-        )
+        keyboard.append([
+            InlineKeyboardButton(
+                f"📘 فصل {chapter + 1}",
+                callback_data=f"management_chapter_{chapter + 1}"
+            )
+        ])
 
-    keyboard.extend(
+    keyboard.extend([
         [
-            [
-                InlineKeyboardButton(
-                    "🧠 مدیریت",
-                    callback_data="management"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "🏠 منوی اصلی",
-                    callback_data="home"
-                )
-            ],
-        ]
-    )
+            InlineKeyboardButton(
+                "🧠 مدیریت",
+                callback_data="management"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+    ])
 
     return InlineKeyboardMarkup(keyboard)
 
