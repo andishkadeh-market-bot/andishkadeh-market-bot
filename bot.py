@@ -4,7 +4,6 @@
 # نسخه سازگار با Render Free Web Service
 # =========================================================
 
-
 import os
 from threading import Thread
 from http.server import BaseHTTPRequestHandler, HTTPServer
