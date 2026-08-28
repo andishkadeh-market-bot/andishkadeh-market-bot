@@ -3,7 +3,7 @@
 # 🧠 روانشناسی و مددکاری اجتماعی
 # 🏛️ اندیشکده مدیریت و بازار
 #
-# نسخه جامع
+# نسخه: 2.0.0
 #
 # شامل:
 # 🧠 مبانی روانشناسی
@@ -14,13 +14,11 @@
 # 🧩 شخصیت‌شناسی
 # 🤝 مددکاری اجتماعی
 # 👨‍👩‍👧 روابط و خانواده
-# 📝 آزمون روانشناسی
+# 📝 آزمون جامع و آزمون بخش‌ها
 # 📚 منابع آموزشی
 #
-# این فایل به صورت Module طراحی شده است
-# و توسط bot.py فراخوانی می‌شود.
+# این فایل Module است و توسط bot.py فراخوانی می‌شود.
 # =========================================================
-
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -30,221 +28,104 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 # =========================================================
 
 SECTION_NAMES = {
-
-    "basics":
-        "🧠 مبانی روانشناسی",
-
-    "individual":
-        "👤 روانشناسی فردی",
-
-    "communication":
-        "💬 مهارت‌های ارتباطی",
-
-    "stress":
-        "😰 استرس و مدیریت آن",
-
-    "motivation":
-        "🎯 انگیزه و هدف‌گذاری",
-
-    "personality":
-        "🧩 شخصیت‌شناسی",
-
-    "socialwork":
-        "🤝 مددکاری اجتماعی",
-
-    "family":
-        "👨‍👩‍👧 روابط و خانواده",
-
+    "basics": "🧠 مبانی روانشناسی",
+    "individual": "👤 روانشناسی فردی",
+    "communication": "💬 مهارت‌های ارتباطی",
+    "stress": "😰 استرس و مدیریت آن",
+    "motivation": "🎯 انگیزه و هدف‌گذاری",
+    "personality": "🧩 شخصیت‌شناسی",
+    "socialwork": "🤝 مددکاری اجتماعی",
+    "family": "👨‍👩‍👧 روابط و خانواده",
 }
 
 
 # =========================================================
-# فصل‌های مبانی روانشناسی
+# فصل‌های هر بخش
 # =========================================================
 
 BASICS_CHAPTER_NAMES = {
-
     1: "روانشناسی چیست؟",
-
     2: "رفتار و فرایندهای ذهنی",
-
     3: "شناخت و ادراک",
-
     4: "یادگیری و حافظه",
-
     5: "هیجان و احساسات",
-
 }
-
-
-# =========================================================
-# فصل‌های روانشناسی فردی
-# =========================================================
 
 INDIVIDUAL_CHAPTER_NAMES = {
-
     1: "خودآگاهی",
-
     2: "اعتمادبه‌نفس",
-
     3: "عزت نفس",
-
     4: "کنترل هیجانات",
-
     5: "تصمیم‌گیری",
-
 }
-
-
-# =========================================================
-# فصل‌های مهارت ارتباطی
-# =========================================================
 
 COMMUNICATION_CHAPTER_NAMES = {
-
     1: "مبانی ارتباط مؤثر",
-
     2: "گوش دادن فعال",
-
     3: "زبان بدن",
-
     4: "همدلی",
-
     5: "مدیریت تعارض",
-
 }
-
-
-# =========================================================
-# فصل‌های استرس
-# =========================================================
 
 STRESS_CHAPTER_NAMES = {
-
     1: "استرس چیست؟",
-
     2: "علل و عوامل استرس",
-
     3: "علائم استرس",
-
     4: "مدیریت استرس",
-
     5: "پیشگیری و سبک زندگی",
-
 }
-
-
-# =========================================================
-# فصل‌های انگیزه
-# =========================================================
 
 MOTIVATION_CHAPTER_NAMES = {
-
     1: "مفهوم انگیزه",
-
     2: "هدف‌گذاری",
-
     3: "عادت‌ها و رفتار",
-
     4: "غلبه بر اهمال‌کاری",
-
     5: "حفظ انگیزه",
-
 }
-
-
-# =========================================================
-# فصل‌های شخصیت‌شناسی
-# =========================================================
 
 PERSONALITY_CHAPTER_NAMES = {
-
     1: "شخصیت چیست؟",
-
     2: "عوامل شکل‌گیری شخصیت",
-
     3: "تفاوت‌های فردی",
-
     4: "نظریه‌های شخصیت",
-
     5: "کاربرد شخصیت‌شناسی",
-
 }
-
-
-# =========================================================
-# فصل‌های مددکاری اجتماعی
-# =========================================================
 
 SOCIALWORK_CHAPTER_NAMES = {
-
     1: "مددکاری اجتماعی چیست؟",
-
     2: "اصول مددکاری",
-
     3: "ارتباط مددکار با مددجو",
-
     4: "ارزیابی وضعیت مددجو",
-
     5: "مداخلات اجتماعی",
-
 }
-
-
-# =========================================================
-# فصل‌های روابط و خانواده
-# =========================================================
 
 FAMILY_CHAPTER_NAMES = {
-
     1: "مبانی روابط انسانی",
-
     2: "اعتماد در روابط",
-
     3: "ارتباط در خانواده",
-
     4: "حل تعارض خانوادگی",
-
     5: "مرزبندی سالم",
-
 }
 
 
 # =========================================================
-# نگهداری نام فصل‌ها
+# همه فصل‌ها
 # =========================================================
 
 CHAPTERS = {
-
-    "basics":
-        BASICS_CHAPTER_NAMES,
-
-    "individual":
-        INDIVIDUAL_CHAPTER_NAMES,
-
-    "communication":
-        COMMUNICATION_CHAPTER_NAMES,
-
-    "stress":
-        STRESS_CHAPTER_NAMES,
-
-    "motivation":
-        MOTIVATION_CHAPTER_NAMES,
-
-    "personality":
-        PERSONALITY_CHAPTER_NAMES,
-
-    "socialwork":
-        SOCIALWORK_CHAPTER_NAMES,
-
-    "family":
-        FAMILY_CHAPTER_NAMES,
-
+    "basics": BASICS_CHAPTER_NAMES,
+    "individual": INDIVIDUAL_CHAPTER_NAMES,
+    "communication": COMMUNICATION_CHAPTER_NAMES,
+    "stress": STRESS_CHAPTER_NAMES,
+    "motivation": MOTIVATION_CHAPTER_NAMES,
+    "personality": PERSONALITY_CHAPTER_NAMES,
+    "socialwork": SOCIALWORK_CHAPTER_NAMES,
+    "family": FAMILY_CHAPTER_NAMES,
 }
 
 
 # =========================================================
-# متن درس‌ها
+# متن فصل‌ها
 # =========================================================
 
 CHAPTER_TEXTS = {
@@ -261,22 +142,22 @@ CHAPTER_TEXTS = {
 
 ━━━━━━━━━━━━━━━━━━
 
-روانشناسی علمی است که رفتار و فرایندهای
-ذهنی انسان را مطالعه می‌کند.
+روانشناسی علمی است که رفتار و فرایندهای ذهنی
+انسان را مطالعه می‌کند.
 
 روانشناسی تلاش می‌کند رفتار انسان را:
 
 🔹 توصیف کند
 🔹 توضیح دهد
 🔹 پیش‌بینی کند
-🔹 و در برخی شرایط تغییر یا بهبود دهد.
+🔹 و در برخی شرایط به بهبود آن کمک کند.
 
 ━━━━━━━━━━━━━━━━━━
 
 📌 رفتار
 
 رفتار شامل فعالیت‌هایی است که می‌توانند
-به شکل مستقیم یا غیرمستقیم مورد بررسی قرار گیرند.
+مورد مشاهده و بررسی قرار گیرند.
 
 مانند:
 
@@ -304,9 +185,16 @@ CHAPTER_TEXTS = {
 
 روانشناسی فقط درباره بیماری‌های روانی نیست.
 
-این علم حوزه‌های بسیار گسترده‌ای مانند
-یادگیری، شخصیت، روابط، کار، آموزش و رفتار
-اجتماعی را نیز بررسی می‌کند.
+این علم حوزه‌هایی مانند:
+
+• یادگیری
+• شخصیت
+• روابط
+• آموزش
+• کار
+• رفتار اجتماعی
+
+را نیز بررسی می‌کند.
 """,
 
         2: """
@@ -315,15 +203,16 @@ CHAPTER_TEXTS = {
 
 ━━━━━━━━━━━━━━━━━━
 
-رفتار انسان نتیجه تعامل عوامل مختلف است.
+رفتار انسان معمولاً نتیجه تعامل عوامل
+مختلف است.
 
 مهم‌ترین عوامل:
 
-• عوامل زیستی
-• عوامل روانی
-• عوامل اجتماعی
-• محیط
-• تجربه‌های گذشته
+🧬 عوامل زیستی
+🧠 عوامل روانی
+👥 عوامل اجتماعی
+🌍 محیط
+📚 تجربه‌های گذشته
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -406,19 +295,19 @@ CHAPTER_TEXTS = {
 • تمرین
 • انگیزه
 • بازخورد
-• کیفیت خواب
+• خواب مناسب
 
 ━━━━━━━━━━━━━━━━━━
 
 🧠 حافظه
 
-حافظه به فرایندهایی مربوط است که امکان:
+فرایندهای حافظه شامل:
 
 1️⃣ رمزگذاری
 2️⃣ ذخیره‌سازی
 3️⃣ بازیابی
 
-اطلاعات را فراهم می‌کنند.
+است.
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -467,12 +356,11 @@ CHAPTER_TEXTS = {
 
 ━━━━━━━━━━━━━━━━━━
 
-🎯 مهارت مهم:
+🎯 تنظیم هیجان به معنی حذف احساسات نیست؛
 
-تنظیم هیجان به معنی حذف احساسات نیست؛
-بلکه یعنی بتوانیم واکنش خود را بهتر مدیریت کنیم.
+بلکه یعنی بتوانیم واکنش خود را
+به شکل مناسب‌تری مدیریت کنیم.
 """,
-
     },
 
 
@@ -502,8 +390,14 @@ CHAPTER_TEXTS = {
 
 🎯 چرا مهم است؟
 
-خودآگاهی می‌تواند به تصمیم‌گیری بهتر،
-مدیریت هیجان و ارتباط مؤثرتر کمک کند.
+خودآگاهی می‌تواند به:
+
+• تصمیم‌گیری بهتر
+• مدیریت هیجان
+• شناخت نیازها
+• ارتباط مؤثرتر
+
+کمک کند.
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -525,13 +419,19 @@ CHAPTER_TEXTS = {
 ━━━━━━━━━━━━━━━━━━
 
 اعتمادبه‌نفس به میزان باور فرد به توانایی
-خود برای انجام یک کار یا مواجهه با یک
-موقعیت مربوط می‌شود.
+خود برای انجام یک کار یا مواجهه با
+یک موقعیت مربوط می‌شود.
 
 ━━━━━━━━━━━━━━━━━━
 
-اعتمادبه‌نفس می‌تواند با تجربه، تمرین،
-یادگیری و موفقیت‌های تدریجی تقویت شود.
+اعتمادبه‌نفس می‌تواند با:
+
+• تجربه
+• تمرین
+• یادگیری
+• موفقیت‌های تدریجی
+
+تقویت شود.
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -541,7 +441,7 @@ CHAPTER_TEXTS = {
 • تمرین مداوم
 • پذیرش اشتباه
 • یادگیری مهارت
-• مقایسه نکردن افراطی خود با دیگران
+• پرهیز از مقایسه افراطی
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -554,12 +454,12 @@ CHAPTER_TEXTS = {
 
 ━━━━━━━━━━━━━━━━━━
 
-عزت نفس به ارزیابی و نگرش فرد نسبت به
-ارزشمندی خودش مربوط است.
+عزت نفس به ارزیابی و نگرش فرد نسبت
+به ارزشمندی خودش مربوط است.
 
 ━━━━━━━━━━━━━━━━━━
 
-اعتمادبه‌نفس و عزت نفس یکی نیستند.
+اعتمادبه‌نفس و عزت نفس دقیقاً یکسان نیستند.
 
 ممکن است فردی در یک مهارت اعتمادبه‌نفس
 بالایی داشته باشد اما در ارزیابی کلی
@@ -573,6 +473,9 @@ CHAPTER_TEXTS = {
 • پذیرش ضعف‌ها
 • احترام به خود
 • پذیرش امکان رشد
+• پرهیز از تحقیر خود
+
+است.
 """,
 
         4: """
@@ -608,7 +511,7 @@ CHAPTER_TEXTS = {
 ━━━━━━━━━━━━━━━━━━
 
 🎯 یک مکث کوتاه گاهی جلوی یک تصمیم
-بلندمدتاً پشیمان‌کننده را می‌گیرد.
+پشیمان‌کننده را می‌گیرد.
 """,
 
         5: """
@@ -622,7 +525,7 @@ CHAPTER_TEXTS = {
 
 ━━━━━━━━━━━━━━━━━━
 
-مراحل ساده:
+مراحل:
 
 1️⃣ تعریف مسئله
 2️⃣ جمع‌آوری اطلاعات
@@ -637,14 +540,13 @@ CHAPTER_TEXTS = {
 نتیجه آن همیشه عالی باشد.
 
 تصمیم خوب معمولاً تصمیمی است که با
-اطلاعات موجود و شرایط واقعی گرفته شده باشد.
+اطلاعات موجود و شرایط واقعی گرفته شود.
 """,
-
     },
 
 
     # =====================================================
-    # مهارت ارتباطی
+    # ارتباطات
     # =====================================================
 
     "communication": {
@@ -655,8 +557,8 @@ CHAPTER_TEXTS = {
 
 ━━━━━━━━━━━━━━━━━━
 
-ارتباط فرایند انتقال و دریافت پیام میان
-افراد است.
+ارتباط فرایند انتقال و دریافت پیام
+میان افراد است.
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -748,7 +650,7 @@ CHAPTER_TEXTS = {
 
 همدلی به معنی:
 
-❌ تأیید همه رفتارها
+❌ تأیید تمام رفتارها
 ❌ موافق بودن با همه عقاید
 ❌ حل کردن تمام مشکلات فرد
 
@@ -783,10 +685,11 @@ CHAPTER_TEXTS = {
 ━━━━━━━━━━━━━━━━━━
 
 🎯 هدف مدیریت تعارض لزوماً برنده شدن
-یک طرف نیست؛ گاهی هدف رسیدن به راه‌حلی
-قابل قبول برای هر دو طرف است.
-""",
+یک طرف نیست؛
 
+گاهی هدف رسیدن به راه‌حلی قابل قبول
+برای هر دو طرف است.
+""",
     },
 
 
@@ -817,7 +720,7 @@ CHAPTER_TEXTS = {
 
 ━━━━━━━━━━━━━━━━━━
 
-📌 مقدار محدودی از فشار می‌تواند در برخی
+📌 مقدار محدودی از فشار ممکن است در برخی
 شرایط به افزایش توجه و عملکرد کمک کند.
 
 اما استرس شدید یا طولانی‌مدت می‌تواند
@@ -854,21 +757,19 @@ CHAPTER_TEXTS = {
 
 ━━━━━━━━━━━━━━━━━━
 
-علائم احتمالی:
-
-🧠 ذهنی:
+🧠 علائم ذهنی:
 
 • نگرانی
 • کاهش تمرکز
 • افکار درگیرکننده
 
-❤️ جسمانی:
+❤️ علائم جسمانی:
 
 • افزایش ضربان قلب
 • تنش عضلانی
 • خستگی
 
-💬 رفتاری:
+💬 علائم رفتاری:
 
 • تحریک‌پذیری
 • تغییر خواب
@@ -899,10 +800,8 @@ CHAPTER_TEXTS = {
 
 ━━━━━━━━━━━━━━━━━━
 
-🎯 نکته:
-
-مدیریت استرس بیشتر از یک تکنیک،
-به مجموعه‌ای از عادت‌های سالم مربوط است.
+🎯 مدیریت استرس معمولاً به مجموعه‌ای
+از عادت‌های سالم نیاز دارد.
 """,
 
         5: """
@@ -931,7 +830,6 @@ CHAPTER_TEXTS = {
 زندگی روزمره باشد، کمک گرفتن از متخصص
 می‌تواند ضروری باشد.
 """,
-
     },
 
 
@@ -974,7 +872,7 @@ CHAPTER_TEXTS = {
 
 ━━━━━━━━━━━━━━━━━━
 
-هدف خوب باید تا حد امکان:
+هدف خوب بهتر است تا حد امکان:
 
 • مشخص
 • قابل اندازه‌گیری
@@ -987,13 +885,9 @@ CHAPTER_TEXTS = {
 
 📌 مثال:
 
-به جای:
+❌ «می‌خواهم بیشتر مطالعه کنم.»
 
-«می‌خواهم بیشتر مطالعه کنم.»
-
-بهتر است:
-
-«هر روز ساعت ۱۸ به مدت ۶۰ دقیقه
+✅ «هر روز ساعت ۱۸ به مدت ۶۰ دقیقه
 مطالعه می‌کنم.»
 
 ━━━━━━━━━━━━━━━━━━
@@ -1054,7 +948,7 @@ CHAPTER_TEXTS = {
 
 «فقط ۱۰ دقیقه شروع می‌کنم.»
 
-شروع کردن اغلب سخت‌ترین قسمت ماجراست.
+شروع کردن اغلب سخت‌ترین قسمت کار است.
 """,
 
         5: """
@@ -1065,7 +959,7 @@ CHAPTER_TEXTS = {
 
 انگیزه همیشه ثابت نمی‌ماند.
 
-به همین دلیل بهتر است سیستم رفتاری
+به همین دلیل بهتر است یک سیستم رفتاری
 قابل اجرا داشته باشیم.
 
 ━━━━━━━━━━━━━━━━━━
@@ -1084,7 +978,6 @@ CHAPTER_TEXTS = {
 🎯 موفقیت پایدار بیشتر به استمرار
 وابسته است تا هیجان لحظه‌ای.
 """,
-
     },
 
 
@@ -1208,7 +1101,6 @@ CHAPTER_TEXTS = {
 اما شخصیت‌شناسی نباید تبدیل به
 برچسب‌زنی یا قضاوت قطعی افراد شود.
 """,
-
     },
 
 
@@ -1347,7 +1239,6 @@ CHAPTER_TEXTS = {
 📌 مداخله باید متناسب با نیاز و شرایط
 واقعی مددجو باشد.
 """,
-
     },
 
 
@@ -1474,213 +1365,180 @@ CHAPTER_TEXTS = {
 📌 مرزبندی با بی‌احترامی یا قطع ارتباط
 یکی نیست.
 """,
-
     },
-
 }
 
 
 # =========================================================
-# سوالات آزمون
+# بانک سوالات
 # =========================================================
 
 PSYCHOLOGY_QUESTIONS = [
 
     {
         "question": "روانشناسی به طور کلی چه چیزی را مطالعه می‌کند؟",
-
         "options": [
             "فقط بیماری‌های روانی",
             "رفتار و فرایندهای ذهنی",
             "فقط رفتار اجتماعی",
-            "فقط عملکرد مغز"
+            "فقط عملکرد مغز",
         ],
-
-        "correct": 1
+        "correct": 1,
     },
 
     {
         "question": "کدام مورد یکی از عناصر مهم ارتباط مؤثر است؟",
-
         "options": [
             "گوش دادن فعال",
             "قطع کردن صحبت دیگران",
             "نادیده گرفتن بازخورد",
-            "قضاوت سریع"
+            "قضاوت سریع",
         ],
-
-        "correct": 0
+        "correct": 0,
     },
 
     {
         "question": "همدلی بیشتر به چه معناست؟",
-
         "options": [
             "تأیید تمام رفتارهای فرد",
             "حل کردن تمام مشکلات فرد",
             "تلاش برای درک تجربه فرد از دیدگاه او",
-            "موافقت با تمام عقاید فرد"
+            "موافقت با تمام عقاید فرد",
         ],
-
-        "correct": 2
+        "correct": 2,
     },
 
     {
         "question": "کدام مورد می‌تواند به مدیریت استرس کمک کند؟",
-
         "options": [
             "بی‌نظمی کامل",
             "خواب منظم",
             "افزایش فشار کاری",
-            "نادیده گرفتن تمام مشکلات"
+            "نادیده گرفتن تمام مشکلات",
         ],
-
-        "correct": 1
+        "correct": 1,
     },
 
     {
         "question": "عزت نفس بیشتر به چه چیزی مربوط است؟",
-
         "options": [
             "ارزیابی فرد از ارزشمندی خود",
             "قدرت بدنی",
             "تعداد دوستان",
-            "میزان درآمد"
+            "میزان درآمد",
         ],
-
-        "correct": 0
+        "correct": 0,
     },
 
     {
         "question": "کدام گزینه به هدف‌گذاری مناسب نزدیک‌تر است؟",
-
         "options": [
             "می‌خواهم موفق شوم",
             "باید بهتر باشم",
             "هر روز ۶۰ دقیقه مطالعه می‌کنم",
-            "یک روزی شروع می‌کنم"
+            "یک روزی شروع می‌کنم",
         ],
-
-        "correct": 2
+        "correct": 2,
     },
 
     {
         "question": "گوش دادن فعال شامل کدام مورد است؟",
-
         "options": [
             "قطع کردن صحبت",
             "توجه و درک پیام",
             "تغییر موضوع",
-            "ارائه پاسخ بدون گوش دادن"
+            "ارائه پاسخ بدون گوش دادن",
         ],
-
-        "correct": 1
+        "correct": 1,
     },
 
     {
         "question": "مددکاری اجتماعی بیشتر با چه هدفی انجام می‌شود؟",
-
         "options": [
             "قضاوت مددجو",
             "تنبیه افراد",
             "کمک و توانمندسازی افراد و خانواده‌ها",
-            "جایگزینی خانواده"
+            "جایگزینی خانواده",
         ],
-
-        "correct": 2
+        "correct": 2,
     },
 
     {
         "question": "کدام مورد از اصول مهم مددکاری اجتماعی است؟",
-
         "options": [
             "تحقیر",
             "قضاوت",
             "احترام به کرامت انسان",
-            "افشای اطلاعات محرمانه"
+            "افشای اطلاعات محرمانه",
         ],
-
-        "correct": 2
+        "correct": 2,
     },
 
     {
         "question": "شخصیت را بهتر است چگونه در نظر گرفت؟",
-
         "options": [
             "یک ویژگی کاملاً ثابت و غیرقابل تغییر",
             "مجموعه‌ای از الگوهای نسبتاً پایدار تفکر، احساس و رفتار",
             "فقط نتیجه ژنتیک",
-            "فقط نتیجه محیط"
+            "فقط نتیجه محیط",
         ],
-
-        "correct": 1
+        "correct": 1,
     },
 
     {
         "question": "کدام مورد می‌تواند به ساخت یک عادت کمک کند؟",
-
         "options": [
             "تکرار رفتار",
             "بی‌برنامگی",
             "تغییر دائمی هدف",
-            "نادیده گرفتن پیشرفت"
+            "نادیده گرفتن پیشرفت",
         ],
-
-        "correct": 0
+        "correct": 0,
     },
 
     {
         "question": "در مدیریت تعارض، کدام رویکرد مناسب‌تر است؟",
-
         "options": [
             "تمرکز بر تحقیر طرف مقابل",
             "تمرکز بر مسئله و راه‌حل",
             "تهدید",
-            "نادیده گرفتن کامل مسئله"
+            "نادیده گرفتن کامل مسئله",
         ],
-
-        "correct": 1
+        "correct": 1,
     },
 
     {
         "question": "ادراک به چه چیزی مربوط می‌شود؟",
-
         "options": [
             "تفسیر و معنا دادن به اطلاعات حسی",
             "فقط دریافت صدا",
             "فقط حرکت بدن",
-            "فقط حافظه"
+            "فقط حافظه",
         ],
-
-        "correct": 0
+        "correct": 0,
     },
 
     {
         "question": "کدام مورد از فرایندهای حافظه است؟",
-
         "options": [
             "رمزگذاری",
             "ذخیره‌سازی",
             "بازیابی",
-            "همه موارد"
+            "همه موارد",
         ],
-
-        "correct": 3
+        "correct": 3,
     },
 
     {
         "question": "مرزبندی سالم در روابط به چه معناست؟",
-
         "options": [
             "قطع تمام روابط",
             "تعیین حدود محترمانه و سالم",
             "کنترل دیگران",
-            "بی‌توجهی به نیازهای دیگران"
+            "بی‌توجهی به نیازهای دیگران",
         ],
-
-        "correct": 1
+        "correct": 1,
     },
-
 ]
 
 
@@ -1728,12 +1586,11 @@ SECTION_QUESTIONS = {
     "family": [
         PSYCHOLOGY_QUESTIONS[14],
     ],
-
 }
 
 
 # =========================================================
-# منوی اصلی روانشناسی و مددکاری
+# منوی اصلی روانشناسی
 # =========================================================
 
 def psychology_socialwork_menu():
@@ -1743,80 +1600,79 @@ def psychology_socialwork_menu():
         [
             InlineKeyboardButton(
                 "🧠 مبانی روانشناسی",
-                callback_data="psychology_section_basics"
+                callback_data="psychology_section_basics",
             )
         ],
 
         [
             InlineKeyboardButton(
                 "👤 روانشناسی فردی",
-                callback_data="psychology_section_individual"
+                callback_data="psychology_section_individual",
             )
         ],
 
         [
             InlineKeyboardButton(
                 "💬 مهارت‌های ارتباطی",
-                callback_data="psychology_section_communication"
+                callback_data="psychology_section_communication",
             )
         ],
 
         [
             InlineKeyboardButton(
                 "😰 استرس و مدیریت آن",
-                callback_data="psychology_section_stress"
+                callback_data="psychology_section_stress",
             )
         ],
 
         [
             InlineKeyboardButton(
                 "🎯 انگیزه و هدف‌گذاری",
-                callback_data="psychology_section_motivation"
+                callback_data="psychology_section_motivation",
             )
         ],
 
         [
             InlineKeyboardButton(
                 "🧩 شخصیت‌شناسی",
-                callback_data="psychology_section_personality"
+                callback_data="psychology_section_personality",
             )
         ],
 
         [
             InlineKeyboardButton(
                 "🤝 مددکاری اجتماعی",
-                callback_data="psychology_section_socialwork"
+                callback_data="psychology_section_socialwork",
             )
         ],
 
         [
             InlineKeyboardButton(
                 "👨‍👩‍👧 روابط و خانواده",
-                callback_data="psychology_section_family"
+                callback_data="psychology_section_family",
             )
         ],
 
         [
             InlineKeyboardButton(
                 "📝 آزمون جامع روانشناسی",
-                callback_data="psychology_exam_intro"
+                callback_data="psychology_exam_intro",
             )
         ],
 
         [
             InlineKeyboardButton(
                 "📚 منابع و راهنمای مطالعه",
-                callback_data="psychology_resources"
+                callback_data="psychology_resources",
             )
         ],
 
         [
             InlineKeyboardButton(
                 "🏠 منوی اصلی",
-                callback_data="home"
+                callback_data="home",
             )
         ],
-
     ]
 
     return InlineKeyboardMarkup(keyboard)
@@ -1835,8 +1691,13 @@ def psychology_socialwork_text():
 
 🏛️ اندیشکده مدیریت و بازار
 
-مرکز آموزش مفاهیم روانشناسی،
-مهارت‌های فردی، ارتباطی و مددکاری اجتماعی
+مرکز آموزش مفاهیم:
+
+🧠 روانشناسی
+👤 مهارت‌های فردی
+💬 ارتباطات
+🤝 مددکاری اجتماعی
+👨‍👩‍👧 روابط و خانواده
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -1856,13 +1717,13 @@ def psychology_socialwork_text():
 🎯 سیستم آموزشی:
 
 📖 درسنامه
-+
+⬇️
 📝 تمرین
-+
+⬇️
 🎯 آزمون
-+
+⬇️
 📊 ارزیابی
-+
+⬇️
 🔄 مرور
 
 ━━━━━━━━━━━━━━━━━━
@@ -1883,10 +1744,7 @@ def psychology_socialwork_text():
 
 def psychology_section_menu(section):
 
-    chapter_names = CHAPTERS.get(
-        section,
-        {}
-    )
+    chapter_names = CHAPTERS.get(section, {})
 
     keyboard = []
 
@@ -1897,10 +1755,8 @@ def psychology_section_menu(section):
                 InlineKeyboardButton(
                     f"📘 فصل {chapter}: {name}",
                     callback_data=(
-                        f"psychology_chapter_"
-                        f"{section}_"
-                        f"{chapter}"
-                    )
+                        f"psychology_chapter_{section}_{chapter}"
+                    ),
                 )
             ]
         )
@@ -1912,9 +1768,8 @@ def psychology_section_menu(section):
                 InlineKeyboardButton(
                     "📝 آزمون این بخش",
                     callback_data=(
-                        f"psychology_exam_section_"
-                        f"{section}"
-                    )
+                        f"psychology_exam_section_{section}"
+                    ),
                 )
             ]
         )
@@ -1923,7 +1778,7 @@ def psychology_section_menu(section):
         [
             InlineKeyboardButton(
                 "🧠 روانشناسی و مددکاری",
-                callback_data="psychology_socialwork"
+                callback_data="psychology_socialwork",
             )
         ]
     )
@@ -1932,7 +1787,7 @@ def psychology_section_menu(section):
         [
             InlineKeyboardButton(
                 "🏠 منوی اصلی",
-                callback_data="home"
+                callback_data="home",
             )
         ]
     )
@@ -1948,13 +1803,10 @@ def psychology_section_text(section):
 
     name = SECTION_NAMES.get(
         section,
-        "روانشناسی و مددکاری"
+        "🧠 روانشناسی و مددکاری",
     )
 
-    chapter_names = CHAPTERS.get(
-        section,
-        {}
-    )
+    chapter_names = CHAPTERS.get(section, {})
 
     chapters_text = ""
 
@@ -1974,15 +1826,19 @@ def psychology_section_text(section):
 
 ━━━━━━━━━━━━━━━━━━
 
-🎯 این بخش شامل درسنامه‌های مفهومی،
-تمرین و آزمون است.
+🎯 این بخش شامل:
+
+📖 درسنامه
+📝 تمرین
+🎯 آزمون
+🔄 مرور
 
 👇 فصل موردنظر را انتخاب کنید.
 """
 
 
 # =========================================================
-# بررسی وجود بخش
+# بررسی بخش
 # =========================================================
 
 def psychology_has_section(section):
@@ -1991,13 +1847,10 @@ def psychology_has_section(section):
 
 
 # =========================================================
-# بررسی وجود فصل
+# بررسی فصل
 # =========================================================
 
-def psychology_has_chapter(
-    section,
-    chapter
-):
+def psychology_has_chapter(section, chapter):
 
     return (
         section in CHAPTERS
@@ -2006,36 +1859,27 @@ def psychology_has_chapter(
 
 
 # =========================================================
-# دریافت نام فصل
+# نام فصل
 # =========================================================
 
-def psychology_chapter_name(
-    section,
-    chapter
-):
+def psychology_chapter_name(section, chapter):
 
     return CHAPTERS.get(
         section,
-        {}
+        {},
     ).get(
         chapter,
-        "فصل آموزشی"
+        "فصل آموزشی",
     )
 
 
 # =========================================================
-# دریافت متن فصل
+# متن فصل
 # =========================================================
 
-def psychology_chapter_text(
-    section,
-    chapter
-):
+def psychology_chapter_text(section, chapter):
 
-    if not psychology_has_chapter(
-        section,
-        chapter
-    ):
+    if not psychology_has_chapter(section, chapter):
 
         return """
 ❌ این فصل وجود ندارد.
@@ -2043,10 +1887,8 @@ def psychology_chapter_text(
 
     text = CHAPTER_TEXTS.get(
         section,
-        {}
-    ).get(
-        chapter
-    )
+        {},
+    ).get(chapter)
 
     if not text:
 
@@ -2061,77 +1903,68 @@ def psychology_chapter_text(
 # منوی فصل
 # =========================================================
 
-def psychology_chapter_menu(
-    section,
-    chapter
-):
+def psychology_chapter_menu(section, chapter):
 
     chapter_names = CHAPTERS.get(
         section,
-        {}
+        {},
     )
 
-    keyboard = [
+    keyboard = []
 
+    # -----------------------------------------------------
+    # آزمون فصل
+    # -----------------------------------------------------
+
+    keyboard.append(
         [
             InlineKeyboardButton(
                 f"📝 آزمون فصل {chapter}",
                 callback_data=(
                     f"psychology_exam_chapter_"
-                    f"{section}_"
-                    f"{chapter}"
-                )
+                    f"{section}_{chapter}"
+                ),
             )
         ]
+    )
 
-    ]
+    # -----------------------------------------------------
+    # فصل قبل / بعد
+    # -----------------------------------------------------
+
+    navigation_buttons = []
 
     if chapter > 1:
 
-        keyboard.append(
-            [
-                InlineKeyboardButton(
-                    "⬅️ فصل قبل",
-                    callback_data=(
-                        f"psychology_chapter_"
-                        f"{section}_"
-                        f"{chapter - 1}"
-                    )
+        navigation_buttons.append(
+            InlineKeyboardButton(
+                "⬅️ فصل قبل",
+                callback_data=(
+                    f"psychology_chapter_"
+                    f"{section}_{chapter - 1}"
                 ),
-
-                InlineKeyboardButton(
-                    "فصل بعد ➡️",
-                    callback_data=(
-                        f"psychology_chapter_"
-                        f"{section}_"
-                        f"{chapter + 1}"
-                    )
-                    if chapter < len(chapter_names)
-                    else "psychology_section_"
-                         + section
-                )
-            ]
+            )
         )
 
-    else:
+    if chapter < len(chapter_names):
 
-        keyboard.append(
-            [
-                InlineKeyboardButton(
-                    "فصل بعد ➡️",
-                    callback_data=(
-                        f"psychology_chapter_"
-                        f"{section}_"
-                        f"{chapter + 1}"
-                    )
-                    if chapter < len(chapter_names)
-                    else (
-                        "psychology_section_"
-                        + section
-                    )
-                )
-            ]
+        navigation_buttons.append(
+            InlineKeyboardButton(
+                "فصل بعد ➡️",
+                callback_data=(
+                    f"psychology_chapter_"
+                    f"{section}_{chapter + 1}"
+                ),
+            )
         )
+
+    if navigation_buttons:
+
+        keyboard.append(navigation_buttons)
+
+    # -----------------------------------------------------
+    # فهرست
+    # -----------------------------------------------------
 
     keyboard.append(
         [
@@ -2139,7 +1972,7 @@ def psychology_chapter_menu(
                 "📚 فهرست فصل‌ها",
                 callback_data=(
                     f"psychology_section_{section}"
-                )
+                ),
             )
         ]
     )
@@ -2148,7 +1981,7 @@ def psychology_chapter_menu(
         [
             InlineKeyboardButton(
                 "🧠 روانشناسی و مددکاری",
-                callback_data="psychology_socialwork"
+                callback_data="psychology_socialwork",
             )
         ]
     )
@@ -2157,7 +1990,7 @@ def psychology_chapter_menu(
         [
             InlineKeyboardButton(
                 "🏠 منوی اصلی",
-                callback_data="home"
+                callback_data="home",
             )
         ]
     )
@@ -2166,23 +1999,21 @@ def psychology_chapter_menu(
 
 
 # =========================================================
-# متن معرفی آزمون
+# معرفی آزمون
 # =========================================================
 
-def psychology_exam_intro_text(
-    section=None
-):
+def psychology_exam_intro_text(section=None):
 
     if section:
 
         name = SECTION_NAMES.get(
             section,
-            "روانشناسی"
+            "🧠 روانشناسی",
         )
 
         questions = SECTION_QUESTIONS.get(
             section,
-            []
+            [],
         )
 
         title = f"""
@@ -2197,16 +2028,16 @@ def psychology_exam_intro_text(
 📝 آزمون جامع روانشناسی
 """
 
-        count = len(
-            PSYCHOLOGY_QUESTIONS
-        )
+        count = len(PSYCHOLOGY_QUESTIONS)
 
     return f"""
 {title}
 
 ━━━━━━━━━━━━━━━━━━
 
-🎯 آزمون آموزشی اندیشکده
+🏛️ اندیشکده مدیریت و بازار
+
+🎯 آزمون آموزشی
 
 📝 تعداد سؤالات:
 {count} سؤال
@@ -2237,18 +2068,15 @@ def psychology_exam_intro_text(
 
 
 # =========================================================
-# منوی شروع آزمون
+# منوی آزمون
 # =========================================================
 
-def psychology_exam_menu(
-    section=None
-):
+def psychology_exam_menu(section=None):
 
     if section:
 
         start_callback = (
-            f"psychology_exam_"
-            f"{section}_0_0"
+            f"psychology_exam_{section}_0_0"
         )
 
         back_callback = (
@@ -2270,24 +2098,23 @@ def psychology_exam_menu(
         [
             InlineKeyboardButton(
                 "🚀 شروع آزمون",
-                callback_data=start_callback
+                callback_data=start_callback,
             )
         ],
 
         [
             InlineKeyboardButton(
                 "📚 بازگشت",
-                callback_data=back_callback
+                callback_data=back_callback,
             )
         ],
 
         [
             InlineKeyboardButton(
                 "🏠 منوی اصلی",
-                callback_data="home"
+                callback_data="home",
             )
-        ]
-
+        ],
     ]
 
     return InlineKeyboardMarkup(keyboard)
@@ -2297,15 +2124,13 @@ def psychology_exam_menu(
 # دریافت سوالات آزمون
 # =========================================================
 
-def get_exam_questions(
-    section=None
-):
+def get_exam_questions(section=None):
 
     if section:
 
         return SECTION_QUESTIONS.get(
             section,
-            []
+            [],
         )
 
     return PSYCHOLOGY_QUESTIONS
@@ -2318,14 +2143,12 @@ def get_exam_questions(
 def psychology_question_data(
     section,
     index,
-    score
+    score,
 ):
 
-    questions = get_exam_questions(
-        section
-    )
+    questions = get_exam_questions(section)
 
-    if index >= len(questions):
+    if index < 0 or index >= len(questions):
 
         return None
 
@@ -2365,7 +2188,7 @@ def psychology_question_data(
                         f"{index}_"
                         f"{option_index}_"
                         f"{score}"
-                    )
+                    ),
                 )
             ]
         )
@@ -2374,14 +2197,14 @@ def psychology_question_data(
         [
             InlineKeyboardButton(
                 "🧠 خروج از آزمون",
-                callback_data="psychology_socialwork"
+                callback_data="psychology_socialwork",
             )
         ]
     )
 
     return (
         text,
-        InlineKeyboardMarkup(keyboard)
+        InlineKeyboardMarkup(keyboard),
     )
 
 
@@ -2393,18 +2216,23 @@ def psychology_answer_data(
     section,
     index,
     selected,
-    score
+    score,
 ):
 
-    questions = get_exam_questions(
-        section
-    )
+    questions = get_exam_questions(section)
 
-    if index >= len(questions):
+    if index < 0 or index >= len(questions):
 
         return None
 
     question = questions[index]
+
+    try:
+        selected = int(selected)
+        score = int(score)
+    except (ValueError, TypeError):
+
+        return None
 
     correct = question["correct"]
 
@@ -2426,9 +2254,7 @@ def psychology_answer_data(
 
     else:
 
-        correct_option = (
-            question["options"][correct]
-        )
+        correct_option = question["options"][correct]
 
         result_text = f"""
 ❌ پاسخ صحیح نیست.
@@ -2454,27 +2280,17 @@ def psychology_answer_data(
     if next_index >= len(questions):
 
         return {
-
             "finished": True,
-
             "score": score,
-
             "result_text": result_text,
-
             "next_index": next_index,
-
         }
 
     return {
-
         "finished": False,
-
         "score": score,
-
         "result_text": result_text,
-
         "next_index": next_index,
-
     }
 
 
@@ -2482,14 +2298,9 @@ def psychology_answer_data(
 # نتیجه آزمون
 # =========================================================
 
-def psychology_result_text(
-    section,
-    score
-):
+def psychology_result_text(section, score):
 
-    questions = get_exam_questions(
-        section
-    )
+    questions = get_exam_questions(section)
 
     total = len(questions)
 
@@ -2529,12 +2340,12 @@ def psychology_result_text(
 
         title = SECTION_NAMES.get(
             section,
-            "روانشناسی"
+            "🧠 روانشناسی",
         )
 
     else:
 
-        title = "آزمون جامع روانشناسی"
+        title = "📝 آزمون جامع روانشناسی"
 
     return f"""
 🏁 آزمون به پایان رسید.
@@ -2587,15 +2398,12 @@ def psychology_result_text(
 # منوی نتیجه
 # =========================================================
 
-def psychology_result_menu(
-    section
-):
+def psychology_result_menu(section=None):
 
     if section:
 
         retry_callback = (
-            f"psychology_exam_"
-            f"{section}_0_0"
+            f"psychology_exam_{section}_0_0"
         )
 
         back_callback = (
@@ -2617,31 +2425,30 @@ def psychology_result_menu(
         [
             InlineKeyboardButton(
                 "🔄 تکرار آزمون",
-                callback_data=retry_callback
+                callback_data=retry_callback,
             )
         ],
 
         [
             InlineKeyboardButton(
                 "📚 بازگشت به آموزش",
-                callback_data=back_callback
+                callback_data=back_callback,
             )
         ],
 
         [
             InlineKeyboardButton(
                 "🧠 روانشناسی و مددکاری",
-                callback_data="psychology_socialwork"
+                callback_data="psychology_socialwork",
             )
         ],
 
         [
             InlineKeyboardButton(
                 "🏠 منوی اصلی",
-                callback_data="home"
+                callback_data="home",
             )
         ],
-
     ]
 
     return InlineKeyboardMarkup(keyboard)
@@ -2708,28 +2515,61 @@ def psychology_resources_text():
 """
 
 
+# =========================================================
+# منوی منابع
+# =========================================================
+
 def psychology_resources_menu():
 
     return InlineKeyboardMarkup(
-
         [
-
             [
                 InlineKeyboardButton(
                     "🧠 روانشناسی و مددکاری",
-                    callback_data="psychology_socialwork"
+                    callback_data="psychology_socialwork",
                 )
             ],
-
             [
                 InlineKeyboardButton(
                     "🏠 منوی اصلی",
-                    callback_data="home"
+                    callback_data="home",
                 )
             ],
-
         ]
+    )
 
+
+# =========================================================
+# توابع کمکی برای bot.py
+# =========================================================
+
+def psychology_get_section(section):
+
+    if not psychology_has_section(section):
+
+        return None
+
+    return {
+        "name": SECTION_NAMES[section],
+        "chapters": CHAPTERS[section],
+        "questions": SECTION_QUESTIONS.get(section, []),
+    }
+
+
+def psychology_get_all_sections():
+
+    return SECTION_NAMES.copy()
+
+
+def psychology_get_chapters(section):
+
+    return CHAPTERS.get(section, {}).copy()
+
+
+def psychology_get_question_count(section=None):
+
+    return len(
+        get_exam_questions(section)
     )
 
 
@@ -2737,11 +2577,9 @@ def psychology_resources_menu():
 # اطلاعات Module
 # =========================================================
 
-MODULE_NAME = (
-    "🧠 روانشناسی و مددکاری اجتماعی"
-)
+MODULE_NAME = "🧠 روانشناسی و مددکاری اجتماعی"
 
-MODULE_VERSION = "1.0.0"
+MODULE_VERSION = "2.0.0"
 
 
 # =========================================================
