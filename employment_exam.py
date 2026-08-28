@@ -1,44 +1,40 @@
 # =========================================================
 # employment_exam.py
-# 📝 سیستم جامع آزمون استخدامی
-# 🏛️ اندیشکده مدیریت و بازار
+# 📝 سیستم آزمون استخدامی
+# اندیشکده مدیریت و بازار
 #
-# نسخه پایدار اتصال به bot.py
-#
-# امکانات:
+# شامل:
 # 🏦 بانک رفاه
 # 🏙️ بانک شهر
-# 🏦 بانک مهر
+# 🟢 بانک مهر
 # 🏛️ بانک‌های دولتی
 #
+# سطوح:
 # 🟢 آسان
 # 🟡 متوسط
 # 🔴 سخت
 #
-# 🎯 آزمون تمرینی
-# 🏆 آزمون شبیه‌سازی‌شده
+# 🎯 آزمون موضوعی
+# 🎲 سوال تصادفی
+# 🧪 شبیه‌سازی آزمون واقعی
 # =========================================================
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
 # =========================================================
-# دسته‌بندی بانک‌ها
+# BANKS
 # =========================================================
 
-BANK_CATEGORIES = {
+BANKS = {
     "refah": "🏦 بانک رفاه",
     "shahr": "🏙️ بانک شهر",
-    "mehr": "🏦 بانک مهر",
+    "mehr": "🟢 بانک مهر",
     "government": "🏛️ بانک‌های دولتی",
 }
 
 
-# =========================================================
-# سطوح دشواری
-# =========================================================
-
-DIFFICULTY_NAMES = {
+DIFFICULTIES = {
     "easy": "🟢 آسان",
     "medium": "🟡 متوسط",
     "hard": "🔴 سخت",
@@ -46,414 +42,504 @@ DIFFICULTY_NAMES = {
 
 
 # =========================================================
-# موضوعات
-# =========================================================
-
-CATEGORY_NAMES = {
-    "banking": "🏦 بانکداری",
-    "economics": "💰 اقتصاد",
-    "management": "📚 مدیریت",
-    "accounting": "🧮 حسابداری",
-    "general": "📖 عمومی",
-    "language": "🇬🇧 زبان انگلیسی",
-    "icdl": "💻 ICDL",
-    "intelligence": "🧠 هوش و استعداد",
-    "law": "⚖️ قوانین",
-}
-
-
-# =========================================================
-# بانک سؤال
-#
-# هر سؤال:
-#
-# bank
-# difficulty
-# category
-# question
-# options
-# correct
+# QUESTION BANK
 # =========================================================
 
 EMPLOYMENT_QUESTIONS = [
 
-    # =====================================================
-    # بانک رفاه
-    # =====================================================
+    # -----------------------------------------------------
+    # بانک رفاه - آسان
+    # -----------------------------------------------------
 
     {
         "bank": "refah",
         "difficulty": "easy",
-        "category": "banking",
-        "question": "کدام گزینه بیشتر با فعالیت اصلی بانک‌ها ارتباط دارد؟",
+        "subject": "banking",
+        "question": "کدام مورد از وظایف اصلی بانک‌ها محسوب می‌شود؟",
         "options": [
             "تولید کالا",
             "واسطه‌گری مالی",
-            "تولید خودرو",
-            "کشاورزی"
+            "تولید مواد اولیه",
+            "تعیین مالیات"
         ],
-        "correct": 1,
+        "correct": 1
     },
 
     {
         "bank": "refah",
-        "difficulty": "medium",
-        "category": "banking",
-        "question": "کدام مورد از وظایف مهم بانک مرکزی است؟",
-        "options": [
-            "تولید کالا",
-            "تنظیم و نظارت بر نظام پولی و بانکی",
-            "فروش کالا",
-            "تولید محصولات صنعتی"
-        ],
-        "correct": 1,
-    },
-
-    {
-        "bank": "refah",
-        "difficulty": "hard",
-        "category": "banking",
-        "question": "ریسک اعتباری در بانکداری به چه معناست؟",
-        "options": [
-            "احتمال نوسان نرخ ارز",
-            "احتمال ناتوانی مشتری در ایفای تعهدات",
-            "احتمال افزایش هزینه کارکنان",
-            "احتمال کاهش قیمت سهام"
-        ],
-        "correct": 1,
-    },
-
-    {
-        "bank": "refah",
-        "difficulty": "medium",
-        "category": "economics",
-        "question": "افزایش نرخ بهره معمولاً چه اثری بر هزینه استقراض دارد؟",
-        "options": [
-            "کاهش می‌دهد",
-            "افزایش می‌دهد",
-            "هیچ اثری ندارد",
-            "همیشه آن را حذف می‌کند"
-        ],
-        "correct": 1,
-    },
-
-    # =====================================================
-    # بانک شهر
-    # =====================================================
-
-    {
-        "bank": "shahr",
         "difficulty": "easy",
-        "category": "banking",
-        "question": "بانک‌ها عمدتاً با کدام مورد سروکار دارند؟",
+        "subject": "banking",
+        "question": "سپرده دیداری معمولاً چه ویژگی‌ای دارد؟",
         "options": [
-            "پول و اعتبار",
-            "کشاورزی",
-            "حمل‌ونقل",
-            "تولید خودرو"
+            "امکان برداشت و استفاده در معاملات",
+            "عدم امکان برداشت",
+            "فقط برای خرید سهام",
+            "فقط برای صادرات"
         ],
-        "correct": 0,
+        "correct": 0
     },
 
     {
-        "bank": "shahr",
-        "difficulty": "medium",
-        "category": "economics",
+        "bank": "refah",
+        "difficulty": "easy",
+        "subject": "economics",
         "question": "تورم به چه معناست؟",
         "options": [
             "کاهش عمومی قیمت‌ها",
             "افزایش مستمر و عمومی سطح قیمت‌ها",
             "افزایش تولید",
-            "کاهش جمعیت"
+            "کاهش نقدینگی"
         ],
-        "correct": 1,
+        "correct": 1
     },
 
     {
-        "bank": "shahr",
-        "difficulty": "hard",
-        "category": "economics",
-        "question": "افزایش شدید نقدینگی بدون رشد متناسب تولید می‌تواند چه اثری داشته باشد؟",
-        "options": [
-            "کاهش قطعی قیمت‌ها",
-            "افزایش فشارهای تورمی",
-            "حذف کامل بیکاری",
-            "افزایش قطعی صادرات"
-        ],
-        "correct": 1,
-    },
-
-    {
-        "bank": "shahr",
-        "difficulty": "medium",
-        "category": "management",
-        "question": "کدام مورد یکی از وظایف اصلی مدیریت است؟",
-        "options": [
-            "برنامه‌ریزی",
-            "حذف سازمان",
-            "کاهش اطلاعات",
-            "عدم تصمیم‌گیری"
-        ],
-        "correct": 0,
-    },
-
-    # =====================================================
-    # بانک مهر
-    # =====================================================
-
-    {
-        "bank": "mehr",
+        "bank": "refah",
         "difficulty": "easy",
-        "category": "banking",
-        "question": "سپرده بانکی چیست؟",
+        "subject": "general",
+        "question": "کدام گزینه جزء مهارت‌های عمومی کار با رایانه است؟",
         "options": [
-            "وجهی که مشتری نزد بانک قرار می‌دهد",
+            "ICDL",
+            "حسابداری صنعتی",
+            "بازاریابی بین‌الملل",
+            "اقتصاد کلان"
+        ],
+        "correct": 0
+    },
+
+    # -----------------------------------------------------
+    # بانک رفاه - متوسط
+    # -----------------------------------------------------
+
+    {
+        "bank": "refah",
+        "difficulty": "medium",
+        "subject": "banking",
+        "question": "کدام گزینه بیشتر با سیاست پولی ارتباط دارد؟",
+        "options": [
             "مالیات",
-            "وام پرداخت‌شده",
-            "هزینه اداری"
+            "مخارج عمرانی دولت",
+            "نرخ بهره و حجم پول",
+            "بودجه عمومی"
         ],
-        "correct": 0,
+        "correct": 2
     },
 
     {
-        "bank": "mehr",
+        "bank": "refah",
         "difficulty": "medium",
-        "category": "banking",
-        "question": "کدام مورد در اعتبارسنجی مشتری اهمیت دارد؟",
+        "subject": "economics",
+        "question": "افزایش نرخ بهره معمولاً چه اثری بر هزینه استقراض دارد؟",
         "options": [
-            "توان بازپرداخت",
-            "نادیده گرفتن سوابق",
-            "عدم بررسی درآمد",
-            "عدم توجه به بدهی‌ها"
+            "کاهش می‌دهد",
+            "افزایش می‌دهد",
+            "بدون اثر است",
+            "آن را حذف می‌کند"
         ],
-        "correct": 0,
+        "correct": 1
     },
 
     {
-        "bank": "mehr",
+        "bank": "refah",
+        "difficulty": "medium",
+        "subject": "banking",
+        "question": "نقدینگی معمولاً شامل چه اجزایی است؟",
+        "options": [
+            "فقط اسکناس",
+            "فقط سکه",
+            "پول و شبه‌پول",
+            "فقط ارز خارجی"
+        ],
+        "correct": 2
+    },
+
+    {
+        "bank": "refah",
+        "difficulty": "medium",
+        "subject": "general",
+        "question": "کدام مورد نمونه‌ای از احراز هویت مشتری است؟",
+        "options": [
+            "بررسی مشخصات هویتی",
+            "افزایش قیمت کالا",
+            "کاهش نرخ ارز",
+            "افزایش تولید"
+        ],
+        "correct": 0
+    },
+
+    # -----------------------------------------------------
+    # بانک رفاه - سخت
+    # -----------------------------------------------------
+
+    {
+        "bank": "refah",
         "difficulty": "hard",
-        "category": "banking",
-        "question": "هدف اصلی مدیریت ریسک در بانک چیست؟",
+        "subject": "banking",
+        "question": "هدف اصلی مقررات مبارزه با پولشویی چیست؟",
         "options": [
-            "حذف تمام فعالیت‌های بانکی",
-            "شناسایی، ارزیابی و کنترل ریسک‌ها",
-            "کاهش تعداد مشتریان",
-            "افزایش هزینه‌ها"
+            "افزایش صادرات",
+            "جلوگیری از ورود وجوه حاصل از فعالیت‌های مجرمانه به چرخه رسمی اقتصاد",
+            "افزایش نرخ بهره",
+            "کاهش مالیات"
         ],
-        "correct": 1,
+        "correct": 1
     },
 
     {
-        "bank": "mehr",
-        "difficulty": "medium",
-        "category": "economics",
-        "question": "کدام گزینه نمونه‌ای از سیاست پولی است؟",
+        "bank": "refah",
+        "difficulty": "hard",
+        "subject": "economics",
+        "question": "در شرایط عادی، سیاست پولی انقباضی با چه هدفی به کار گرفته می‌شود؟",
         "options": [
-            "تغییر نرخ سیاستی",
-            "افزایش بودجه عمرانی دولت",
-            "تغییر مالیات",
-            "افزایش مخارج دولت"
+            "افزایش فشارهای تورمی",
+            "کاهش تقاضای کل و فشارهای تورمی",
+            "افزایش کسری بودجه",
+            "افزایش واردات"
         ],
-        "correct": 0,
+        "correct": 1
     },
 
-    # =====================================================
-    # بانک‌های دولتی
-    # =====================================================
+    # -----------------------------------------------------
+    # بانک شهر
+    # -----------------------------------------------------
 
     {
-        "bank": "government",
+        "bank": "shahr",
         "difficulty": "easy",
-        "category": "economics",
+        "subject": "banking",
+        "question": "بانک چه نقشی در اقتصاد دارد؟",
+        "options": [
+            "واسطه‌گری بین صاحبان منابع و متقاضیان منابع",
+            "تولید خودرو",
+            "تولید مواد غذایی",
+            "تعیین نرخ مالیات"
+        ],
+        "correct": 0
+    },
+
+    {
+        "bank": "shahr",
+        "difficulty": "easy",
+        "subject": "economics",
+        "question": "قانون تقاضا در شرایط برابر چه رابطه‌ای را بیان می‌کند؟",
+        "options": [
+            "افزایش قیمت معمولاً باعث کاهش مقدار تقاضا می‌شود",
+            "افزایش قیمت همیشه تقاضا را دو برابر می‌کند",
+            "قیمت هیچ اثری بر تقاضا ندارد",
+            "افزایش قیمت عرضه را کاهش می‌دهد"
+        ],
+        "correct": 0
+    },
+
+    {
+        "bank": "shahr",
+        "difficulty": "medium",
+        "subject": "banking",
+        "question": "ریسک اعتباری به چه معناست؟",
+        "options": [
+            "احتمال ناتوانی طرف مقابل در ایفای تعهدات",
+            "احتمال افزایش فروش",
+            "احتمال کاهش هزینه اداری",
+            "افزایش سرمایه بانک"
+        ],
+        "correct": 0
+    },
+
+    {
+        "bank": "shahr",
+        "difficulty": "medium",
+        "subject": "economics",
         "question": "تولید ناخالص داخلی چه چیزی را اندازه‌گیری می‌کند؟",
         "options": [
-            "ارزش کالاها و خدمات نهایی تولیدشده",
-            "مقدار پول نقد",
-            "تعداد بانک‌ها",
-            "میزان مالیات"
+            "ارزش کالاها و خدمات نهایی تولیدشده در اقتصاد",
+            "کل دارایی خانوارها",
+            "کل پول نقد مردم",
+            "فقط میزان صادرات"
         ],
-        "correct": 0,
+        "correct": 0
+    },
+
+    {
+        "bank": "shahr",
+        "difficulty": "hard",
+        "subject": "banking",
+        "question": "کدام گزینه نمونه‌ای از ریسک نقدینگی است؟",
+        "options": [
+            "ناتوانی در تأمین تعهدات سررسیدشده",
+            "افزایش بهره‌وری",
+            "افزایش فروش",
+            "کاهش هزینه تبلیغات"
+        ],
+        "correct": 0
+    },
+
+    {
+        "bank": "shahr",
+        "difficulty": "hard",
+        "subject": "economics",
+        "question": "اگر نرخ تورم از نرخ رشد اسمی درآمد بیشتر باشد، قدرت خرید واقعی چه وضعیتی پیدا می‌کند؟",
+        "options": [
+            "افزایش می‌یابد",
+            "کاهش می‌یابد",
+            "حتماً ثابت می‌ماند",
+            "دو برابر می‌شود"
+        ],
+        "correct": 1
+    },
+
+    # -----------------------------------------------------
+    # بانک مهر
+    # -----------------------------------------------------
+
+    {
+        "bank": "mehr",
+        "difficulty": "easy",
+        "subject": "banking",
+        "question": "هدف اصلی واسطه‌گری مالی چیست؟",
+        "options": [
+            "ارتباط میان پس‌اندازکنندگان و متقاضیان منابع",
+            "تولید کالا",
+            "تعیین مالیات",
+            "تعیین قیمت ارز"
+        ],
+        "correct": 0
+    },
+
+    {
+        "bank": "mehr",
+        "difficulty": "easy",
+        "subject": "economics",
+        "question": "کدام گزینه یکی از عوامل مؤثر بر رشد اقتصادی است؟",
+        "options": [
+            "بهره‌وری",
+            "کاهش فناوری",
+            "کاهش سرمایه‌گذاری",
+            "کاهش ظرفیت تولید"
+        ],
+        "correct": 0
+    },
+
+    {
+        "bank": "mehr",
+        "difficulty": "medium",
+        "subject": "banking",
+        "question": "اعتبارسنجی مشتری بیشتر با چه هدفی انجام می‌شود؟",
+        "options": [
+            "بررسی توان و سابقه ایفای تعهدات",
+            "افزایش قیمت کالا",
+            "تعیین مالیات",
+            "افزایش صادرات"
+        ],
+        "correct": 0
+    },
+
+    {
+        "bank": "mehr",
+        "difficulty": "medium",
+        "subject": "general",
+        "question": "کدام گزینه برای ارتباط مؤثر با مشتری اهمیت بیشتری دارد؟",
+        "options": [
+            "گوش دادن فعال",
+            "قطع کردن صحبت مشتری",
+            "بی‌توجهی",
+            "ارائه اطلاعات نادرست"
+        ],
+        "correct": 0
+    },
+
+    {
+        "bank": "mehr",
+        "difficulty": "hard",
+        "subject": "banking",
+        "question": "تنوع‌بخشی در مدیریت ریسک معمولاً با چه هدفی انجام می‌شود؟",
+        "options": [
+            "کاهش تمرکز ریسک",
+            "افزایش تمرکز ریسک",
+            "افزایش قطعی سود",
+            "حذف کامل ریسک"
+        ],
+        "correct": 0
+    },
+
+    # -----------------------------------------------------
+    # بانک‌های دولتی
+    # -----------------------------------------------------
+
+    {
+        "bank": "government",
+        "difficulty": "easy",
+        "subject": "banking",
+        "question": "بانک مرکزی معمولاً چه نقشی دارد؟",
+        "options": [
+            "سیاست‌گذاری پولی و نظارت بر نظام پولی",
+            "تولید کالا",
+            "فروشگاه‌داری",
+            "تولید خودرو"
+        ],
+        "correct": 0
+    },
+
+    {
+        "bank": "government",
+        "difficulty": "easy",
+        "subject": "economics",
+        "question": "بیکاری به طور کلی به چه وضعیتی اشاره دارد؟",
+        "options": [
+            "فرد آماده و مایل به کار است ولی شغل ندارد",
+            "فرد دارای شغل است",
+            "فرد بازنشسته است",
+            "فرد دانش‌آموز است"
+        ],
+        "correct": 0
     },
 
     {
         "bank": "government",
         "difficulty": "medium",
-        "category": "economics",
-        "question": "کدام مورد ابزار سیاست مالی محسوب می‌شود؟",
+        "subject": "banking",
+        "question": "عملیات بازار باز بیشتر در حوزه کدام سیاست قرار می‌گیرد؟",
+        "options": [
+            "سیاست پولی",
+            "سیاست مالی",
+            "سیاست تجاری",
+            "سیاست صنعتی"
+        ],
+        "correct": 0
+    },
+
+    {
+        "bank": "government",
+        "difficulty": "medium",
+        "subject": "economics",
+        "question": "کدام مورد ابزار سیاست مالی است؟",
         "options": [
             "مالیات",
             "عملیات بازار باز",
-            "نرخ سیاستی",
-            "ذخایر بانکی"
+            "ذخایر بانکی",
+            "نرخ سیاستی بانک مرکزی"
         ],
-        "correct": 0,
+        "correct": 0
     },
 
     {
         "bank": "government",
         "difficulty": "hard",
-        "category": "economics",
-        "question": "سیاست پولی انقباضی معمولاً با چه هدفی اجرا می‌شود؟",
+        "subject": "banking",
+        "question": "کدام مورد می‌تواند از پیامدهای ضعف مدیریت نقدینگی بانک باشد؟",
         "options": [
-            "افزایش فشار تورمی",
-            "کاهش فشارهای تورمی",
-            "افزایش قطعی مصرف",
-            "افزایش مخارج دولت"
+            "مشکل در ایفای تعهدات کوتاه‌مدت",
+            "افزایش قطعی سود",
+            "کاهش ریسک",
+            "افزایش خودکار سرمایه"
         ],
-        "correct": 1,
+        "correct": 0
     },
 
-    # =====================================================
-    # عمومی
-    # =====================================================
+    {
+        "bank": "government",
+        "difficulty": "hard",
+        "subject": "economics",
+        "question": "سیاست مالی انبساطی معمولاً شامل کدام اقدام است؟",
+        "options": [
+            "افزایش مخارج دولت یا کاهش مالیات",
+            "کاهش مخارج دولت و افزایش مالیات",
+            "افزایش نرخ بهره",
+            "کاهش نقدینگی توسط بانک مرکزی"
+        ],
+        "correct": 0
+    },
+
+    # -----------------------------------------------------
+    # عمومی مشترک
+    # -----------------------------------------------------
 
     {
         "bank": "government",
         "difficulty": "easy",
-        "category": "general",
-        "question": "کدام گزینه یک سیستم‌عامل است؟",
+        "subject": "general",
+        "question": "کدام گزینه یک موتور جست‌وجوی اینترنتی است؟",
         "options": [
-            "Windows",
+            "Google",
             "Excel",
-            "Word",
+            "Windows",
             "PowerPoint"
         ],
-        "correct": 0,
+        "correct": 0
     },
 
     {
         "bank": "government",
         "difficulty": "medium",
-        "category": "icdl",
-        "question": "کدام نرم‌افزار برای کار با جداول و محاسبات مناسب‌تر است؟",
+        "subject": "general",
+        "question": "در Excel تابع SUM معمولاً برای چه کاری استفاده می‌شود؟",
         "options": [
-            "Excel",
-            "Paint",
-            "Notepad",
-            "Browser"
+            "جمع کردن مقادیر",
+            "حذف فایل",
+            "ارسال ایمیل",
+            "ایجاد تصویر"
         ],
-        "correct": 0,
-    },
-
-    {
-        "bank": "government",
-        "difficulty": "easy",
-        "category": "language",
-        "question": "معنی کلمه Bank در زمینه مالی چیست؟",
-        "options": [
-            "بازار",
-            "بانک",
-            "فروشگاه",
-            "شرکت"
-        ],
-        "correct": 1,
-    },
-
-    {
-        "bank": "government",
-        "difficulty": "medium",
-        "category": "intelligence",
-        "question": "اگر عدد 2 برابر شود و سپس 3 واحد به آن اضافه شود، حاصل برای عدد 5 چیست؟",
-        "options": [
-            "10",
-            "11",
-            "13",
-            "15"
-        ],
-        "correct": 1,
-    },
-
-    # =====================================================
-    # حسابداری
-    # =====================================================
-
-    {
-        "bank": "government",
-        "difficulty": "easy",
-        "category": "accounting",
-        "question": "کدام گزینه در معادله حسابداری قرار دارد؟",
-        "options": [
-            "دارایی",
-            "فقط فروش",
-            "فقط هزینه",
-            "فقط مالیات"
-        ],
-        "correct": 0,
-    },
-
-    {
-        "bank": "government",
-        "difficulty": "medium",
-        "category": "accounting",
-        "question": "معادله اساسی حسابداری کدام است؟",
-        "options": [
-            "دارایی = بدهی + سرمایه",
-            "دارایی = فروش + هزینه",
-            "سرمایه = فروش - دارایی",
-            "بدهی = دارایی + سرمایه"
-        ],
-        "correct": 0,
-    },
-
-    # =====================================================
-    # مدیریت
-    # =====================================================
-
-    {
-        "bank": "government",
-        "difficulty": "easy",
-        "category": "management",
-        "question": "کدام مورد یکی از وظایف اصلی مدیریت است؟",
-        "options": [
-            "برنامه‌ریزی",
-            "حذف کارکنان",
-            "حذف اهداف",
-            "عدم کنترل"
-        ],
-        "correct": 0,
+        "correct": 0
     },
 
     {
         "bank": "government",
         "difficulty": "hard",
-        "category": "management",
-        "question": "کنترل در مدیریت عمدتاً با چه هدفی انجام می‌شود؟",
+        "subject": "general",
+        "question": "کدام گزینه برای امنیت حساب کاربری مناسب‌تر است؟",
         "options": [
-            "مقایسه عملکرد با اهداف و اصلاح انحرافات",
-            "حذف برنامه‌ریزی",
-            "افزایش بی‌هدف هزینه‌ها",
-            "کاهش اطلاعات"
+            "استفاده از رمز عبور قوی و احراز هویت چندمرحله‌ای",
+            "استفاده از یک رمز ساده برای همه حساب‌ها",
+            "ارسال رمز برای دیگران",
+            "ذخیره رمز در پیام عمومی"
         ],
-        "correct": 0,
+        "correct": 0
     },
-
 ]
 
 
 # =========================================================
-# وضعیت آزمون کاربر
+# TEXT
 # =========================================================
 
-def _get_exam_state(context):
+def employment_exam_text():
 
-    if not hasattr(context, "user_data"):
-        return {}
+    return """
+📝 آزمون استخدامی
 
-    if "employment_exam" not in context.user_data:
+━━━━━━━━━━━━━━━━━━
 
-        context.user_data["employment_exam"] = {
-            "questions": [],
-            "index": 0,
-            "score": 0,
-            "answered": False,
-            "simulation": False,
-        }
+🏛️ اندیشکده مدیریت و بازار
 
-    return context.user_data["employment_exam"]
+بانک سؤال تخصصی آزمون‌های استخدامی
+
+━━━━━━━━━━━━━━━━━━
+
+🏦 بانک رفاه
+🏙️ بانک شهر
+🟢 بانک مهر
+🏛️ بانک‌های دولتی
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 امکانات:
+
+🟢 سطح آسان
+🟡 سطح متوسط
+🔴 سطح سخت
+
+🎲 سوالات تصادفی
+
+🧪 شبیه‌سازی آزمون واقعی
+
+━━━━━━━━━━━━━━━━━━
+
+با مطالعه، تمرین و تحلیل اشتباهات
+آمادگی خود را مرحله‌به‌مرحله افزایش دهید.
+"""
 
 
 # =========================================================
-# منوی اصلی آزمون
+# MAIN MENU
 # =========================================================
 
 def employment_exam_menu():
@@ -463,49 +549,59 @@ def employment_exam_menu():
         [
             InlineKeyboardButton(
                 "🏦 بانک رفاه",
-                callback_data="employment_category_refah"
-            ),
-            InlineKeyboardButton(
-                "🏙️ بانک شهر",
-                callback_data="employment_category_shahr"
-            ),
-        ],
-
-        [
-            InlineKeyboardButton(
-                "🏦 بانک مهر",
-                callback_data="employment_category_mehr"
-            ),
-            InlineKeyboardButton(
-                "🏛️ بانک‌های دولتی",
-                callback_data="employment_category_government"
-            ),
-        ],
-
-        [
-            InlineKeyboardButton(
-                "🟢 سطح آسان",
-                callback_data="employment_difficulty_easy"
+                callback_data="employment_bank_refah"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "🟡 سطح متوسط",
+                "🏙️ بانک شهر",
+                callback_data="employment_bank_shahr"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🟢 بانک مهر",
+                callback_data="employment_bank_mehr"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏛️ بانک‌های دولتی",
+                callback_data="employment_bank_government"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🟢 آسان",
+                callback_data="employment_difficulty_easy"
+            ),
+            InlineKeyboardButton(
+                "🟡 متوسط",
                 callback_data="employment_difficulty_medium"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "🔴 سطح سخت",
+                "🔴 سخت",
                 callback_data="employment_difficulty_hard"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "🏆 آزمون شبیه‌سازی‌شده",
+                "🎲 سوالات تصادفی",
+                callback_data="employment_random"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🧪 شبیه‌سازی آزمون واقعی",
                 callback_data="employment_simulation"
             )
         ],
@@ -516,73 +612,16 @@ def employment_exam_menu():
                 callback_data="home"
             )
         ],
-
     ]
 
     return InlineKeyboardMarkup(keyboard)
 
 
 # =========================================================
-# متن اصلی
+# CALLBACK MAIN
 # =========================================================
 
-def employment_exam_text():
-
-    return f"""
-📝 آزمون استخدامی
-
-🏛️ اندیشکده مدیریت و بازار
-
-━━━━━━━━━━━━━━━━━━
-
-🎯 بانک جامع سؤال استخدامی
-
-🏦 بانک رفاه
-🏙️ بانک شهر
-🏦 بانک مهر
-🏛️ بانک‌های دولتی
-
-━━━━━━━━━━━━━━━━━━
-
-📊 سطح‌بندی:
-
-🟢 آسان
-🟡 متوسط
-🔴 سخت
-
-━━━━━━━━━━━━━━━━━━
-
-📚 موضوعات:
-
-🏦 بانکداری
-💰 اقتصاد
-📚 مدیریت
-🧮 حسابداری
-💻 ICDL
-🧠 هوش
-🇬🇧 زبان
-📖 عمومی
-
-━━━━━━━━━━━━━━━━━━
-
-📊 تعداد سؤال فعلی:
-{len(EMPLOYMENT_QUESTIONS)}
-
-━━━━━━━━━━━━━━━━━━
-
-🏆 آزمون شبیه‌سازی‌شده نیز
-در دسترس است.
-"""
-
-
-# =========================================================
-# CALLBACK اصلی
-# =========================================================
-
-async def employment_exam_callback(
-    update,
-    context
-):
+async def employment_exam_callback(update, context):
 
     query = update.callback_query
 
@@ -595,98 +634,123 @@ async def employment_exam_callback(
 
 
 # =========================================================
-# CALLBACK دسته‌بندی
-#
-# این همان تابعی است که bot.py فعلی
-# به دنبال آن می‌گردد.
+# FILTER
 # =========================================================
 
-async def employment_exam_category_callback(
-    update,
-    context
-):
+def get_questions(bank=None, difficulty=None):
+
+    questions = EMPLOYMENT_QUESTIONS.copy()
+
+    if bank:
+        questions = [
+            q for q in questions
+            if q["bank"] == bank
+        ]
+
+    if difficulty:
+        questions = [
+            q for q in questions
+            if q["difficulty"] == difficulty
+        ]
+
+    return questions
+
+
+# =========================================================
+# BANK MENU CALLBACK
+# =========================================================
+
+async def employment_bank_callback(update, context):
 
     query = update.callback_query
 
     await query.answer()
 
-    category = query.data.replace(
-        "employment_category_",
+    bank = query.data.replace(
+        "employment_bank_",
         ""
     )
 
-    if category not in BANK_CATEGORIES:
+    if bank not in BANKS:
 
         await query.edit_message_text(
-            "❌ دسته‌بندی انتخاب‌شده معتبر نیست.",
+            "❌ بانک موردنظر پیدا نشد.",
             reply_markup=employment_exam_menu()
         )
 
         return
 
-    questions = [
-        q
-        for q in EMPLOYMENT_QUESTIONS
-        if q["bank"] == category
+    questions = get_questions(
+        bank=bank
+    )
+
+    text = f"""
+{BANKS[bank]}
+
+━━━━━━━━━━━━━━━━━━
+
+📝 تعداد سوالات موجود:
+{len(questions)}
+
+🎯 سطح آزمون را انتخاب کنید:
+
+🟢 آسان
+🟡 متوسط
+🔴 سخت
+
+━━━━━━━━━━━━━━━━━━
+"""
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🟢 آسان",
+                callback_data=f"employment_start_bank_{bank}_easy"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🟡 متوسط",
+                callback_data=f"employment_start_bank_{bank}_medium"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🔴 سخت",
+                callback_data=f"employment_start_bank_{bank}_hard"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🎯 همه سطوح",
+                callback_data=f"employment_start_bank_{bank}_all"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "⬅️ بازگشت",
+                callback_data="employment_exam"
+            )
+        ],
+
     ]
 
-    bank_name = BANK_CATEGORIES[category]
-
-    if not questions:
-
-        await query.edit_message_text(
-            f"""
-❌ برای {bank_name}
-هنوز سؤال ثبت نشده است.
-""",
-            reply_markup=employment_exam_menu()
-        )
-
-        return
-
-    # -----------------------------------------------------
-    # ذخیره آزمون
-    # -----------------------------------------------------
-
-    context.user_data["employment_exam"] = {
-        "questions": questions,
-        "index": 0,
-        "score": 0,
-        "answered": False,
-        "simulation": False,
-    }
-
-    await show_question(
-        query,
-        context
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
 # =========================================================
-# انتخاب بانک
-#
-# نام جایگزین برای سازگاری بیشتر
+# DIFFICULTY CALLBACK
 # =========================================================
 
-async def employment_bank_callback(
-    update,
-    context
-):
-
-    return await employment_exam_category_callback(
-        update,
-        context
-    )
-
-
-# =========================================================
-# انتخاب سطح
-# =========================================================
-
-async def employment_difficulty_callback(
-    update,
-    context
-):
+async def employment_difficulty_callback(update, context):
 
     query = update.callback_query
 
@@ -697,135 +761,274 @@ async def employment_difficulty_callback(
         ""
     )
 
-    if difficulty not in DIFFICULTY_NAMES:
+    if difficulty not in DIFFICULTIES:
 
         await query.edit_message_text(
-            "❌ سطح انتخاب‌شده معتبر نیست.",
+            "❌ سطح نامعتبر است.",
             reply_markup=employment_exam_menu()
         )
 
         return
 
-    questions = [
-        q
-        for q in EMPLOYMENT_QUESTIONS
-        if q["difficulty"] == difficulty
+    questions = get_questions(
+        difficulty=difficulty
+    )
+
+    text = f"""
+{DIFFICULTIES[difficulty]}
+
+━━━━━━━━━━━━━━━━━━
+
+📝 تعداد سوالات:
+{len(questions)}
+
+🎯 بانک‌های مختلف در این آزمون
+بر اساس سطح انتخاب‌شده ترکیب شده‌اند.
+
+━━━━━━━━━━━━━━━━━━
+"""
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🚀 شروع آزمون",
+                callback_data=f"employment_start_difficulty_{difficulty}"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "⬅️ بازگشت",
+                callback_data="employment_exam"
+            )
+        ],
+
     ]
 
-    if not questions:
-
-        await query.edit_message_text(
-            "❌ برای این سطح سؤال ثبت نشده است.",
-            reply_markup=employment_exam_menu()
-        )
-
-        return
-
-    context.user_data["employment_exam"] = {
-        "questions": questions,
-        "index": 0,
-        "score": 0,
-        "answered": False,
-        "simulation": False,
-    }
-
-    await show_question(
-        query,
-        context
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
 # =========================================================
-# آزمون شبیه‌سازی‌شده
+# START FILTERED EXAM
 # =========================================================
 
-async def employment_simulation_callback(
-    update,
-    context
-):
+async def employment_start_callback(update, context):
 
     query = update.callback_query
 
     await query.answer()
 
-    questions = list(
-        EMPLOYMENT_QUESTIONS
-    )
+    data = query.data.split("_")
 
-    if not questions:
+    # employment_start_bank_bankname_difficulty
+    if len(data) >= 5 and data[2] == "bank":
+
+        bank = data[3]
+        difficulty = data[4]
+
+        if difficulty == "all":
+            questions = get_questions(bank=bank)
+        else:
+            questions = get_questions(
+                bank=bank,
+                difficulty=difficulty
+            )
+
+    # employment_start_difficulty_difficulty
+    elif len(data) >= 4 and data[2] == "difficulty":
+
+        difficulty = data[3]
+
+        questions = get_questions(
+            difficulty=difficulty
+        )
+
+    else:
 
         await query.edit_message_text(
-            "❌ بانک سؤال خالی است.",
+            "❌ اطلاعات آزمون نامعتبر است.",
             reply_markup=employment_exam_menu()
         )
 
         return
 
-    context.user_data["employment_exam"] = {
-        "questions": questions,
-        "index": 0,
-        "score": 0,
-        "answered": False,
-        "simulation": True,
-    }
+    if not questions:
+
+        await query.edit_message_text(
+            "❌ در این بخش هنوز سؤال کافی ثبت نشده است.",
+            reply_markup=employment_exam_menu()
+        )
+
+        return
+
+    context.user_data["employment_questions"] = questions
 
     await show_question(
         query,
-        context
+        questions,
+        0,
+        0
     )
 
 
 # =========================================================
-# نمایش سؤال
+# RANDOM
+# =========================================================
+
+async def employment_random_callback(update, context):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    import random
+
+    questions = EMPLOYMENT_QUESTIONS.copy()
+
+    random.shuffle(questions)
+
+    questions = questions[:10]
+
+    context.user_data["employment_questions"] = questions
+
+    await show_question(
+        query,
+        questions,
+        0,
+        0
+    )
+
+
+# =========================================================
+# SIMULATION
+# =========================================================
+
+async def employment_simulation_callback(update, context):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    import random
+
+    questions = EMPLOYMENT_QUESTIONS.copy()
+
+    random.shuffle(questions)
+
+    questions = questions[:20]
+
+    context.user_data["employment_questions"] = questions
+
+    text = """
+🧪 شبیه‌سازی آزمون استخدامی
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 آزمون ترکیبی
+
+📝 تعداد سؤالات:
+20 سؤال
+
+⏱️ فعلاً بدون محدودیت زمانی
+
+🏦 شامل:
+بانکداری
+اقتصاد
+مهارت‌های عمومی
+
+━━━━━━━━━━━━━━━━━━
+
+سؤالات به صورت ترکیبی انتخاب شده‌اند.
+
+👇 آزمون را شروع کنید:
+"""
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🚀 شروع شبیه‌سازی",
+                callback_data="employment_simulation_start"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "⬅️ بازگشت",
+                callback_data="employment_exam"
+            )
+        ],
+
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def employment_simulation_start_callback(update, context):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    questions = context.user_data.get(
+        "employment_questions",
+        []
+    )
+
+    if not questions:
+
+        await query.edit_message_text(
+            "❌ آزمون شبیه‌سازی پیدا نشد.",
+            reply_markup=employment_exam_menu()
+        )
+
+        return
+
+    await show_question(
+        query,
+        questions,
+        0,
+        0
+    )
+
+
+# =========================================================
+# SHOW QUESTION
 # =========================================================
 
 async def show_question(
     query,
-    context
+    questions,
+    index,
+    score
 ):
-
-    state = _get_exam_state(
-        context
-    )
-
-    questions = state.get(
-        "questions",
-        []
-    )
-
-    index = state.get(
-        "index",
-        0
-    )
-
-    score = state.get(
-        "score",
-        0
-    )
 
     if index >= len(questions):
 
         await show_result(
             query,
-            context
+            questions,
+            score
         )
 
         return
 
     question = questions[index]
 
-    bank_name = BANK_CATEGORIES.get(
+    bank_name = BANKS.get(
         question["bank"],
         "آزمون استخدامی"
     )
 
-    difficulty = DIFFICULTY_NAMES.get(
+    difficulty_name = DIFFICULTIES.get(
         question["difficulty"],
-        ""
-    )
-
-    category = CATEGORY_NAMES.get(
-        question["category"],
         ""
     )
 
@@ -834,15 +1037,13 @@ async def show_question(
 
 ━━━━━━━━━━━━━━━━━━
 
-🏦 {bank_name}
+{bank_name}
 
-📚 موضوع: {category}
-
-📊 سطح: {difficulty}
+{difficulty_name}
 
 ❓ سؤال {index + 1} از {len(questions)}
 
-⭐ امتیاز: {score}
+⭐ امتیاز فعلی: {score}
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -850,7 +1051,7 @@ async def show_question(
 
 ━━━━━━━━━━━━━━━━━━
 
-👇 گزینه صحیح را انتخاب کنید:
+👇 گزینه موردنظر را انتخاب کنید:
 """
 
     keyboard = []
@@ -866,7 +1067,8 @@ async def show_question(
                     callback_data=(
                         f"employment_answer_"
                         f"{index}_"
-                        f"{option_index}"
+                        f"{option_index}_"
+                        f"{score}"
                     )
                 )
             ]
@@ -883,20 +1085,15 @@ async def show_question(
 
     await query.edit_message_text(
         text,
-        reply_markup=InlineKeyboardMarkup(
-            keyboard
-        )
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
 # =========================================================
-# پاسخ سؤال
+# ANSWER
 # =========================================================
 
-async def employment_answer_callback(
-    update,
-    context
-):
+async def employment_answer_callback(update, context):
 
     query = update.callback_query
 
@@ -908,6 +1105,7 @@ async def employment_answer_callback(
 
         index = int(data[2])
         selected = int(data[3])
+        score = int(data[4])
 
     except (
         IndexError,
@@ -921,20 +1119,26 @@ async def employment_answer_callback(
 
         return
 
-    state = _get_exam_state(
-        context
-    )
-
-    questions = state.get(
-        "questions",
+    questions = context.user_data.get(
+        "employment_questions",
         []
     )
+
+    if not questions:
+
+        await query.edit_message_text(
+            "❌ آزمون منقضی شده است.",
+            reply_markup=employment_exam_menu()
+        )
+
+        return
 
     if index >= len(questions):
 
         await show_result(
             query,
-            context
+            questions,
+            score
         )
 
         return
@@ -945,7 +1149,7 @@ async def employment_answer_callback(
 
     if selected == correct:
 
-        state["score"] += 1
+        score += 1
 
         result_text = """
 ✅ پاسخ صحیح است.
@@ -967,102 +1171,108 @@ async def employment_answer_callback(
 ✅ پاسخ صحیح:
 
 {correct_option}
-
-━━━━━━━━━━━━━━━━━━
-
-📚 پاسخ درست را یاد بگیرید.
 """
 
-    state["index"] = index + 1
+    next_index = index + 1
 
-    score = state["score"]
-
-    if state["index"] < len(questions):
-
-        keyboard = [
-
-            [
-                InlineKeyboardButton(
-                    "➡️ سؤال بعدی",
-                    callback_data="employment_next"
-                )
-            ],
-
-            [
-                InlineKeyboardButton(
-                    "❌ خروج از آزمون",
-                    callback_data="employment_exam"
-                )
-            ],
-
-        ]
-
-        await query.edit_message_text(
-            result_text +
-            f"\n\n⭐ امتیاز فعلی: {score}",
-            reply_markup=InlineKeyboardMarkup(
-                keyboard
-            )
-        )
-
-    else:
+    if next_index >= len(questions):
 
         await show_result(
             query,
-            context
+            questions,
+            score,
+            prefix=result_text
         )
 
+        return
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "➡️ سؤال بعدی",
+                callback_data=(
+                    f"employment_next_"
+                    f"{next_index}_"
+                    f"{score}"
+                )
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "❌ خروج از آزمون",
+                callback_data="employment_exam"
+            )
+        ],
+
+    ]
+
+    await query.edit_message_text(
+        result_text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
 
 # =========================================================
-# سؤال بعدی
+# NEXT
 # =========================================================
 
-async def employment_next_callback(
-    update,
-    context
-):
+async def employment_next_callback(update, context):
 
     query = update.callback_query
 
     await query.answer()
 
+    try:
+
+        data = query.data.split("_")
+
+        index = int(data[2])
+        score = int(data[3])
+
+    except (
+        IndexError,
+        ValueError
+    ):
+
+        await query.edit_message_text(
+            "⚠️ خطا در اطلاعات آزمون.",
+            reply_markup=employment_exam_menu()
+        )
+
+        return
+
+    questions = context.user_data.get(
+        "employment_questions",
+        []
+    )
+
     await show_question(
         query,
-        context
+        questions,
+        index,
+        score
     )
 
 
 # =========================================================
-# نتیجه آزمون
+# RESULT
 # =========================================================
 
 async def show_result(
     query,
-    context
+    questions,
+    score,
+    prefix=""
 ):
 
-    state = _get_exam_state(
-        context
-    )
-
-    questions = state.get(
-        "questions",
-        []
-    )
-
-    score = state.get(
-        "score",
-        0
-    )
-
-    total = len(
-        questions
-    )
+    total = len(questions)
 
     if total == 0:
 
         await query.edit_message_text(
-            "❌ آزمونی انجام نشده است.",
+            "❌ آزمون بدون سؤال است.",
             reply_markup=employment_exam_menu()
         )
 
@@ -1075,26 +1285,23 @@ async def show_result(
     )
 
     if percentage >= 90:
-
         evaluation = "🏆 فوق‌العاده"
 
     elif percentage >= 80:
-
         evaluation = "🥇 عالی"
 
     elif percentage >= 70:
-
         evaluation = "🥈 خوب"
 
     elif percentage >= 50:
-
         evaluation = "🟡 متوسط"
 
     else:
-
         evaluation = "📚 نیازمند مطالعه بیشتر"
 
     text = f"""
+{prefix}
+
 🏁 آزمون استخدامی به پایان رسید.
 
 ━━━━━━━━━━━━━━━━━━
@@ -1115,21 +1322,15 @@ async def show_result(
 
 ━━━━━━━━━━━━━━━━━━
 
-🎯 مسیر پیشنهادی:
+🎯 پیشنهاد:
 
-📖 مطالعه
+📖 مطالعه مباحث
 +
-📝 تست
+📝 تمرین بیشتر
 +
-🔍 تحلیل اشتباهات
+🔍 بررسی اشتباهات
 +
-🔄 مرور
-+
-🏆 آزمون شبیه‌سازی
-
-━━━━━━━━━━━━━━━━━━
-
-🏛️ اندیشکده مدیریت و بازار
+🔄 تکرار آزمون
 """
 
     keyboard = [
@@ -1143,7 +1344,14 @@ async def show_result(
 
         [
             InlineKeyboardButton(
-                "🏆 آزمون شبیه‌سازی",
+                "🎲 سوالات تصادفی",
+                callback_data="employment_random"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🧪 شبیه‌سازی",
                 callback_data="employment_simulation"
             )
         ],
@@ -1159,62 +1367,5 @@ async def show_result(
 
     await query.edit_message_text(
         text,
-        reply_markup=InlineKeyboardMarkup(
-            keyboard
-        )
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
-
-
-# =========================================================
-# توابع آماری
-# =========================================================
-
-def get_question_count():
-
-    return len(
-        EMPLOYMENT_QUESTIONS
-    )
-
-
-def get_bank_question_count(
-    bank
-):
-
-    return len(
-        [
-            q
-            for q in EMPLOYMENT_QUESTIONS
-            if q["bank"] == bank
-        ]
-    )
-
-
-def get_difficulty_question_count(
-    difficulty
-):
-
-    return len(
-        [
-            q
-            for q in EMPLOYMENT_QUESTIONS
-            if q["difficulty"] == difficulty
-        ]
-    )
-
-
-def get_category_question_count(
-    category
-):
-
-    return len(
-        [
-            q
-            for q in EMPLOYMENT_QUESTIONS
-            if q["category"] == category
-        ]
-    )
-
-
-# =========================================================
-# پایان employment_exam.py
-# =========================================================
