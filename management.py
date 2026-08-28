@@ -6,7 +6,6 @@
 # ماژول مستقل آموزش مدیریت
 # =========================================================
 
-
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -20,27 +19,16 @@ from telegram import (
 MANAGEMENT_CHAPTER_NAMES = {
 
     1: "مبانی و مفاهیم مدیریت",
-
     2: "نظریه‌های مدیریت",
-
     3: "برنامه‌ریزی و تصمیم‌گیری",
-
     4: "سازماندهی و طراحی سازمان",
-
     5: "مدیریت منابع انسانی",
-
     6: "رهبری و رفتار سازمانی",
-
     7: "انگیزش و رضایت شغلی",
-
     8: "ارتباطات سازمانی",
-
     9: "کنترل و ارزیابی عملکرد",
-
     10: "مدیریت استراتژیک",
-
     11: "مدیریت بازاریابی",
-
     12: "مدیریت مالی",
 
 }
@@ -327,7 +315,6 @@ MANAGEMENT_LESSONS = {
 """,
     },
 
-
     2: {
         0: """
 📘 مدیریت علمی
@@ -457,7 +444,6 @@ MANAGEMENT_LESSONS = {
 """,
     },
 
-
     3: {
         0: """
 📘 برنامه‌ریزی
@@ -562,7 +548,6 @@ MANAGEMENT_LESSONS = {
 """,
     },
 
-
     4: {
         0: """
 📘 سازماندهی
@@ -643,7 +628,6 @@ MANAGEMENT_LESSONS = {
 سازمان هماهنگ باشد.
 """,
     },
-
 
     5: {
         0: """
@@ -729,7 +713,6 @@ MANAGEMENT_LESSONS = {
 را افزایش دهد.
 """,
     },
-
 
     6: {
         0: """
@@ -826,7 +809,6 @@ MANAGEMENT_LESSONS = {
 """,
     },
 
-
     7: {
         0: """
 📘 مفهوم انگیزش
@@ -912,7 +894,6 @@ MANAGEMENT_LESSONS = {
 در سازمان همراه است.
 """,
     },
-
 
     8: {
         0: """
@@ -1003,7 +984,6 @@ MANAGEMENT_LESSONS = {
 """,
     },
 
-
     9: {
         0: """
 📘 مفهوم کنترل
@@ -1084,7 +1064,6 @@ MANAGEMENT_LESSONS = {
 """,
     },
 
-
     10: {
         0: """
 📘 مفهوم استراتژی
@@ -1164,7 +1143,6 @@ T = تهدیدها
 است.
 """,
     },
-
 
     11: {
         0: """
@@ -1250,7 +1228,6 @@ Promotion
 ایجاد تفاوت معنادار نسبت به رقبا.
 """,
     },
-
 
     12: {
         0: """
@@ -1384,7 +1361,6 @@ MANAGEMENT_QUESTIONS = {
         },
     ],
 
-
     2: [
         {
             "question": "پدر مدیریت علمی چه کسی است؟",
@@ -1423,7 +1399,6 @@ MANAGEMENT_QUESTIONS = {
         },
     ],
 
-
     3: [
         {
             "question": "اولین مرحله فرآیند تصمیم‌گیری چیست؟",
@@ -1449,7 +1424,6 @@ MANAGEMENT_QUESTIONS = {
             "explanation": "هدف مناسب باید مشخص و تا حد امکان قابل اندازه‌گیری باشد.",
         },
     ],
-
 
     4: [
         {
@@ -1477,7 +1451,6 @@ MANAGEMENT_QUESTIONS = {
         },
     ],
 
-
     5: [
         {
             "question": "تجزیه و تحلیل شغل چه چیزی را مشخص می‌کند؟",
@@ -1503,7 +1476,6 @@ MANAGEMENT_QUESTIONS = {
             "explanation": "ارزیابی عملکرد می‌تواند نیازهای آموزشی کارکنان را مشخص کند.",
         },
     ],
-
 
     6: [
         {
@@ -1531,7 +1503,6 @@ MANAGEMENT_QUESTIONS = {
         },
     ],
 
-
     7: [
         {
             "question": "کدام نظریه نیازهای انسان را در سطوح مختلف مطرح می‌کند؟",
@@ -1557,7 +1528,6 @@ MANAGEMENT_QUESTIONS = {
             "explanation": "حقوق و شرایط کار در نظریه هرزبرگ از عوامل بهداشتی هستند.",
         },
     ],
-
 
     8: [
         {
@@ -1585,7 +1555,6 @@ MANAGEMENT_QUESTIONS = {
         },
     ],
 
-
     9: [
         {
             "question": "اولین مرحله فرآیند کنترل چیست؟",
@@ -1611,7 +1580,6 @@ MANAGEMENT_QUESTIONS = {
             "explanation": "کنترل پیشگیرانه قبل از وقوع مشکل انجام می‌شود.",
         },
     ],
-
 
     10: [
         {
@@ -1639,7 +1607,6 @@ MANAGEMENT_QUESTIONS = {
         },
     ],
 
-
     11: [
         {
             "question": "کدام گزینه یکی از عناصر 4P است؟",
@@ -1665,7 +1632,6 @@ MANAGEMENT_QUESTIONS = {
             "explanation": "بخش‌بندی جغرافیایی یکی از روش‌های رایج بخش‌بندی بازار است.",
         },
     ],
-
 
     12: [
         {
@@ -2471,6 +2437,112 @@ def management_exam_intro_text(chapter):
 
 
 # =========================================================
+# 📝 منوی آزمون مدیریت
+# =========================================================
+#
+# این تابع برای سازگاری با bot.py اضافه شده است.
+# خطای قبلی:
+#
+# ImportError: cannot import name 'management_exam_menu'
+#
+# به دلیل نبودن همین تابع در management.py بود.
+# =========================================================
+
+def management_exam_menu(chapter=None):
+
+    # اگر فصل مشخص شده باشد،
+    # مستقیماً معرفی آزمون همان فصل را برمی‌گردانیم.
+
+    if chapter is not None:
+
+        try:
+            chapter = int(chapter)
+
+        except (TypeError, ValueError):
+
+            return (
+                "❌ شماره فصل نامعتبر است.",
+                management_back_menu()
+            )
+
+        return management_exam_intro_text(chapter)
+
+    # اگر فصل مشخص نشده باشد،
+    # فهرست آزمون‌های مدیریت نمایش داده می‌شود.
+
+    keyboard = []
+
+    for chapter_number, chapter_name in MANAGEMENT_CHAPTER_NAMES.items():
+
+        questions = MANAGEMENT_QUESTIONS.get(
+            chapter_number,
+            []
+        )
+
+        # فقط فصل‌هایی که سؤال آزمون دارند نمایش داده شوند.
+
+        if questions:
+
+            keyboard.append(
+                [
+                    InlineKeyboardButton(
+                        f"📝 آزمون فصل {chapter_number}: {chapter_name}",
+                        callback_data=(
+                            f"management_exam_intro_{chapter_number}"
+                        )
+                    )
+                ]
+            )
+
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                "📚 آموزش مدیریت",
+                callback_data="education"
+            )
+        ]
+    )
+
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ]
+    )
+
+    text = """
+📝 آزمون‌های آموزش مدیریت
+
+🏛️ اندیشکده مدیریت و بازار
+
+━━━━━━━━━━━━━━━━━━
+
+در این بخش می‌توانید آزمون پایان
+هر فصل را انجام دهید.
+
+🎯 آزمون‌ها شامل:
+
+• سؤالات چهارگزینه‌ای
+• امتیازدهی
+• اعلام پاسخ صحیح
+• توضیح پاسخ
+• نتیجه نهایی
+• درصد عملکرد
+
+━━━━━━━━━━━━━━━━━━
+
+👇 آزمون فصل موردنظر را انتخاب کنید.
+"""
+
+    return (
+        text,
+        InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
 # ❓ متن سؤال
 # =========================================================
 
@@ -2485,7 +2557,7 @@ def management_question_text(
         []
     )
 
-    if index >= len(questions):
+    if index < 0 or index >= len(questions):
 
         return (
             "❌ سؤال موردنظر وجود ندارد.",
@@ -2779,17 +2851,21 @@ def module_status():
 
     return {
         "module": "management",
+
         "chapters": len(
             MANAGEMENT_CHAPTER_NAMES
         ),
+
         "topics": sum(
             len(topics)
             for topics in MANAGEMENT_TOPICS.values()
         ),
+
         "questions": sum(
             len(questions)
             for questions in MANAGEMENT_QUESTIONS.values()
         ),
+
         "status": "ready",
     }
 
