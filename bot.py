@@ -3887,57 +3887,46 @@ async def employment_exam_category_callback(
             )
 
         except Exception:
-
-            keyboard = InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "🟢 آسان",
-                            callback_data=f"employment_difficulty_easy_{category}"
-                        )
-                    ],
-                    [
-                        InlineKeyboardButton(
-                            "🟡 متوسط",
-                            callback_data=f"employment_difficulty_medium_{category}"
-                        )
-                    ],
-                    [
-                        InlineKeyboardButton(
-                            "🔴 سخت",
-                            callback_data=f"employment_difficulty_hard_{category}"
-                        )
-                    ],
-                    [
-                        InlineKeyboardButton(
-                            "📝 شبیه‌سازی واقعی",
-                            callback_data=f"employment_simulation_{category}"
-                        )
-                    ],
-                    [
-                        InlineKeyboardButton(
-                            "📝 آزمون استخدامی",
-                            callback_data="employment_exam"
-                        ]
-                    ]
-                ]
-            )
-
-    else:
-
-        keyboard = InlineKeyboardMarkup(
+    keyboard = InlineKeyboardMarkup(
+        [
             [
-                [
-                    InlineKeyboardButton(
-                        "🟢 آسان",
-                        callback_data=f"employment_difficulty_easy_{category}"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "🟡 متوسط",
-                        callback_data=f"employment_difficulty_medium_{category}"
-                    )
+                InlineKeyboardButton(
+                    "🟢 آسان",
+                    callback_data=f"employment_difficulty_easy_{category}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🟡 متوسط",
+                    callback_data=f"employment_difficulty_medium_{category}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🔴 سخت",
+                    callback_data=f"employment_difficulty_hard_{category}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "📝 شبیه‌سازی واقعی",
+                    callback_data=f"employment_simulation_{category}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "📝 آزمون استخدامی",
+                    callback_data="employment_exam"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🔙 بازگشت",
+                    callback_data="employment_menu"
+                )
+            ]
+        ]
+    )
                 ],
                 [
                     InlineKeyboardButton(
