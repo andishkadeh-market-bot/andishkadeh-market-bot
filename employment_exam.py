@@ -1,829 +1,901 @@
 # =========================================================
 # employment_exam.py
-# 📝 آزمون استخدامی
+# 📝 سیستم جامع آزمون استخدامی
 # 🏛️ اندیشکده مدیریت و بازار
+#
+# نسخه حرفه‌ای:
+# - بانک رفاه
+# - بانک شهر
+# - بانک مهر
+# - بانک‌های دولتی
+# - بانک جامع
+# - سطح آسان / متوسط / سخت
+# - آزمون شبیه‌سازی‌شده
+#
+# این فایل مستقل از bot.py طراحی شده است.
 # =========================================================
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+# =========================================================
+# IMPORTS
+# =========================================================
+
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
 
 
 # =========================================================
-# SUBJECTS
+# CATEGORY NAMES
 # =========================================================
 
-EMPLOYMENT_SUBJECTS = {
-    "banking_laws": "🏦 قوانین و مقررات بانکی",
-    "iq": "🧠 هوش و استعداد",
-    "math": "➗ ریاضی و آمار",
-    "english": "🇬🇧 زبان انگلیسی",
-    "icdl": "💻 ICDL",
-    "general": "🌐 اطلاعات عمومی",
+EMPLOYMENT_CATEGORIES = {
+
+    "refah": "🏦 آزمون بانک رفاه",
+
+    "shahr": "🏙️ آزمون بانک شهر",
+
+    "mehr": "🤝 آزمون بانک مهر",
+
+    "government": "🏛️ آزمون بانک‌های دولتی",
+
+    "general": "📚 بانک جامع آزمون استخدامی",
+
 }
 
 
 # =========================================================
-# QUESTIONS
-# ساختار:
+# DIFFICULTY NAMES
+# =========================================================
+
+DIFFICULTY_NAMES = {
+
+    "easy": "🟢 آسان",
+
+    "medium": "🟡 متوسط",
+
+    "hard": "🔴 سخت",
+
+}
+
+
+# =========================================================
+# SUBJECT NAMES
+# =========================================================
+
+SUBJECT_NAMES = {
+
+    "banking": "🏦 بانکداری",
+
+    "law": "⚖️ قوانین و مقررات",
+
+    "management": "📚 مدیریت",
+
+    "accounting": "🧮 حسابداری",
+
+    "economics": "💰 اقتصاد",
+
+    "marketing": "📈 بازاریابی و فروش",
+
+    "icdl": "💻 فناوری اطلاعات و ICDL",
+
+    "english": "🇬🇧 زبان انگلیسی",
+
+    "math": "➗ ریاضی و آمار",
+
+    "intelligence": "🧠 هوش و استعداد",
+
+    "general": "📖 عمومی",
+
+}
+
+
+# =========================================================
+# QUESTION BANK
+# =========================================================
+#
+# ساختار هر سؤال:
 #
 # {
+#     "category": "refah",
+#     "subject": "banking",
+#     "difficulty": "easy",
 #     "question": "...",
-#     "options": ["...", "...", "...", "..."],
-#     "correct": 0
+#     "options": [
+#         "...",
+#         "...",
+#         "...",
+#         "..."
+#     ],
+#     "correct": 0,
+#     "explanation": "..."
 # }
+#
+# correct از صفر شروع می‌شود:
+# 0 = گزینه اول
+# 1 = گزینه دوم
+# 2 = گزینه سوم
+# 3 = گزینه چهارم
 # =========================================================
 
-EMPLOYMENT_QUESTIONS = {
+EMPLOYMENT_QUESTION_BANK = [
 
-    "banking_laws": [
+    # =====================================================
+    # BANKING - EASY
+    # =====================================================
 
-        {
-            "question": "کدام مورد از موضوعات مرتبط با قوانین بانکی است؟",
-            "options": [
-                "قانون عملیات بانکی بدون ربا",
-                "قانون تجارت الکترونیک اروپا",
-                "قانون راهنمایی و رانندگی",
-                "قانون ثبت احوال"
-            ],
-            "correct": 0
-        },
+    {
+        "category": "general",
+        "subject": "banking",
+        "difficulty": "easy",
+        "question": "بانک چیست؟",
+        "options": [
+            "مؤسسه‌ای برای دریافت و پرداخت و ارائه خدمات مالی",
+            "شرکت تولیدکننده کالا",
+            "مرجع قانون‌گذاری کشور",
+            "شرکت بیمه"
+        ],
+        "correct": 0,
+        "explanation": "بانک یک نهاد مالی است که خدماتی مانند دریافت سپرده، پرداخت تسهیلات و انتقال وجوه ارائه می‌کند."
+    },
 
-        {
-            "question": "کدام نهاد نقش اصلی در سیاست‌گذاری پولی کشور دارد؟",
-            "options": [
-                "بانک مرکزی",
-                "شهرداری",
-                "وزارت ورزش",
-                "سازمان ثبت احوال"
-            ],
-            "correct": 0
-        },
+    {
+        "category": "refah",
+        "subject": "banking",
+        "difficulty": "easy",
+        "question": "یکی از وظایف اصلی بانک‌ها کدام است؟",
+        "options": [
+            "تولید کالا",
+            "جمع‌آوری سپرده‌ها و تخصیص منابع",
+            "تعیین مالیات",
+            "صدور شناسنامه"
+        ],
+        "correct": 1,
+        "explanation": "یکی از مهم‌ترین وظایف بانک‌ها تجهیز و تخصیص منابع مالی است."
+    },
 
-        {
-            "question": "کدام گزینه با مبارزه با پولشویی ارتباط مستقیم دارد؟",
-            "options": [
-                "شناسایی و احراز هویت مشتری",
-                "افزایش تبلیغات",
-                "کاهش ساعات کاری",
-                "افزایش فروشگاه‌ها"
-            ],
-            "correct": 0
-        },
+    {
+        "category": "shahr",
+        "subject": "banking",
+        "difficulty": "easy",
+        "question": "حساب جاری بیشتر برای چه منظوری استفاده می‌شود؟",
+        "options": [
+            "انجام عملیات دریافت و پرداخت",
+            "سرمایه‌گذاری بلندمدت",
+            "خرید سهام شرکت‌ها",
+            "پرداخت مالیات دولت"
+        ],
+        "correct": 0,
+        "explanation": "حساب جاری برای انجام عملیات روزمره دریافت و پرداخت و استفاده از ابزارهای پرداخت طراحی شده است."
+    },
 
-        {
-            "question": "منظور از احراز هویت مشتری چیست؟",
-            "options": [
-                "بررسی و تأیید هویت مشتری",
-                "افزایش موجودی حساب",
-                "پرداخت تسهیلات",
-                "بستن حساب"
-            ],
-            "correct": 0
-        },
+    {
+        "category": "mehr",
+        "subject": "banking",
+        "difficulty": "easy",
+        "question": "کدام مورد از خدمات معمول بانکی است؟",
+        "options": [
+            "انتقال وجه",
+            "تولید خودرو",
+            "ساخت مسکن",
+            "تولید مواد غذایی"
+        ],
+        "correct": 0,
+        "explanation": "انتقال وجه یکی از خدمات پایه شبکه بانکی است."
+    },
 
-        {
-            "question": "کدام گزینه نمونه‌ای از عملیات بانکی است؟",
-            "options": [
-                "افتتاح حساب",
-                "تولید خودرو",
-                "ساخت ساختمان",
-                "تولید محصولات کشاورزی"
-            ],
-            "correct": 0
-        },
+    # =====================================================
+    # BANKING - MEDIUM
+    # =====================================================
 
-    ],
+    {
+        "category": "government",
+        "subject": "banking",
+        "difficulty": "medium",
+        "question": "کدام گزینه به مفهوم تجهیز منابع در بانکداری نزدیک‌تر است؟",
+        "options": [
+            "جمع‌آوری سپرده‌ها و منابع مالی",
+            "فروش دارایی‌های ثابت بانک",
+            "افزایش هزینه‌های اداری",
+            "کاهش تعداد شعب"
+        ],
+        "correct": 0,
+        "explanation": "تجهیز منابع به فرآیند جذب منابع مالی از جمله سپرده‌ها مربوط است."
+    },
 
-    "iq": [
+    {
+        "category": "refah",
+        "subject": "banking",
+        "difficulty": "medium",
+        "question": "تخصیص منابع بانکی عمدتاً به چه معناست؟",
+        "options": [
+            "پرداخت تسهیلات و تأمین مالی فعالیت‌ها",
+            "افزایش تعداد کارکنان",
+            "خرید تجهیزات اداری",
+            "تغییر نام شعب"
+        ],
+        "correct": 0,
+        "explanation": "تخصیص منابع یعنی منابع جذب‌شده در قالب تسهیلات و سایر فعالیت‌های مجاز مالی به متقاضیان اختصاص یابد."
+    },
 
-        {
-            "question": "عدد بعدی را مشخص کنید:\n\n2 ، 4 ، 6 ، 8 ، ؟",
-            "options": [
-                "9",
-                "10",
-                "11",
-                "12"
-            ],
-            "correct": 1
-        },
+    {
+        "category": "shahr",
+        "subject": "banking",
+        "difficulty": "medium",
+        "question": "نقدینگی در اقتصاد معمولاً شامل چه مواردی است؟",
+        "options": [
+            "فقط اسکناس",
+            "فقط سپرده‌های بلندمدت",
+            "پول و شبه‌پول",
+            "فقط سکه"
+        ],
+        "correct": 2,
+        "explanation": "در تعریف رایج، نقدینگی شامل پول و شبه‌پول است."
+    },
 
-        {
-            "question": "عدد بعدی را مشخص کنید:\n\n3 ، 6 ، 12 ، 24 ، ؟",
-            "options": [
-                "36",
-                "42",
-                "48",
-                "54"
-            ],
-            "correct": 2
-        },
+    {
+        "category": "mehr",
+        "subject": "banking",
+        "difficulty": "medium",
+        "question": "افزایش نرخ بهره معمولاً چه اثری بر هزینه استقراض دارد؟",
+        "options": [
+            "کاهش می‌دهد",
+            "افزایش می‌دهد",
+            "هیچ اثری ندارد",
+            "همیشه آن را صفر می‌کند"
+        ],
+        "correct": 1,
+        "explanation": "در شرایط معمول، افزایش نرخ بهره هزینه تأمین مالی و استقراض را افزایش می‌دهد."
+    },
 
-        {
-            "question": "اگر همه مدیران کارمند باشند و علی مدیر باشد، کدام گزینه درست است؟",
-            "options": [
-                "علی کارمند است",
-                "علی مدیر نیست",
-                "همه کارمندان مدیرند",
-                "هیچ نتیجه‌ای نمی‌توان گرفت"
-            ],
-            "correct": 0
-        },
+    # =====================================================
+    # BANKING - HARD
+    # =====================================================
 
-        {
-            "question": "کدام گزینه با بقیه متفاوت است؟",
-            "options": [
-                "مربع",
-                "مثلث",
-                "دایره",
-                "مکعب"
-            ],
-            "correct": 3
-        },
+    {
+        "category": "general",
+        "subject": "banking",
+        "difficulty": "hard",
+        "question": "کدام مورد می‌تواند ریسک نقدینگی بانک را افزایش دهد؟",
+        "options": [
+            "عدم تطابق سررسید دارایی‌ها و بدهی‌ها",
+            "افزایش سرمایه بانک",
+            "بهبود مدیریت نقدینگی",
+            "افزایش دارایی‌های نقد"
+        ],
+        "correct": 0,
+        "explanation": "عدم تطابق سررسید دارایی‌ها و بدهی‌ها می‌تواند توان بانک برای ایفای تعهدات کوتاه‌مدت را تحت فشار قرار دهد."
+    },
 
-        {
-            "question": "اگر امروز دوشنبه باشد، سه روز بعد چه روزی است؟",
-            "options": [
-                "سه‌شنبه",
-                "چهارشنبه",
-                "پنجشنبه",
-                "جمعه"
-            ],
-            "correct": 2
-        },
+    {
+        "category": "refah",
+        "subject": "banking",
+        "difficulty": "hard",
+        "question": "کدام گزینه بهتر بیانگر ریسک اعتباری است؟",
+        "options": [
+            "احتمال ناتوانی مشتری در ایفای تعهدات",
+            "احتمال خرابی سیستم رایانه‌ای",
+            "احتمال تغییر نرخ ارز",
+            "احتمال افزایش هزینه برق"
+        ],
+        "correct": 0,
+        "explanation": "ریسک اعتباری به احتمال عدم ایفای تعهدات مالی توسط طرف مقابل مربوط است."
+    },
 
-    ],
+    # =====================================================
+    # LAW
+    # =====================================================
 
-    "math": [
+    {
+        "category": "government",
+        "subject": "law",
+        "difficulty": "easy",
+        "question": "قانون عملیات بانکی بدون ربا با چه هدف کلی تدوین شده است؟",
+        "options": [
+            "تنظیم عملیات بانکی بر اساس موازین مربوط به بانکداری بدون ربا",
+            "تعیین نرخ مالیات بر درآمد",
+            "تنظیم صادرات کالا",
+            "تعیین قوانین راهنمایی و رانندگی"
+        ],
+        "correct": 0,
+        "explanation": "این قانون چارچوب عملیات بانکی بدون ربا در نظام بانکی ایران را مشخص می‌کند."
+    },
 
-        {
-            "question": "حاصل 15 + 27 چند است؟",
-            "options": [
-                "32",
-                "42",
-                "52",
-                "62"
-            ],
-            "correct": 1
-        },
+    {
+        "category": "refah",
+        "subject": "law",
+        "difficulty": "medium",
+        "question": "هدف اصلی قوانین مبارزه با پولشویی چیست؟",
+        "options": [
+            "جلوگیری از ورود و گردش وجوه با منشأ غیرقانونی",
+            "افزایش تبلیغات بانکی",
+            "افزایش تعداد شعب",
+            "کاهش ساعات کاری بانک"
+        ],
+        "correct": 0,
+        "explanation": "قوانین مبارزه با پولشویی برای شناسایی، پیشگیری و مقابله با گردش عواید حاصل از جرم طراحی شده‌اند."
+    },
 
-        {
-            "question": "20 درصد عدد 200 چند است؟",
-            "options": [
-                "20",
-                "30",
-                "40",
-                "50"
-            ],
-            "correct": 2
-        },
+    {
+        "category": "government",
+        "subject": "law",
+        "difficulty": "hard",
+        "question": "کدام مورد در چارچوب مبارزه با پولشویی اهمیت بیشتری دارد؟",
+        "options": [
+            "شناخت مشتری و بررسی معاملات مشکوک",
+            "افزایش تبلیغات",
+            "کاهش تعداد کارکنان",
+            "افزایش دکوراسیون شعب"
+        ],
+        "correct": 0,
+        "explanation": "شناخت مشتری و پایش معاملات از اجزای مهم نظام مبارزه با پولشویی هستند."
+    },
 
-        {
-            "question": "اگر قیمت کالایی 100 هزار تومان باشد و 10 درصد افزایش پیدا کند، قیمت جدید چقدر است؟",
-            "options": [
-                "105 هزار تومان",
-                "110 هزار تومان",
-                "115 هزار تومان",
-                "120 هزار تومان"
-            ],
-            "correct": 1
-        },
+    # =====================================================
+    # ECONOMICS
+    # =====================================================
 
-        {
-            "question": "میانگین اعداد 10، 20 و 30 چند است؟",
-            "options": [
-                "15",
-                "20",
-                "25",
-                "30"
-            ],
-            "correct": 1
-        },
+    {
+        "category": "general",
+        "subject": "economics",
+        "difficulty": "easy",
+        "question": "تورم چیست؟",
+        "options": [
+            "افزایش مستمر و عمومی سطح قیمت‌ها",
+            "افزایش قیمت یک کالا",
+            "کاهش درآمد دولت",
+            "افزایش تولید یک شرکت"
+        ],
+        "correct": 0,
+        "explanation": "تورم به افزایش مستمر و عمومی سطح قیمت کالاها و خدمات گفته می‌شود."
+    },
 
-        {
-            "question": "حاصل 8 × 7 چند است؟",
-            "options": [
-                "48",
-                "54",
-                "56",
-                "64"
-            ],
-            "correct": 2
-        },
+    {
+        "category": "shahr",
+        "subject": "economics",
+        "difficulty": "medium",
+        "question": "کدام مورد از عوامل مؤثر بر نرخ ارز است؟",
+        "options": [
+            "عرضه و تقاضای ارز",
+            "تورم",
+            "نرخ بهره",
+            "همه موارد"
+        ],
+        "correct": 3,
+        "explanation": "نرخ ارز تحت تأثیر مجموعه‌ای از عوامل اقتصادی و انتظارات قرار می‌گیرد."
+    },
 
-    ],
+    {
+        "category": "government",
+        "subject": "economics",
+        "difficulty": "hard",
+        "question": "کدام گزینه بیشتر به سیاست پولی مربوط است؟",
+        "options": [
+            "نرخ‌های سیاستی و مدیریت نقدینگی",
+            "بودجه عمرانی دولت",
+            "مالیات بر درآمد",
+            "مخارج دولت"
+        ],
+        "correct": 0,
+        "explanation": "سیاست پولی از ابزارهای پولی و اعتباری برای اثرگذاری بر اقتصاد استفاده می‌کند."
+    },
 
-    "english": [
+    # =====================================================
+    # MANAGEMENT
+    # =====================================================
 
-        {
-            "question": "معنی کلمه \"Bank\" چیست؟",
-            "options": [
-                "بازار",
-                "بانک",
-                "شرکت",
-                "فروشگاه"
-            ],
-            "correct": 1
-        },
+    {
+        "category": "general",
+        "subject": "management",
+        "difficulty": "easy",
+        "question": "کدام گزینه یکی از وظایف اصلی مدیریت است؟",
+        "options": [
+            "برنامه‌ریزی",
+            "تولید اسکناس",
+            "صدور گذرنامه",
+            "قانون‌گذاری"
+        ],
+        "correct": 0,
+        "explanation": "برنامه‌ریزی از وظایف اصلی مدیریت است."
+    },
 
-        {
-            "question": "معنی کلمه \"Market\" چیست؟",
-            "options": [
-                "بانک",
-                "بازار",
-                "پول",
-                "کارمند"
-            ],
-            "correct": 1
-        },
+    {
+        "category": "refah",
+        "subject": "management",
+        "difficulty": "medium",
+        "question": "کنترل در مدیریت به چه معناست؟",
+        "options": [
+            "مقایسه عملکرد واقعی با استانداردها و اصلاح انحرافات",
+            "فقط استخدام کارکنان",
+            "افزایش هزینه‌ها",
+            "حذف برنامه‌ریزی"
+        ],
+        "correct": 0,
+        "explanation": "کنترل شامل سنجش عملکرد، مقایسه با استاندارد و اقدامات اصلاحی است."
+    },
 
-        {
-            "question": "کدام گزینه معنی \"Manager\" است؟",
-            "options": [
-                "مدیر",
-                "مشتری",
-                "فروشنده",
-                "حسابدار"
-            ],
-            "correct": 0
-        },
+    {
+        "category": "shahr",
+        "subject": "management",
+        "difficulty": "hard",
+        "question": "در تحلیل SWOT کدام گزینه جزء عوامل داخلی سازمان محسوب می‌شود؟",
+        "options": [
+            "نقاط قوت و ضعف",
+            "فرصت‌ها و تهدیدها",
+            "تورم کشور",
+            "رقبای خارجی"
+        ],
+        "correct": 0,
+        "explanation": "نقاط قوت و ضعف عوامل داخلی و فرصت‌ها و تهدیدها عوامل محیطی هستند."
+    },
 
-        {
-            "question": "گزینه صحیح را انتخاب کنید:\n\nShe ___ a manager.",
-            "options": [
-                "am",
-                "are",
-                "is",
-                "be"
-            ],
-            "correct": 2
-        },
+    # =====================================================
+    # ACCOUNTING
+    # =====================================================
 
-        {
-            "question": "معنی \"Customer\" چیست؟",
-            "options": [
-                "مشتری",
-                "مدیر",
-                "کارمند",
-                "بانک"
-            ],
-            "correct": 0
-        },
+    {
+        "category": "general",
+        "subject": "accounting",
+        "difficulty": "easy",
+        "question": "معادله اساسی حسابداری کدام است؟",
+        "options": [
+            "دارایی = بدهی + سرمایه",
+            "دارایی = درآمد - هزینه",
+            "بدهی = دارایی + سرمایه",
+            "سرمایه = دارایی + بدهی"
+        ],
+        "correct": 0,
+        "explanation": "معادله اساسی حسابداری عبارت است از دارایی برابر با بدهی به علاوه سرمایه."
+    },
 
-    ],
+    {
+        "category": "refah",
+        "subject": "accounting",
+        "difficulty": "medium",
+        "question": "کدام مورد ماهیت بدهکار دارد؟",
+        "options": [
+            "دارایی",
+            "بدهی",
+            "سرمایه",
+            "درآمد"
+        ],
+        "correct": 0,
+        "explanation": "حساب‌های دارایی در حالت معمول ماهیت بدهکار دارند."
+    },
 
-    "icdl": [
+    {
+        "category": "government",
+        "subject": "accounting",
+        "difficulty": "hard",
+        "question": "اگر دارایی‌های یک شرکت افزایش یابد و سایر عوامل ثابت باشند، اثر آن بر سرمایه چگونه است؟",
+        "options": [
+            "لزوماً سرمایه افزایش می‌یابد",
+            "لزوماً سرمایه کاهش می‌یابد",
+            "بدون اطلاعات بیشتر نمی‌توان نتیجه قطعی گرفت",
+            "سرمایه همیشه صفر می‌شود"
+        ],
+        "correct": 2,
+        "explanation": "افزایش دارایی می‌تواند در مقابل افزایش بدهی یا سرمایه قرار گیرد و بدون دانستن طرف معامله نتیجه قطعی درباره سرمایه ممکن نیست."
+    },
 
-        {
-            "question": "کدام نرم‌افزار برای پردازش متن استفاده می‌شود؟",
-            "options": [
-                "Microsoft Word",
-                "Calculator",
-                "Paint",
-                "Media Player"
-            ],
-            "correct": 0
-        },
+    # =====================================================
+    # MARKETING
+    # =====================================================
 
-        {
-            "question": "کدام نرم‌افزار برای کار با جداول و محاسبات مناسب است؟",
-            "options": [
-                "Word",
-                "Excel",
-                "Paint",
-                "Notepad"
-            ],
-            "correct": 1
-        },
+    {
+        "category": "general",
+        "subject": "marketing",
+        "difficulty": "easy",
+        "question": "بازاریابی بیشتر بر چه موضوعی تمرکز دارد؟",
+        "options": [
+            "شناخت نیاز مشتری و ایجاد ارزش",
+            "فقط تولید محصول",
+            "فقط حسابداری",
+            "فقط استخدام کارکنان"
+        ],
+        "correct": 0,
+        "explanation": "بازاریابی فرآیندی برای شناخت نیازها، ایجاد ارزش و برقراری ارتباط با بازار هدف است."
+    },
 
-        {
-            "question": "میانبر Copy در ویندوز چیست؟",
-            "options": [
-                "Ctrl + X",
-                "Ctrl + C",
-                "Ctrl + V",
-                "Ctrl + Z"
-            ],
-            "correct": 1
-        },
+    {
+        "category": "shahr",
+        "subject": "marketing",
+        "difficulty": "medium",
+        "question": "کدام مورد یکی از عناصر آمیخته بازاریابی سنتی 4P است؟",
+        "options": [
+            "Product",
+            "People",
+            "Process",
+            "Performance"
+        ],
+        "correct": 0,
+        "explanation": "در مدل 4P، محصول، قیمت، توزیع و ترفیع قرار دارند."
+    },
 
-        {
-            "question": "میانبر Paste چیست؟",
-            "options": [
-                "Ctrl + A",
-                "Ctrl + C",
-                "Ctrl + V",
-                "Ctrl + S"
-            ],
-            "correct": 2
-        },
+    {
+        "category": "refah",
+        "subject": "marketing",
+        "difficulty": "hard",
+        "question": "تقسیم‌بندی بازار با چه هدفی انجام می‌شود؟",
+        "options": [
+            "شناسایی گروه‌های نسبتاً مشابه مشتریان",
+            "حذف تمام مشتریان",
+            "افزایش هزینه تولید",
+            "کاهش اطلاعات بازار"
+        ],
+        "correct": 0,
+        "explanation": "هدف از بخش‌بندی بازار، شناسایی گروه‌های دارای ویژگی‌ها و نیازهای مشابه برای بازاریابی هدفمند است."
+    },
 
-        {
-            "question": "کدام گزینه برای ذخیره فایل استفاده می‌شود؟",
-            "options": [
-                "Ctrl + S",
-                "Ctrl + P",
-                "Ctrl + X",
-                "Ctrl + F"
-            ],
-            "correct": 0
-        },
+    # =====================================================
+    # ICDL
+    # =====================================================
 
-    ],
+    {
+        "category": "general",
+        "subject": "icdl",
+        "difficulty": "easy",
+        "question": "کدام نرم‌افزار بیشتر برای محاسبات و جداول استفاده می‌شود؟",
+        "options": [
+            "Microsoft Excel",
+            "Microsoft Word",
+            "Paint",
+            "Notepad"
+        ],
+        "correct": 0,
+        "explanation": "Excel نرم‌افزار صفحه گسترده و مناسب محاسبات و تحلیل داده است."
+    },
 
-    "general": [
+    {
+        "category": "government",
+        "subject": "icdl",
+        "difficulty": "medium",
+        "question": "میانبر Ctrl+C معمولاً چه عملی انجام می‌دهد؟",
+        "options": [
+            "کپی",
+            "چسباندن",
+            "حذف",
+            "ذخیره"
+        ],
+        "correct": 0,
+        "explanation": "Ctrl+C برای Copy یا کپی‌کردن استفاده می‌شود."
+    },
 
-        {
-            "question": "واحد پول رسمی ایران چیست؟",
-            "options": [
-                "دلار",
-                "ریال",
-                "یورو",
-                "لیر"
-            ],
-            "correct": 1
-        },
+    {
+        "category": "general",
+        "subject": "icdl",
+        "difficulty": "hard",
+        "question": "در Excel، فرمول‌ها معمولاً با چه علامتی آغاز می‌شوند؟",
+        "options": [
+            "=",
+            "+",
+            "#",
+            "@"
+        ],
+        "correct": 0,
+        "explanation": "فرمول‌های Excel معمولاً با علامت مساوی شروع می‌شوند."
+    },
 
-        {
-            "question": "بانک مرکزی چه نقشی در اقتصاد دارد؟",
-            "options": [
-                "سیاست‌گذاری پولی",
-                "تولید خودرو",
-                "ساخت مسکن",
-                "تولید مواد غذایی"
-            ],
-            "correct": 0
-        },
+    # =====================================================
+    # ENGLISH
+    # =====================================================
 
-        {
-            "question": "کدام مورد از اجزای اصلی اقتصاد است؟",
-            "options": [
-                "عرضه و تقاضا",
-                "فقط صادرات",
-                "فقط واردات",
-                "فقط مالیات"
-            ],
-            "correct": 0
-        },
+    {
+        "category": "general",
+        "subject": "english",
+        "difficulty": "easy",
+        "question": "معنی کلمه Bank کدام است؟",
+        "options": [
+            "بانک",
+            "بازار",
+            "شرکت",
+            "فروشگاه"
+        ],
+        "correct": 0,
+        "explanation": "Bank به معنی بانک است."
+    },
 
-        {
-            "question": "تورم به طور کلی به چه معناست؟",
-            "options": [
-                "کاهش عمومی قیمت‌ها",
-                "افزایش مستمر و عمومی سطح قیمت‌ها",
-                "افزایش تولید",
-                "کاهش بیکاری"
-            ],
-            "correct": 1
-        },
+    {
+        "category": "government",
+        "subject": "english",
+        "difficulty": "medium",
+        "question": "کدام گزینه معنی Customer است؟",
+        "options": [
+            "مشتری",
+            "کارمند",
+            "مدیر",
+            "حسابدار"
+        ],
+        "correct": 0,
+        "explanation": "Customer یعنی مشتری."
+    },
 
-        {
-            "question": "GDP مخفف چیست؟",
-            "options": [
-                "تولید ناخالص داخلی",
-                "درآمد خالص بانک",
-                "مالیات عمومی",
-                "نرخ بهره"
-            ],
-            "correct": 0
-        },
+    {
+        "category": "refah",
+        "subject": "english",
+        "difficulty": "hard",
+        "question": "کدام گزینه نزدیک‌ترین معنی Financial را دارد؟",
+        "options": [
+            "مالی",
+            "حقوقی",
+            "بازاریابی",
+            "اداری"
+        ],
+        "correct": 0,
+        "explanation": "Financial به امور مالی مربوط است."
+    },
 
-    ],
-}
+    # =====================================================
+    # MATH
+    # =====================================================
+
+    {
+        "category": "general",
+        "subject": "math",
+        "difficulty": "easy",
+        "question": "اگر قیمت کالایی 100 باشد و 10 درصد افزایش یابد، قیمت جدید چقدر است؟",
+        "options": [
+            "105",
+            "110",
+            "115",
+            "120"
+        ],
+        "correct": 1,
+        "explanation": "10 درصد 100 برابر 10 است، بنابراین قیمت جدید 110 می‌شود."
+    },
+
+    {
+        "category": "government",
+        "subject": "math",
+        "difficulty": "medium",
+        "question": "اگر 20 درصد مبلغی برابر 40 باشد، کل مبلغ چقدر است؟",
+        "options": [
+            "100",
+            "150",
+            "200",
+            "250"
+        ],
+        "correct": 2,
+        "explanation": "اگر 20 درصد برابر 40 باشد، 100 درصد برابر 200 خواهد بود."
+    },
+
+    {
+        "category": "shahr",
+        "subject": "math",
+        "difficulty": "hard",
+        "question": "میانگین اعداد 10، 20، 30 و 40 چند است؟",
+        "options": [
+            "20",
+            "25",
+            "30",
+            "35"
+        ],
+        "correct": 1,
+        "explanation": "مجموع 100 است و با تقسیم بر 4، میانگین 25 به دست می‌آید."
+    },
+
+    # =====================================================
+    # INTELLIGENCE
+    # =====================================================
+
+    {
+        "category": "general",
+        "subject": "intelligence",
+        "difficulty": "easy",
+        "question": "عدد بعدی را پیدا کنید: 2، 4، 6، 8، ؟",
+        "options": [
+            "9",
+            "10",
+            "11",
+            "12"
+        ],
+        "correct": 1,
+        "explanation": "هر عدد دو واحد بیشتر از عدد قبلی است."
+    },
+
+    {
+        "category": "refah",
+        "subject": "intelligence",
+        "difficulty": "medium",
+        "question": "عدد بعدی چیست؟ 3، 6، 12، 24، ؟",
+        "options": [
+            "36",
+            "42",
+            "48",
+            "54"
+        ],
+        "correct": 2,
+        "explanation": "هر عدد دو برابر عدد قبلی است."
+    },
+
+    {
+        "category": "government",
+        "subject": "intelligence",
+        "difficulty": "hard",
+        "question": "اگر تمام Aها، B باشند و هیچ Bای C نباشد، کدام گزینه درست است؟",
+        "options": [
+            "هیچ Aای C نیست",
+            "تمام Cها A هستند",
+            "تمام Bها A هستند",
+            "برخی Aها حتماً C هستند"
+        ],
+        "correct": 0,
+        "explanation": "اگر A زیرمجموعه B باشد و B با C اشتراک نداشته باشد، A نیز با C اشتراک ندارد."
+    },
+
+]
 
 
 # =========================================================
-# INTRO
+# HELPER FUNCTIONS
 # =========================================================
 
-def employment_exam_intro_text():
+def get_all_questions():
+    """
+    تمام سؤالات بانک را برمی‌گرداند.
+    """
 
-    return """
-📝 آزمون استخدامی
+    return EMPLOYMENT_QUESTION_BANK.copy()
 
-━━━━━━━━━━━━━━━━━━
 
-🏛️ اندیشکده مدیریت و بازار
+def get_questions_by_category(category):
+    """
+    دریافت سؤالات یک بانک خاص.
+    """
 
-سیستم تمرینی آزمون‌های استخدامی
+    return [
+        question
+        for question in EMPLOYMENT_QUESTION_BANK
+        if question["category"] == category
+        or (
+            category == "general"
+            and question["category"] == "general"
+        )
+    ]
 
-━━━━━━━━━━━━━━━━━━
 
-📚 سرفصل‌های موجود:
+def get_questions_by_difficulty(difficulty):
+    """
+    دریافت سؤالات بر اساس سطح.
+    """
 
-🏦 قوانین و مقررات بانکی
-🧠 هوش و استعداد
-➗ ریاضی و آمار
-🇬🇧 زبان انگلیسی
-💻 ICDL
-🌐 اطلاعات عمومی
+    return [
+        question
+        for question in EMPLOYMENT_QUESTION_BANK
+        if question["difficulty"] == difficulty
+    ]
 
-━━━━━━━━━━━━━━━━━━
 
-🎯 هدف:
+def get_questions_by_subject(subject):
+    """
+    دریافت سؤالات یک درس خاص.
+    """
 
-تمرین
-+
-آزمون
-+
-تحلیل اشتباهات
-+
-آمادگی استخدامی
+    return [
+        question
+        for question in EMPLOYMENT_QUESTION_BANK
+        if question["subject"] == subject
+    ]
 
-👇 درس موردنظر را انتخاب کنید.
-"""
+
+def get_category_questions(category):
+    """
+    دریافت سؤالات دسته انتخاب‌شده.
+    """
+
+    if category == "general":
+        return EMPLOYMENT_QUESTION_BANK.copy()
+
+    return [
+        question
+        for question in EMPLOYMENT_QUESTION_BANK
+        if question["category"] == category
+    ]
+
+
+def get_filtered_questions(
+    category="general",
+    difficulty="all",
+    subject="all"
+):
+    """
+    فیلتر حرفه‌ای سؤالات بر اساس:
+    بانک + سطح + درس
+    """
+
+    questions = []
+
+    for question in EMPLOYMENT_QUESTION_BANK:
+
+        if category != "general":
+
+            if question["category"] != category:
+                continue
+
+        if difficulty != "all":
+
+            if question["difficulty"] != difficulty:
+                continue
+
+        if subject != "all":
+
+            if question["subject"] != subject:
+                continue
+
+        questions.append(question)
+
+    return questions
 
 
 # =========================================================
-# MENU
+# MAIN EMPLOYMENT MENU
 # =========================================================
 
 def employment_exam_menu():
-
-    keyboard = []
-
-    for key, name in EMPLOYMENT_SUBJECTS.items():
-
-        keyboard.append(
-            [
-                InlineKeyboardButton(
-                    name,
-                    callback_data=f"employment_subject_{key}"
-                )
-            ]
-        )
-
-    keyboard.append(
-        [
-            InlineKeyboardButton(
-                "🎯 آزمون جامع",
-                callback_data="employment_full_exam"
-            )
-        ]
-    )
-
-    keyboard.append(
-        [
-            InlineKeyboardButton(
-                "🏠 منوی اصلی",
-                callback_data="home"
-            )
-        ]
-    )
-
-    return InlineKeyboardMarkup(keyboard)
-
-
-# =========================================================
-# SUBJECT INTRO
-# =========================================================
-
-def employment_subject_intro(
-    subject
-):
-
-    if subject not in EMPLOYMENT_SUBJECTS:
-
-        return (
-            "❌ این درس وجود ندارد.",
-            employment_exam_menu()
-        )
-
-    name = EMPLOYMENT_SUBJECTS[subject]
-
-    questions = EMPLOYMENT_QUESTIONS.get(
-        subject,
-        []
-    )
-
-    text = f"""
-📚 {name}
-
-━━━━━━━━━━━━━━━━━━
-
-📝 تعداد سؤالات:
-{len(questions)} سؤال
-
-🎯 نوع آزمون:
-چهارگزینه‌ای
-
-⭐ امتیاز:
-هر پاسخ صحیح = ۱ امتیاز
-
-━━━━━━━━━━━━━━━━━━
-
-📌 بعد از هر پاسخ، جواب صحیح نمایش داده می‌شود.
-
-👇 برای شروع:
-"""
-
-    keyboard = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    "🚀 شروع آزمون",
-                    callback_data=f"employment_exam_{subject}_0_0"
-                )
-            ],
-
-            [
-                InlineKeyboardButton(
-                    "📝 آزمون جامع",
-                    callback_data="employment_full_exam"
-                )
-            ],
-
-            [
-                InlineKeyboardButton(
-                    "🔙 بازگشت",
-                    callback_data="employment_exam"
-                )
-            ],
-
-            [
-                InlineKeyboardButton(
-                    "🏠 منوی اصلی",
-                    callback_data="home"
-                )
-            ],
-        ]
-    )
-
-    return text, keyboard
-
-
-# =========================================================
-# GET QUESTIONS
-# =========================================================
-
-def get_subject_questions(
-    subject
-):
-
-    return EMPLOYMENT_QUESTIONS.get(
-        subject,
-        []
-    )
-
-
-# =========================================================
-# QUESTION
-# =========================================================
-
-def employment_question_data(
-    subject,
-    index,
-    score
-):
-
-    questions = get_subject_questions(subject)
-
-    if not questions:
-        return None
-
-    if index >= len(questions):
-        return None
-
-    question = questions[index]
-
-    name = EMPLOYMENT_SUBJECTS.get(
-        subject,
-        "آزمون استخدامی"
-    )
-
-    text = f"""
-📝 آزمون استخدامی
-
-📚 {name}
-
-━━━━━━━━━━━━━━━━━━
-
-❓ سؤال {index + 1} از {len(questions)}
-
-⭐ امتیاز فعلی: {score}
-
-━━━━━━━━━━━━━━━━━━
-
-{question["question"]}
-
-━━━━━━━━━━━━━━━━━━
-
-👇 گزینه صحیح را انتخاب کنید:
-"""
-
-    keyboard = []
-
-    for option_index, option in enumerate(
-        question["options"]
-    ):
-
-        keyboard.append(
-            [
-                InlineKeyboardButton(
-                    option,
-                    callback_data=(
-                        f"employment_answer_"
-                        f"{subject}_"
-                        f"{index}_"
-                        f"{option_index}_"
-                        f"{score}"
-                    )
-                )
-            ]
-        )
-
-    keyboard.append(
-        [
-            InlineKeyboardButton(
-                "❌ خروج از آزمون",
-                callback_data="employment_exam"
-            )
-        ]
-    )
-
-    return (
-        text,
-        InlineKeyboardMarkup(keyboard)
-    )
-
-
-# =========================================================
-# ANSWER
-# =========================================================
-
-def employment_answer_data(
-    subject,
-    index,
-    selected,
-    score
-):
-
-    questions = get_subject_questions(subject)
-
-    if not questions:
-        return None
-
-    if index >= len(questions):
-        return None
-
-    question = questions[index]
-
-    correct = question["correct"]
-
-    is_correct = selected == correct
-
-    if is_correct:
-
-        score += 1
-
-        result_text = f"""
-✅ پاسخ صحیح است.
-
-🎯 +۱ امتیاز
-
-⭐ امتیاز فعلی: {score}
-
-━━━━━━━━━━━━━━━━━━
-
-آفرین 👏
-"""
-
-    else:
-
-        correct_option = question["options"][correct]
-
-        result_text = f"""
-❌ پاسخ اشتباه است.
-
-━━━━━━━━━━━━━━━━━━
-
-✅ پاسخ صحیح:
-
-{correct_option}
-
-━━━━━━━━━━━━━━━━━━
-
-⭐ امتیاز فعلی: {score}
-"""
-
-    next_index = index + 1
-
-    finished = next_index >= len(questions)
-
-    return {
-        "is_correct": is_correct,
-        "score": score,
-        "next_index": next_index,
-        "finished": finished,
-        "result_text": result_text,
-    }
-
-
-# =========================================================
-# RESULT
-# =========================================================
-
-def employment_result_text(
-    subject,
-    score
-):
-
-    questions = get_subject_questions(subject)
-
-    total = len(questions)
-
-    if total == 0:
-        return "❌ آزمونی برای این بخش وجود ندارد."
-
-    wrong = total - score
-
-    percentage = round(
-        (score / total) * 100
-    )
-
-    if percentage >= 90:
-        evaluation = "🏆 فوق‌العاده"
-
-    elif percentage >= 80:
-        evaluation = "🥇 عالی"
-
-    elif percentage >= 70:
-        evaluation = "🥈 خوب"
-
-    elif percentage >= 50:
-        evaluation = "🟡 متوسط"
-
-    else:
-        evaluation = "📚 نیازمند مطالعه بیشتر"
-
-    name = EMPLOYMENT_SUBJECTS.get(
-        subject,
-        "آزمون استخدامی"
-    )
-
-    return f"""
-🏁 آزمون به پایان رسید.
-
-📚 {name}
-
-━━━━━━━━━━━━━━━━━━
-
-📊 نتیجه آزمون
-
-📝 تعداد سؤالات: {total}
-
-✅ پاسخ صحیح: {score}
-
-❌ پاسخ غلط: {wrong}
-
-📈 درصد: {percentage}٪
-
-🎯 ارزیابی:
-
-{evaluation}
-
-━━━━━━━━━━━━━━━━━━
-
-🎯 مسیر پیشنهادی:
-
-📖 مطالعه
-+
-📝 آزمون
-+
-🔍 بررسی اشتباهات
-+
-🔄 تکرار آزمون
-"""
-
-
-# =========================================================
-# RESULT MENU
-# =========================================================
-
-def employment_result_menu(
-    subject
-):
 
     keyboard = [
 
         [
             InlineKeyboardButton(
-                "🔄 تکرار آزمون",
-                callback_data=(
-                    f"employment_exam_{subject}_0_0"
-                )
+                "🏦 بانک رفاه",
+                callback_data="employment_category_refah"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "📚 انتخاب درس دیگر",
-                callback_data="employment_exam"
+                "🏙️ بانک شهر",
+                callback_data="employment_category_shahr"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "🎯 آزمون جامع",
-                callback_data="employment_full_exam"
+                "🤝 بانک مهر",
+                callback_data="employment_category_mehr"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏛️ بانک‌های دولتی",
+                callback_data="employment_category_government"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📚 بانک جامع سؤالات",
+                callback_data="employment_category_general"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🎯 آزمون شبیه‌سازی‌شده",
+                callback_data="employment_simulation"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🟢 آزمون آسان",
+                callback_data="employment_difficulty_easy"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🟡 آزمون متوسط",
+                callback_data="employment_difficulty_medium"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🔴 آزمون سخت",
+                callback_data="employment_difficulty_hard"
             )
         ],
 
@@ -840,121 +912,378 @@ def employment_result_menu(
 
 
 # =========================================================
-# FULL EXAM
+# INTRO TEXT
 # =========================================================
 
-def get_full_exam_questions():
+def employment_exam_intro_text():
 
-    questions = []
+    total = len(EMPLOYMENT_QUESTION_BANK)
 
-    for subject, subject_questions in EMPLOYMENT_QUESTIONS.items():
-
-        for question in subject_questions:
-
-            item = question.copy()
-
-            item["subject"] = subject
-
-            questions.append(item)
-
-    return questions
-
-
-def employment_full_exam_intro():
-
-    questions = get_full_exam_questions()
-
-    text = f"""
-🎯 آزمون جامع استخدامی
-
-━━━━━━━━━━━━━━━━━━
+    return f"""
+📝 آزمون استخدامی
 
 🏛️ اندیشکده مدیریت و بازار
 
-آزمون ترکیبی از سرفصل‌های:
+━━━━━━━━━━━━━━━━━━
 
-🏦 قوانین بانکی
-🧠 هوش
-➗ ریاضی
-🇬🇧 زبان
+🎯 بانک حرفه‌ای سؤالات استخدامی
+
+در این بخش می‌توانید به مجموعه‌ای از
+سؤالات تخصصی و عمومی آزمون‌های استخدامی
+دسترسی داشته باشید.
+
+━━━━━━━━━━━━━━━━━━
+
+🏦 بانک رفاه
+🏙️ بانک شهر
+🤝 بانک مهر
+🏛️ بانک‌های دولتی
+
+━━━━━━━━━━━━━━━━━━
+
+📊 سطح‌بندی:
+
+🟢 آسان
+🟡 متوسط
+🔴 سخت
+
+━━━━━━━━━━━━━━━━━━
+
+📚 دروس:
+
+🏦 بانکداری
+⚖️ قوانین
+📚 مدیریت
+🧮 حسابداری
+💰 اقتصاد
+📈 بازاریابی
 💻 ICDL
-🌐 اطلاعات عمومی
+🇬🇧 زبان
+➗ ریاضی
+🧠 هوش
+
+━━━━━━━━━━━━━━━━━━
+
+📦 تعداد فعلی سؤالات بانک:
+
+{total} سؤال
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 هدف:
+
+تمرین
++
+ارزیابی
++
+تحلیل اشتباهات
++
+آمادگی آزمون استخدامی
+"""
+
+
+# =========================================================
+# CATEGORY TEXT
+# =========================================================
+
+def employment_category_text(category):
+
+    name = EMPLOYMENT_CATEGORIES.get(
+        category,
+        "آزمون استخدامی"
+    )
+
+    questions = get_category_questions(
+        category
+    )
+
+    return f"""
+{name}
+
+━━━━━━━━━━━━━━━━━━
+
+📊 تعداد سؤالات موجود:
+
+{len(questions)} سؤال
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 سطح‌بندی آزمون:
+
+🟢 آسان
+🟡 متوسط
+🔴 سخت
+
+━━━━━━━━━━━━━━━━━━
+
+📚 می‌توانید آزمون را
+بر اساس سطح انتخاب کنید.
+
+👇 سطح موردنظر را انتخاب کنید.
+"""
+
+
+# =========================================================
+# CATEGORY MENU
+# =========================================================
+
+def employment_category_menu(category):
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🟢 آسان",
+                callback_data=(
+                    f"employment_start_"
+                    f"{category}_easy"
+                )
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🟡 متوسط",
+                callback_data=(
+                    f"employment_start_"
+                    f"{category}_medium"
+                )
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🔴 سخت",
+                callback_data=(
+                    f"employment_start_"
+                    f"{category}_hard"
+                )
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🎯 ترکیبی",
+                callback_data=(
+                    f"employment_start_"
+                    f"{category}_all"
+                )
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "⬅️ آزمون استخدامی",
+                callback_data="employment_exam"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+# =========================================================
+# DIFFICULTY TEXT
+# =========================================================
+
+def employment_difficulty_text(difficulty):
+
+    name = DIFFICULTY_NAMES.get(
+        difficulty,
+        "آزمون"
+    )
+
+    questions = get_questions_by_difficulty(
+        difficulty
+    )
+
+    return f"""
+{name}
 
 ━━━━━━━━━━━━━━━━━━
 
 📝 تعداد سؤالات:
-{len(questions)} سؤال
 
-⭐ هر پاسخ صحیح:
-۱ امتیاز
+{len(questions)} سؤال
 
 ━━━━━━━━━━━━━━━━━━
 
-🎯 مناسب برای:
-آمادگی آزمون‌های استخدامی
+📚 دروس متنوع:
 
-👇 آماده‌ای؟ 
+🏦 بانکداری
+⚖️ قوانین
+📚 مدیریت
+🧮 حسابداری
+💰 اقتصاد
+📈 بازاریابی
+💻 ICDL
+🇬🇧 زبان
+➗ ریاضی
+🧠 هوش
+
+━━━━━━━━━━━━━━━━━━
+
+👇 برای شروع آزمون آماده شوید.
 """
 
-    keyboard = InlineKeyboardMarkup(
+
+# =========================================================
+# DIFFICULTY MENU
+# =========================================================
+
+def employment_difficulty_menu(difficulty):
+
+    keyboard = [
+
         [
-            [
-                InlineKeyboardButton(
-                    "🚀 شروع آزمون جامع",
-                    callback_data="employment_full_0_0"
+            InlineKeyboardButton(
+                "🚀 شروع آزمون",
+                callback_data=(
+                    f"employment_difficulty_start_"
+                    f"{difficulty}"
                 )
-            ],
+            )
+        ],
 
-            [
-                InlineKeyboardButton(
-                    "🔙 بازگشت",
-                    callback_data="employment_exam"
-                )
-            ],
+        [
+            InlineKeyboardButton(
+                "📝 آزمون استخدامی",
+                callback_data="employment_exam"
+            )
+        ],
 
-            [
-                InlineKeyboardButton(
-                    "🏠 منوی اصلی",
-                    callback_data="home"
-                )
-            ],
-        ]
-    )
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
 
-    return text, keyboard
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
 
 
-def employment_full_question_data(
+# =========================================================
+# SIMULATION
+# =========================================================
+
+def employment_simulation_text():
+
+    return """
+🎯 آزمون شبیه‌سازی‌شده استخدامی
+
+━━━━━━━━━━━━━━━━━━
+
+این آزمون با ترکیبی از سؤالات
+عمومی و تخصصی طراحی شده است.
+
+📚 موضوعات:
+
+🏦 بانکداری
+⚖️ قوانین
+📚 مدیریت
+🧮 حسابداری
+💰 اقتصاد
+📈 بازاریابی
+💻 ICDL
+🇬🇧 زبان
+➗ ریاضی
+🧠 هوش
+
+━━━━━━━━━━━━━━━━━━
+
+📊 ویژگی آزمون:
+
+• سؤالات ترکیبی
+• سطح‌های مختلف
+• محاسبه درصد
+• نمایش پاسخ صحیح
+• ارزیابی نهایی
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 هدف:
+
+شبیه‌سازی فضای آزمون استخدامی
+
+━━━━━━━━━━━━━━━━━━
+
+👇 برای شروع:
+"""
+
+
+def employment_simulation_menu():
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🚀 شروع آزمون شبیه‌سازی",
+                callback_data="employment_simulation_start"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📝 آزمون استخدامی",
+                callback_data="employment_exam"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+# =========================================================
+# QUESTION TEXT
+# =========================================================
+
+def employment_question_text(
+    question,
     index,
+    total,
     score
 ):
 
-    questions = get_full_exam_questions()
-
-    if not questions:
-        return None
-
-    if index >= len(questions):
-        return None
-
-    question = questions[index]
-
-    subject = EMPLOYMENT_SUBJECTS.get(
+    subject = SUBJECT_NAMES.get(
         question["subject"],
-        "آزمون جامع"
+        "📚 عمومی"
     )
 
-    text = f"""
-🎯 آزمون جامع استخدامی
+    difficulty = DIFFICULTY_NAMES.get(
+        question["difficulty"],
+        "🟡 متوسط"
+    )
+
+    return f"""
+📝 آزمون استخدامی
 
 ━━━━━━━━━━━━━━━━━━
 
-📚 مبحث:
-{subject}
-
-❓ سؤال {index + 1} از {len(questions)}
+❓ سؤال {index + 1} از {total}
 
 ⭐ امتیاز فعلی: {score}
+
+📚 درس: {subject}
+
+🎯 سطح: {difficulty}
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -965,10 +1294,21 @@ def employment_full_question_data(
 👇 گزینه صحیح را انتخاب کنید:
 """
 
+
+# =========================================================
+# QUESTION KEYBOARD
+# =========================================================
+
+def employment_question_keyboard(
+    category,
+    index,
+    score
+):
+
     keyboard = []
 
     for option_index, option in enumerate(
-        question["options"]
+        category[index]["options"]
     ):
 
         keyboard.append(
@@ -976,7 +1316,7 @@ def employment_full_question_data(
                 InlineKeyboardButton(
                     option,
                     callback_data=(
-                        f"employment_full_answer_"
+                        f"employment_answer_"
                         f"{index}_"
                         f"{option_index}_"
                         f"{score}"
@@ -988,115 +1328,82 @@ def employment_full_question_data(
     keyboard.append(
         [
             InlineKeyboardButton(
-                "❌ خروج از آزمون",
+                "🛑 خروج از آزمون",
                 callback_data="employment_exam"
             )
         ]
     )
 
-    return (
-        text,
-        InlineKeyboardMarkup(keyboard)
-    )
+    return InlineKeyboardMarkup(keyboard)
 
 
-def employment_full_answer_data(
-    index,
-    selected,
-    score
+# =========================================================
+# RESULT TEXT
+# =========================================================
+
+def employment_result_text(
+    score,
+    total
 ):
 
-    questions = get_full_exam_questions()
+    if total == 0:
 
-    if not questions:
-        return None
-
-    if index >= len(questions):
-        return None
-
-    question = questions[index]
-
-    correct = question["correct"]
-
-    if selected == correct:
-
-        score += 1
-
-        result_text = f"""
-✅ پاسخ صحیح است.
-
-🎯 +۱ امتیاز
-
-⭐ امتیاز فعلی: {score}
-
-━━━━━━━━━━━━━━━━━━
-
-آفرین 👏
+        return """
+❌ آزمونی برای نمایش نتیجه وجود ندارد.
 """
-
-    else:
-
-        correct_option = question["options"][correct]
-
-        result_text = f"""
-❌ پاسخ اشتباه است.
-
-━━━━━━━━━━━━━━━━━━
-
-✅ پاسخ صحیح:
-
-{correct_option}
-
-━━━━━━━━━━━━━━━━━━
-
-⭐ امتیاز فعلی: {score}
-"""
-
-    next_index = index + 1
-
-    return {
-        "score": score,
-        "next_index": next_index,
-        "finished": next_index >= len(questions),
-        "result_text": result_text,
-    }
-
-
-def employment_full_result_text(
-    score
-):
-
-    questions = get_full_exam_questions()
-
-    total = len(questions)
 
     wrong = total - score
 
     percentage = round(
         (score / total) * 100
-    ) if total else 0
+    )
 
     if percentage >= 90:
+
         evaluation = "🏆 فوق‌العاده"
 
+        message = (
+            "عملکرد شما در سطح بسیار بالایی قرار دارد."
+        )
+
     elif percentage >= 80:
+
         evaluation = "🥇 عالی"
 
+        message = (
+            "عملکرد بسیار خوبی دارید."
+        )
+
     elif percentage >= 70:
+
         evaluation = "🥈 خوب"
 
+        message = (
+            "پایه شما مناسب است، اما هنوز جای پیشرفت دارید."
+        )
+
     elif percentage >= 50:
+
         evaluation = "🟡 متوسط"
 
+        message = (
+            "نیاز به مرور و تمرین بیشتری دارید."
+        )
+
     else:
-        evaluation = "📚 نیازمند مطالعه بیشتر"
+
+        evaluation = "📚 نیازمند مطالعه"
+
+        message = (
+            "پیشنهاد می‌شود ابتدا درسنامه‌ها را مرور کنید."
+        )
 
     return f"""
-🏁 آزمون جامع استخدامی تمام شد.
+🏁 آزمون استخدامی به پایان رسید.
 
 ━━━━━━━━━━━━━━━━━━
 
-📊 نتیجه نهایی
+📊 نتیجه آزمون
 
 📝 تعداد سؤالات: {total}
 
@@ -1106,13 +1413,17 @@ def employment_full_result_text(
 
 📈 درصد: {percentage}٪
 
+━━━━━━━━━━━━━━━━━━
+
 🎯 ارزیابی:
 
 {evaluation}
 
+{message}
+
 ━━━━━━━━━━━━━━━━━━
 
-🏛️ اندیشکده مدیریت و بازار
+📚 مسیر پیشنهادی:
 
 مطالعه
 +
@@ -1120,35 +1431,307 @@ def employment_full_result_text(
 +
 آزمون
 +
-تحلیل
-=
-پیشرفت
+تحلیل اشتباهات
++
+مرور
 """
 
 
-def employment_full_result_menu():
+# =========================================================
+# RESULT MENU
+# =========================================================
 
-    return InlineKeyboardMarkup(
+def employment_result_menu():
+
+    keyboard = [
+
         [
-            [
-                InlineKeyboardButton(
-                    "🔄 آزمون جامع مجدد",
-                    callback_data="employment_full_exam"
-                )
-            ],
+            InlineKeyboardButton(
+                "🔄 آزمون مجدد",
+                callback_data="employment_exam"
+            )
+        ],
 
-            [
-                InlineKeyboardButton(
-                    "📚 انتخاب درس",
-                    callback_data="employment_exam"
-                )
-            ],
+        [
+            InlineKeyboardButton(
+                "🎯 شبیه‌سازی آزمون",
+                callback_data="employment_simulation"
+            )
+        ],
 
-            [
-                InlineKeyboardButton(
-                    "🏠 منوی اصلی",
-                    callback_data="home"
-                )
-            ],
-        ]
+        [
+            InlineKeyboardButton(
+                "📚 بانک سؤالات",
+                callback_data="employment_category_general"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+# =========================================================
+# QUESTION SELECTION
+# =========================================================
+
+def prepare_exam_questions(
+    category="general",
+    difficulty="all",
+    count=None
+):
+    """
+    آماده‌سازی سؤالات آزمون.
+
+    برای نسخه فعلی سؤال‌ها به ترتیب بانک انتخاب می‌شوند.
+    در نسخه بعدی می‌توانیم انتخاب تصادفی،
+    جلوگیری از تکرار و سیستم آزمون هوشمند را اضافه کنیم.
+    """
+
+    questions = get_filtered_questions(
+        category=category,
+        difficulty=difficulty
     )
+
+    if count is not None:
+
+        questions = questions[:count]
+
+    return questions
+
+
+# =========================================================
+# SIMULATION QUESTIONS
+# =========================================================
+
+def prepare_simulation_questions(
+    count=20
+):
+    """
+    آزمون شبیه‌سازی‌شده.
+
+    از کل بانک سؤال انتخاب می‌شود.
+    """
+
+    questions = EMPLOYMENT_QUESTION_BANK.copy()
+
+    return questions[:count]
+
+
+# =========================================================
+# STATISTICS
+# =========================================================
+
+def employment_statistics():
+
+    total = len(
+        EMPLOYMENT_QUESTION_BANK
+    )
+
+    statistics = {
+
+        "total": total,
+
+        "categories": {},
+
+        "difficulties": {},
+
+        "subjects": {},
+
+    }
+
+    # -----------------------------------------------------
+    # CATEGORIES
+    # -----------------------------------------------------
+
+    for category in EMPLOYMENT_CATEGORIES:
+
+        statistics["categories"][category] = len(
+            get_category_questions(category)
+        )
+
+    # -----------------------------------------------------
+    # DIFFICULTIES
+    # -----------------------------------------------------
+
+    for difficulty in DIFFICULTY_NAMES:
+
+        statistics["difficulties"][difficulty] = len(
+            get_questions_by_difficulty(
+                difficulty
+            )
+        )
+
+    # -----------------------------------------------------
+    # SUBJECTS
+    # -----------------------------------------------------
+
+    for subject in SUBJECT_NAMES:
+
+        statistics["subjects"][subject] = len(
+            get_questions_by_subject(
+                subject
+            )
+        )
+
+    return statistics
+
+
+# =========================================================
+# STATISTICS TEXT
+# =========================================================
+
+def employment_statistics_text():
+
+    stats = employment_statistics()
+
+    category_text = ""
+
+    for category, count in stats[
+        "categories"
+    ].items():
+
+        name = EMPLOYMENT_CATEGORIES.get(
+            category,
+            category
+        )
+
+        category_text += (
+            f"{name}: {count}\n"
+        )
+
+    difficulty_text = ""
+
+    for difficulty, count in stats[
+        "difficulties"
+    ].items():
+
+        name = DIFFICULTY_NAMES.get(
+            difficulty,
+            difficulty
+        )
+
+        difficulty_text += (
+            f"{name}: {count}\n"
+        )
+
+    return f"""
+📊 آمار بانک آزمون استخدامی
+
+━━━━━━━━━━━━━━━━━━
+
+📚 مجموع سؤالات:
+
+{stats["total"]} سؤال
+
+━━━━━━━━━━━━━━━━━━
+
+🏦 دسته‌بندی بانک‌ها:
+
+{category_text}
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 سطح سؤالات:
+
+{difficulty_text}
+
+━━━━━━━━━━━━━━━━━━
+
+🏛️ اندیشکده مدیریت و بازار
+"""
+
+
+# =========================================================
+# STATISTICS MENU
+# =========================================================
+
+def employment_statistics_menu():
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "📝 آزمون استخدامی",
+                callback_data="employment_exam"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+# =========================================================
+# EXPORTS
+# =========================================================
+
+__all__ = [
+
+    "EMPLOYMENT_CATEGORIES",
+
+    "DIFFICULTY_NAMES",
+
+    "SUBJECT_NAMES",
+
+    "EMPLOYMENT_QUESTION_BANK",
+
+    "employment_exam_menu",
+
+    "employment_exam_intro_text",
+
+    "employment_category_text",
+
+    "employment_category_menu",
+
+    "employment_difficulty_text",
+
+    "employment_difficulty_menu",
+
+    "employment_simulation_text",
+
+    "employment_simulation_menu",
+
+    "employment_question_text",
+
+    "employment_question_keyboard",
+
+    "employment_result_text",
+
+    "employment_result_menu",
+
+    "prepare_exam_questions",
+
+    "prepare_simulation_questions",
+
+    "employment_statistics",
+
+    "employment_statistics_text",
+
+    "employment_statistics_menu",
+
+    "get_all_questions",
+
+    "get_questions_by_category",
+
+    "get_questions_by_difficulty",
+
+    "get_questions_by_subject",
+
+    "get_filtered_questions",
+
+]
