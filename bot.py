@@ -1,4 +1,5 @@
 import os
+import logging
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
@@ -15,10 +16,21 @@ from banking import (
     banking_back_menu,
     banking_intro_text,
     banking_chapter_text,
-    chapter_exam_menu,
     CHAPTER_NAMES,
     BANKING_CHAPTER_QUESTIONS,
 )
+
+
+# =========================================================
+# تنظیمات اولیه
+# =========================================================
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
+
+logger = logging.getLogger(__name__)
 
 
 # =========================================================
@@ -34,7 +46,7 @@ if not TOKEN:
 
 
 # =========================================================
-# 🏠 منوی اصلی
+# منوی اصلی
 # =========================================================
 
 def main_menu():
@@ -117,13 +129,14 @@ def main_menu():
                 callback_data="support"
             )
         ],
+
     ]
 
     return InlineKeyboardMarkup(keyboard)
 
 
 # =========================================================
-# 👋 متن خوش‌آمدگویی
+# متن خوش‌آمدگویی
 # =========================================================
 
 def welcome_text():
@@ -136,30 +149,47 @@ def welcome_text():
 ━━━━━━━━━━━━━━━━━━
 
 📚 آموزش تخصصی
-📝 آزمون‌های استخدامی
+آموزش مفهومی مدیریت، تجارت، اقتصاد،
+بازاریابی، بانکداری و مهارت‌های حرفه‌ای
+
+📝 آزمون استخدامی
+تمرین و آمادگی آزمون‌های استخدامی
+
 🎲 سوالات تصادفی
+تمرین سریع و سنجش دانش
+
 🧠 روانشناسی و مددکاری
-📖 منابع آموزشی
-🚀 توسعه مهارت‌های حرفه‌ای
+مفاهیم تخصصی روانشناسی،
+مددکاری اجتماعی و مهارت‌های ارتباطی
 
-━━━━━━━━━━━━━━━━━━
+🏦 بانکداری تخصصی
+درسنامه + آزمون فصل + ارزیابی
 
-📖 حوزه‌های آموزشی:
+🌍 تجارت بین‌الملل
+مفاهیم تجارت، صادرات، واردات،
+بازرگانی و بازارهای بین‌المللی
 
-📚 مدیریت و مدیریت بازرگانی
-🌍 تجارت و بازرگانی بین‌الملل
 📈 بازاریابی و فروش
+بازاریابی، رفتار مشتری،
+فروش و توسعه بازار
+
 💰 اقتصاد و بازار
-🏦 بانکداری و خدمات مالی
-🧠 روانشناسی و مددکاری
+اقتصاد، بازارها، پول، تورم
+و مفاهیم اقتصادی
 
 ━━━━━━━━━━━━━━━━━━
 
-🎯 یادگیری مفهومی
+🎯 هدف اندیشکده:
+
+یادگیری مفهومی
 +
-📝 تمرین و آزمون
+تمرین
 +
-📊 ارزیابی عملکرد
+آزمون
++
+تحلیل
++
+توسعه مهارت
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -185,7 +215,7 @@ async def start(
 
 
 # =========================================================
-# 🏠 بازگشت به منوی اصلی
+# 🏠 منوی اصلی
 # =========================================================
 
 async def home_callback(
@@ -223,7 +253,7 @@ async def support_callback(
 
 
 # =========================================================
-# 🏦 منوی بانکداری
+# 🏦 بانکداری
 # =========================================================
 
 async def banking_callback(
@@ -244,7 +274,7 @@ async def banking_callback(
 
 
 # =========================================================
-# 📚 نمایش فصل بانکداری
+# 📖 نمایش فصل بانکداری
 # =========================================================
 
 async def banking_chapter_callback(
@@ -287,19 +317,20 @@ async def banking_chapter_callback(
 
     try:
 
-        text, keyboard = banking_chapter_text(chapter)
+        text, _ = banking_chapter_text(chapter)
 
     except Exception as error:
 
-        print(
-            f"Error loading chapter {chapter}: {error}"
+        logger.exception(
+            "Error loading banking chapter %s",
+            chapter
         )
 
         await query.edit_message_text(
             """
 ⚠️ خطا در بارگذاری درسنامه.
 
-لطفاً بعداً دوباره تلاش کنید.
+لطفاً دوباره تلاش کنید.
 """,
             reply_markup=banking_back_menu()
         )
@@ -307,17 +338,63 @@ async def banking_chapter_callback(
         return
 
 
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                f"📝 آزمون فصل {chapter}",
+                callback_data=f"banking_exam_intro_{chapter}"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "⬅️ فصل قبل",
+                callback_data=(
+                    f"banking_chapter_{chapter - 1}"
+                    if chapter > 1
+                    else "banking"
+                )
+            ),
+
+            InlineKeyboardButton(
+                "فصل بعد ➡️",
+                callback_data=(
+                    f"banking_chapter_{chapter + 1}"
+                    if chapter < 12
+                    else "banking"
+                )
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏦 بانکداری",
+                callback_data="banking"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+
     await query.edit_message_text(
         text,
-        reply_markup=keyboard
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
 # =========================================================
-# 📝 منوی آزمون فصل
+# 📝 معرفی آزمون فصل
 # =========================================================
 
-async def banking_exam_menu_callback(
+async def banking_exam_intro_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
@@ -330,7 +407,7 @@ async def banking_exam_menu_callback(
 
         chapter = int(
             query.data.replace(
-                "banking_exam_menu_",
+                "banking_exam_intro_",
                 ""
             )
         )
@@ -339,16 +416,6 @@ async def banking_exam_menu_callback(
 
         await query.edit_message_text(
             "❌ شماره فصل نامعتبر است.",
-            reply_markup=banking_back_menu()
-        )
-
-        return
-
-
-    if chapter not in CHAPTER_NAMES:
-
-        await query.edit_message_text(
-            "❌ این فصل وجود ندارد.",
             reply_markup=banking_back_menu()
         )
 
@@ -390,16 +457,85 @@ async def banking_exam_menu_callback(
         return
 
 
-    text, keyboard = chapter_exam_menu(chapter)
+    name = CHAPTER_NAMES.get(
+        chapter,
+        "بانکداری"
+    )
+
+
+    text = f"""
+📝 آزمون پایان فصل {chapter}
+
+🏦 {name}
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 آزمون تخصصی و مفهومی
+
+📝 تعداد سؤالات:
+{len(questions)} سؤال
+
+━━━━━━━━━━━━━━━━━━
+
+📌 قوانین آزمون
+
+• هر سؤال چهار گزینه دارد.
+• فقط یک گزینه صحیح است.
+• پاسخ‌ها بررسی می‌شوند.
+• امتیاز شما محاسبه می‌شود.
+• نتیجه در پایان نمایش داده می‌شود.
+
+━━━━━━━━━━━━━━━━━━
+
+💡 پیشنهاد:
+
+ابتدا درسنامه را مطالعه کنید،
+سپس آزمون را انجام دهید.
+
+━━━━━━━━━━━━━━━━━━
+
+👇 برای شروع آزمون:
+"""
+
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🚀 شروع آزمون",
+                callback_data=(
+                    f"banking_exam_{chapter}_0_0"
+                )
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📖 بازگشت به درسنامه",
+                callback_data=(
+                    f"banking_chapter_{chapter}"
+                )
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏦 بانکداری",
+                callback_data="banking"
+            )
+        ],
+
+    ]
+
 
     await query.edit_message_text(
         text,
-        reply_markup=keyboard
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
 # =========================================================
-# 📝 نمایش سؤال آزمون
+# 📝 نمایش سؤال بانکداری
 # =========================================================
 
 async def banking_exam_question_callback(
@@ -414,8 +550,6 @@ async def banking_exam_question_callback(
     try:
 
         data = query.data.split("_")
-
-        # banking_exam_1_0_0
 
         chapter = int(data[2])
         index = int(data[3])
@@ -473,7 +607,8 @@ async def banking_exam_question_callback(
     text = f"""
 📝 آزمون بانکداری
 
-📘 فصل {chapter} | {name}
+📘 فصل {chapter}
+🏦 {name}
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -531,7 +666,7 @@ async def banking_exam_question_callback(
 
 
 # =========================================================
-# 📝 پردازش پاسخ
+# 📝 بررسی پاسخ
 # =========================================================
 
 async def banking_answer_callback(
@@ -546,8 +681,6 @@ async def banking_answer_callback(
     try:
 
         data = query.data.split("_")
-
-        # banking_answer_1_0_0_0
 
         chapter = int(data[2])
         index = int(data[3])
@@ -572,16 +705,6 @@ async def banking_answer_callback(
         chapter,
         []
     )
-
-
-    if not questions:
-
-        await query.edit_message_text(
-            "❌ سوالی برای این فصل وجود ندارد.",
-            reply_markup=banking_back_menu()
-        )
-
-        return
 
 
     if index >= len(questions):
@@ -614,8 +737,9 @@ async def banking_answer_callback(
 ━━━━━━━━━━━━━━━━━━
 
 آفرین 👏
-"""
 
+به سؤال بعدی بروید.
+"""
 
     else:
 
@@ -670,6 +794,7 @@ async def banking_answer_callback(
                     callback_data="banking"
                 )
             ],
+
         ]
 
 
@@ -677,7 +802,6 @@ async def banking_answer_callback(
             result_text,
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
-
 
     else:
 
@@ -790,7 +914,8 @@ async def show_exam_result(
 
 📈 درصد: {percentage}٪
 
-🎯 ارزیابی: {evaluation}
+🎯 ارزیابی:
+{evaluation}
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -798,7 +923,7 @@ async def show_exam_result(
 
 ━━━━━━━━━━━━━━━━━━
 
-🎯 هدف اندیشکده:
+🏛️ اندیشکده مدیریت و بازار
 
 یادگیری مفهومی
 +
@@ -806,7 +931,7 @@ async def show_exam_result(
 +
 مرور هدفمند
 +
-آمادگی آزمون استخدامی
+آمادگی آزمون
 """
 
 
@@ -829,6 +954,7 @@ async def show_exam_result(
                 )
             )
         ],
+
     ]
 
 
@@ -862,6 +988,7 @@ async def show_exam_result(
                     callback_data="home"
                 )
             ],
+
         ]
     )
 
@@ -873,10 +1000,10 @@ async def show_exam_result(
 
 
 # =========================================================
-# 🏆 آزمون جامع
+# 🧠 روانشناسی و مددکاری اجتماعی
 # =========================================================
 
-async def banking_full_exam_callback(
+async def psychology_socialwork_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
@@ -885,55 +1012,622 @@ async def banking_full_exam_callback(
 
     await query.answer()
 
+    text = """
+🧠 روانشناسی و مددکاری اجتماعی
+
+مرکز تخصصی آموزش مفاهیم روانشناسی،
+مددکاری اجتماعی و مهارت‌های ارتباطی
+
+━━━━━━━━━━━━━━━━━━
+
+📚 محورهای آموزشی
+
+🧠 روانشناسی عمومی
+• ادراک
+• یادگیری
+• حافظه
+• انگیزش
+• هیجان
+• شخصیت
+• رفتار
+
+👥 روانشناسی اجتماعی
+• ارتباطات
+• گروه
+• نگرش
+• نفوذ اجتماعی
+• تعارض
+• رفتار جمعی
+
+🤝 مددکاری اجتماعی
+• مفهوم مددکاری
+• فرد، خانواده و جامعه
+• ارزیابی اجتماعی
+• مداخله
+• مصاحبه مددکاری
+• پرونده اجتماعی
+• توانمندسازی
+• حمایت اجتماعی
+
+🗣️ مهارت‌های ارتباطی
+• گوش دادن فعال
+• همدلی
+• ارتباط مؤثر
+• حل تعارض
+• مصاحبه
+• ارتباط حرفه‌ای
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 هدف این بخش:
+
+یادگیری مفهومی
++
+مهارت حرفه‌ای
++
+آمادگی آزمون
++
+تمرین
+
+━━━━━━━━━━━━━━━━━━
+
+⚠️ مطالب این بخش آموزشی هستند
+و جایگزین تشخیص یا درمان تخصصی
+توسط متخصص مربوطه نیستند.
+
+━━━━━━━━━━━━━━━━━━
+"""
+
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🧠 روانشناسی عمومی",
+                callback_data="psychology_general"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "👥 روانشناسی اجتماعی",
+                callback_data="psychology_social"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🤝 مددکاری اجتماعی",
+                callback_data="social_work"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🗣️ مهارت‌های ارتباطی",
+                callback_data="communication_skills"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📝 آزمون روانشناسی و مددکاری",
+                callback_data="psychology_exam"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+
     await query.edit_message_text(
-        """
-🏆 آزمون جامع بانکداری
-
-━━━━━━━━━━━━━━━━━━
-
-🚧 آزمون جامع در حال توسعه است.
-
-در نسخه بعدی، سؤالات تمام فصل‌های
-بانکداری در یک آزمون ترکیبی قرار می‌گیرند.
-
-━━━━━━━━━━━━━━━━━━
-
-📚 فصل‌های موجود:
-
-۱. مبانی بانکداری
-۲. سپرده‌ها و حساب‌ها
-۳. تسهیلات و اعتبارات
-۴. عقود بانکی
-۵. قوانین و مقررات
-۶. چک و اسناد بانکی
-۷. مبارزه با پولشویی
-۸. اعتبارسنجی
-۹. بانکداری الکترونیک
-۱۰. مدیریت ریسک
-۱۱. بانک مرکزی و سیاست پولی
-۱۲. بانکداری اسلامی
-""",
-        reply_markup=InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "🏦 بازگشت به بانکداری",
-                        callback_data="banking"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "🏠 منوی اصلی",
-                        callback_data="home"
-                    )
-                ]
-            ]
-        )
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
 # =========================================================
-# 🚧 بخش‌های موقت
+# 📚 زیرمنوی روانشناسی
+# =========================================================
+
+async def psychology_general_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    text = """
+🧠 روانشناسی عمومی
+
+━━━━━━━━━━━━━━━━━━
+
+📌 روانشناسی چیست؟
+
+روانشناسی علمی است که رفتار و
+فرایندهای ذهنی را مطالعه می‌کند.
+
+━━━━━━━━━━━━━━━━━━
+
+📚 مباحث اصلی
+
+1️⃣ ادراک
+
+فرآیندی که طی آن اطلاعات حسی
+سازمان‌دهی و تفسیر می‌شوند.
+
+2️⃣ یادگیری
+
+تغییر نسبتاً پایدار در رفتار یا
+توانایی رفتاری در اثر تجربه و تمرین.
+
+3️⃣ حافظه
+
+فرآیندهای رمزگذاری، ذخیره‌سازی
+و بازیابی اطلاعات.
+
+4️⃣ انگیزش
+
+فرآیندهایی که رفتار را فعال،
+هدایت و حفظ می‌کنند.
+
+5️⃣ هیجان
+
+واکنش‌هایی شامل مؤلفه‌های
+احساسی، فیزیولوژیک و رفتاری.
+
+6️⃣ شخصیت
+
+الگوهای نسبتاً پایدار افکار،
+احساسات و رفتار فرد.
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 نکته آموزشی
+
+برای مطالعه روانشناسی فقط
+تعریف‌ها را حفظ نکنید.
+
+مفهوم
+⬇️
+مثال
+⬇️
+کاربرد
+⬇️
+تفاوت با مفاهیم مشابه
+
+را بررسی کنید.
+"""
+
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🧠 روانشناسی و مددکاری",
+                callback_data="psychology_socialwork"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
+# 👥 روانشناسی اجتماعی
+# =========================================================
+
+async def psychology_social_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    text = """
+👥 روانشناسی اجتماعی
+
+━━━━━━━━━━━━━━━━━━
+
+روانشناسی اجتماعی به بررسی این
+موضوع می‌پردازد که افکار، احساسات
+و رفتار افراد چگونه تحت تأثیر
+دیگران و موقعیت اجتماعی قرار می‌گیرد.
+
+━━━━━━━━━━━━━━━━━━
+
+📚 مباحث مهم
+
+• نگرش
+• کلیشه
+• پیش‌داوری
+• نفوذ اجتماعی
+• همنوایی
+• اطاعت
+• رفتار گروهی
+• ارتباطات
+• تعارض
+• همکاری
+• تصمیم‌گیری گروهی
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 کاربردها
+
+🏢 محیط کار
+👥 روابط اجتماعی
+🎓 آموزش
+🤝 مددکاری
+📈 مدیریت
+🗣️ ارتباطات
+
+━━━━━━━━━━━━━━━━━━
+
+⭐ نکته
+
+رفتار انسان را نمی‌توان همیشه
+صرفاً با یک عامل توضیح داد.
+
+شخص
++
+موقعیت
++
+گروه
++
+فرهنگ
+
+می‌توانند بر رفتار اثر بگذارند.
+"""
+
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🔙 روانشناسی و مددکاری",
+                callback_data="psychology_socialwork"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
+# 🤝 مددکاری اجتماعی
+# =========================================================
+
+async def social_work_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    text = """
+🤝 مددکاری اجتماعی
+
+━━━━━━━━━━━━━━━━━━
+
+مددکاری اجتماعی حرفه‌ای است که
+با هدف کمک به افراد، خانواده‌ها
+و گروه‌ها برای مواجهه با مسائل
+اجتماعی و افزایش توانمندی آنان
+فعالیت می‌کند.
+
+━━━━━━━━━━━━━━━━━━
+
+📚 مفاهیم مهم
+
+1️⃣ مددجو
+
+فرد، خانواده، گروه یا جامعه‌ای
+که برای حل یا مدیریت یک مسئله
+از خدمات حرفه‌ای استفاده می‌کند.
+
+2️⃣ ارزیابی
+
+شناخت مسئله، شرایط فرد،
+منابع حمایتی، عوامل خطر
+و ظرفیت‌های موجود.
+
+3️⃣ مداخله
+
+اقدامات حرفه‌ای برای کمک به
+مدیریت یا کاهش مسئله و افزایش
+توانمندی.
+
+4️⃣ توانمندسازی
+
+تقویت ظرفیت فرد یا جامعه برای
+مشارکت و تصمیم‌گیری مؤثر.
+
+5️⃣ حمایت اجتماعی
+
+منابع رسمی و غیررسمی مانند
+خانواده، دوستان، نهادها و خدمات
+اجتماعی.
+
+━━━━━━━━━━━━━━━━━━
+
+🧩 سطوح مداخله
+
+👤 فرد
+👨‍👩‍👧 خانواده
+👥 گروه
+🏘️ جامعه
+
+━━━━━━━━━━━━━━━━━━
+
+⭐ مهارت‌های مهم مددکار
+
+• گوش دادن فعال
+• مصاحبه حرفه‌ای
+• همدلی
+• مشاهده
+• ارزیابی
+• مستندسازی
+• ارتباط حرفه‌ای
+• حفظ مرزهای حرفه‌ای
+• ارجاع مناسب
+
+━━━━━━━━━━━━━━━━━━
+
+⚠️ اصل مهم
+
+مددکاری حرفه‌ای باید بر اصول
+اخلاقی، حفظ کرامت انسان،
+محرمانگی و رعایت حدود حرفه‌ای
+استوار باشد.
+"""
+
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🔙 روانشناسی و مددکاری",
+                callback_data="psychology_socialwork"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
+# 🗣️ مهارت‌های ارتباطی
+# =========================================================
+
+async def communication_skills_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    text = """
+🗣️ مهارت‌های ارتباطی
+
+━━━━━━━━━━━━━━━━━━
+
+ارتباط مؤثر فقط صحبت کردن نیست.
+
+فرستنده
+⬇️
+پیام
+⬇️
+کانال
+⬇️
+گیرنده
+⬇️
+بازخورد
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 مهارت‌های مهم
+
+👂 گوش دادن فعال
+
+• توجه به صحبت
+• قطع نکردن بی‌مورد
+• پرسش مناسب
+• بازتاب پیام
+
+❤️ همدلی
+
+تلاش برای درک تجربه و دیدگاه
+فرد مقابل بدون قضاوت عجولانه.
+
+🗣️ بیان مؤثر
+
+پیام باید روشن، دقیق و متناسب
+با مخاطب باشد.
+
+🤝 حل تعارض
+
+• شناسایی مسئله
+• شنیدن دیدگاه‌ها
+• تفکیک شخص از مسئله
+• پیدا کردن راه‌حل
+• توافق
+
+━━━━━━━━━━━━━━━━━━
+
+⭐ نکته حرفه‌ای
+
+همدلی به معنی تأیید تمام
+رفتارها یا عقاید فرد نیست.
+
+همدلی یعنی تلاش برای فهمیدن
+تجربه او.
+"""
+
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🔙 روانشناسی و مددکاری",
+                callback_data="psychology_socialwork"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
+# 📝 آزمون روانشناسی و مددکاری
+# =========================================================
+
+async def psychology_exam_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    text = """
+📝 آزمون روانشناسی و مددکاری
+
+━━━━━━━━━━━━━━━━━━
+
+🚧 سیستم آزمون تخصصی این بخش
+در مرحله طراحی است.
+
+در نسخه کامل:
+
+🧠 روانشناسی عمومی
+👥 روانشناسی اجتماعی
+🤝 مددکاری اجتماعی
+🗣️ مهارت‌های ارتباطی
+
+به‌صورت جداگانه آزمون خواهند داشت.
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 ساختار آزمون:
+
+سؤال
+⬇️
+چهار گزینه
+⬇️
+پاسخ
+⬇️
+تحلیل
+⬇️
+امتیاز
+⬇️
+ارزیابی عملکرد
+"""
+
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🧠 مطالعه روانشناسی",
+                callback_data="psychology_general"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🤝 مطالعه مددکاری",
+                callback_data="social_work"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🔙 بازگشت",
+                callback_data="psychology_socialwork"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
+# 🚧 بخش‌های آموزشی موقت
 # =========================================================
 
 async def temporary_section(
@@ -949,10 +1643,9 @@ async def temporary_section(
         """
 🚧 این بخش در حال توسعه است.
 
-محتوای تخصصی این قسمت به‌زودی
-در اندیشکده مدیریت و بازار قرار می‌گیرد.
-
-━━━━━━━━━━━━━━━━━━
+هدف این قسمت ارائه محتوای تخصصی،
+درسنامه، نمونه‌ها، تمرین‌ها و آزمون‌های
+ساختاریافته است.
 
 🏛️ اندیشکده مدیریت و بازار
 """,
@@ -970,7 +1663,22 @@ async def temporary_section(
 
 
 # =========================================================
-# ⚠️ Callback ناشناخته
+# ⚠️ مدیریت خطا
+# =========================================================
+
+async def error_handler(
+    update: object,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    logger.exception(
+        "Exception while handling update:",
+        exc_info=context.error
+    )
+
+
+# =========================================================
+# ❓ Callback ناشناخته
 # =========================================================
 
 async def unknown_callback(
@@ -999,7 +1707,9 @@ def main():
     )
 
 
+    # =====================================================
     # /start
+    # =====================================================
 
     application.add_handler(
         CommandHandler(
@@ -1009,7 +1719,9 @@ def main():
     )
 
 
+    # =====================================================
     # HOME
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -1019,7 +1731,9 @@ def main():
     )
 
 
+    # =====================================================
     # SUPPORT
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -1029,7 +1743,9 @@ def main():
     )
 
 
+    # =====================================================
     # BANKING
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -1039,7 +1755,9 @@ def main():
     )
 
 
-    # BANKING CHAPTER
+    # =====================================================
+    # BANKING CHAPTERS
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -1049,17 +1767,21 @@ def main():
     )
 
 
-    # BANKING EXAM MENU
+    # =====================================================
+    # BANKING EXAM INTRO
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
-            banking_exam_menu_callback,
-            pattern=r"^banking_exam_menu_[0-9]+$"
+            banking_exam_intro_callback,
+            pattern=r"^banking_exam_intro_[0-9]+$"
         )
     )
 
 
-    # BANKING EXAM QUESTIONS
+    # =====================================================
+    # BANKING EXAM QUESTION
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -1069,7 +1791,9 @@ def main():
     )
 
 
-    # BANKING ANSWERS
+    # =====================================================
+    # BANKING ANSWER
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -1079,25 +1803,61 @@ def main():
     )
 
 
-    # FULL EXAM
+    # =====================================================
+    # PSYCHOLOGY / SOCIAL WORK
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
-            banking_full_exam_callback,
-            pattern=r"^banking_full_exam$"
+            psychology_socialwork_callback,
+            pattern=r"^psychology_socialwork$"
         )
     )
 
 
     application.add_handler(
         CallbackQueryHandler(
-            banking_full_exam_callback,
-            pattern=r"^banking_full_exam_start$"
+            psychology_general_callback,
+            pattern=r"^psychology_general$"
         )
     )
 
 
-    # TEMPORARY SECTIONS
+    application.add_handler(
+        CallbackQueryHandler(
+            psychology_social_callback,
+            pattern=r"^psychology_social$"
+        )
+    )
+
+
+    application.add_handler(
+        CallbackQueryHandler(
+            social_work_callback,
+            pattern=r"^social_work$"
+        )
+    )
+
+
+    application.add_handler(
+        CallbackQueryHandler(
+            communication_skills_callback,
+            pattern=r"^communication_skills$"
+        )
+    )
+
+
+    application.add_handler(
+        CallbackQueryHandler(
+            psychology_exam_callback,
+            pattern=r"^psychology_exam$"
+        )
+    )
+
+
+    # =====================================================
+    # OTHER MAIN SECTIONS
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -1106,7 +1866,6 @@ def main():
                 r"^(education|"
                 r"employment_exam|"
                 r"random_questions|"
-                r"psychology_socialwork|"
                 r"international_trade|"
                 r"marketing|"
                 r"economics|"
@@ -1117,7 +1876,10 @@ def main():
     )
 
 
-    # UNKNOWN
+    # =====================================================
+    # UNKNOWN CALLBACK
+    # باید آخرین Handler باشد
+    # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -1126,10 +1888,22 @@ def main():
     )
 
 
+    # =====================================================
+    # ERROR HANDLER
+    # =====================================================
+
+    application.add_error_handler(
+        error_handler
+    )
+
+
+    # =====================================================
+    # RUN
+    # =====================================================
+
     print(
         "🏛️ Andishkadeh Market Bot is running..."
     )
-
 
     application.run_polling()
 
@@ -1139,4 +1913,5 @@ def main():
 # =========================================================
 
 if __name__ == "__main__":
+
     main()
