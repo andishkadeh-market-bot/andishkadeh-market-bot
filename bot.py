@@ -1,7 +1,8 @@
 # =========================================================
 # bot.py
 # 🏛️ اندیشکده مدیریت و بازار
-# نسخه جامع و سازگار با Render Free Web Service
+# نسخه جامع + اتصال کامل اقتصاد و بازار
+# سازگار با Render Free Web Service
 # =========================================================
 
 import os
@@ -72,7 +73,6 @@ from marketing import (
     marketing_result_text,
     marketing_result_menu,
     marketing_has_chapter,
-    marketing_has_questions,
     CHAPTER_NAMES as MARKETING_CHAPTER_NAMES,
 )
 
@@ -1908,7 +1908,982 @@ async def marketing_answer_callback(
 
 
 # =========================================================
-# بخش‌های موقت
+# ECONOMICS / MARKET
+# بخش کامل اقتصاد و بازار
+# =========================================================
+
+def economics_menu():
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "📚 آموزش اقتصاد",
+                callback_data="economics_lessons"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📊 مفاهیم اقتصادی",
+                callback_data="economics_concepts"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "💹 اقتصاد و بازار",
+                callback_data="economics_market"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏦 سیاست پولی",
+                callback_data="economics_monetary"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏛️ سیاست مالی",
+                callback_data="economics_fiscal"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📈 تورم و رشد اقتصادی",
+                callback_data="economics_inflation_growth"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "💵 ارز و نرخ بهره",
+                callback_data="economics_currency_interest"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📝 آزمون اقتصاد",
+                callback_data="economics_exam"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+def economics_text():
+
+    return """
+💰 اقتصاد و بازار
+
+━━━━━━━━━━━━━━━━━━
+
+🏛️ اندیشکده مدیریت و بازار
+
+مرکز آموزش مفاهیم اقتصاد، بازارهای مالی
+و تحلیل متغیرهای اقتصادی
+
+━━━━━━━━━━━━━━━━━━
+
+📚 در این بخش با موضوعات زیر آشنا می‌شوید:
+
+• مبانی علم اقتصاد
+• عرضه و تقاضا
+• بازار و قیمت
+• تورم
+• رشد اقتصادی
+• بیکاری
+• سیاست پولی
+• سیاست مالی
+• نرخ بهره
+• نرخ ارز
+• بانک مرکزی
+• نقدینگی
+• تولید ناخالص داخلی
+• رکود و رونق اقتصادی
+• بازارهای مالی
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 هدف:
+
+درک مفاهیم اقتصادی
++
+تحلیل بازار
++
+آمادگی آزمون
++
+کاربرد در مدیریت و کسب‌وکار
+
+👇 بخش موردنظر را انتخاب کنید.
+"""
+
+
+def economics_lessons_text():
+
+    return """
+📚 آموزش اقتصاد
+
+━━━━━━━━━━━━━━━━━━
+
+1️⃣ اقتصاد چیست؟
+
+اقتصاد علمی است که بررسی می‌کند منابع محدود
+چگونه برای تأمین نیازها و خواسته‌های نامحدود
+انسان‌ها تخصیص پیدا می‌کنند.
+
+━━━━━━━━━━━━━━━━━━
+
+2️⃣ عرضه و تقاضا
+
+🔹 عرضه:
+مقدار کالا یا خدمتی که تولیدکنندگان حاضرند
+در قیمت مشخص به بازار عرضه کنند.
+
+🔹 تقاضا:
+مقدار کالا یا خدمتی که مصرف‌کنندگان حاضرند
+در قیمت مشخص خریداری کنند.
+
+━━━━━━━━━━━━━━━━━━
+
+3️⃣ قانون تقاضا
+
+در شرایط برابر، با افزایش قیمت یک کالا،
+مقدار تقاضا برای آن کاهش پیدا می‌کند.
+
+━━━━━━━━━━━━━━━━━━
+
+4️⃣ قانون عرضه
+
+در شرایط برابر، افزایش قیمت معمولاً باعث
+افزایش تمایل تولیدکنندگان به عرضه می‌شود.
+
+━━━━━━━━━━━━━━━━━━
+
+5️⃣ تعادل بازار
+
+نقطه‌ای که در آن مقدار عرضه با مقدار تقاضا
+برابر می‌شود، تعادل بازار نام دارد.
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 نکته آزمونی:
+
+افزایش قیمت ≠ همیشه کاهش تقاضا در تمام شرایط
+
+عوامل دیگری مانند درآمد، قیمت کالاهای مرتبط،
+انتظارات و ترجیحات مصرف‌کننده نیز اهمیت دارند.
+"""
+
+
+def economics_concepts_text():
+
+    return """
+📊 مفاهیم مهم اقتصادی
+
+━━━━━━━━━━━━━━━━━━
+
+💰 تورم
+
+افزایش مستمر و عمومی سطح قیمت کالاها و خدمات
+در طول زمان.
+
+━━━━━━━━━━━━━━━━━━
+
+📈 رشد اقتصادی
+
+افزایش ظرفیت تولید کالاها و خدمات در اقتصاد،
+که معمولاً با رشد تولید ناخالص داخلی سنجیده می‌شود.
+
+━━━━━━━━━━━━━━━━━━
+
+👷 بیکاری
+
+وضعیتی که فرد آماده و مایل به کار است اما
+شغل مناسب پیدا نکرده است.
+
+━━━━━━━━━━━━━━━━━━
+
+🏭 تولید ناخالص داخلی
+
+ارزش کالاها و خدمات نهایی تولیدشده در داخل
+مرزهای یک کشور طی یک دوره مشخص.
+
+━━━━━━━━━━━━━━━━━━
+
+💧 نقدینگی
+
+مجموع پول و شبه‌پول موجود در اقتصاد است.
+
+━━━━━━━━━━━━━━━━━━
+
+💵 نرخ بهره
+
+هزینه استفاده از پول در طول زمان است و یکی
+از متغیرهای مهم در تصمیم‌های سرمایه‌گذاری،
+پس‌انداز و مصرف محسوب می‌شود.
+"""
+
+
+def economics_market_text():
+
+    return """
+💹 اقتصاد و بازار
+
+━━━━━━━━━━━━━━━━━━
+
+بازار محلی برای تعامل عرضه‌کنندگان و
+تقاضاکنندگان است.
+
+━━━━━━━━━━━━━━━━━━
+
+📈 بازار صعودی
+
+زمانی که روند عمومی قیمت‌ها و ارزش دارایی‌ها
+رو به افزایش باشد.
+
+📉 بازار نزولی
+
+زمانی که روند عمومی قیمت‌ها و ارزش دارایی‌ها
+رو به کاهش باشد.
+
+━━━━━━━━━━━━━━━━━━
+
+🔹 عوامل مؤثر بر بازار:
+
+• تورم
+• نرخ بهره
+• نرخ ارز
+• نقدینگی
+• سیاست‌های دولت
+• سیاست بانک مرکزی
+• رشد اقتصادی
+• انتظارات فعالان اقتصادی
+• وضعیت عرضه و تقاضا
+• تحولات سیاسی و بین‌المللی
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 نکته:
+
+تحلیل بازار فقط با نگاه کردن به قیمت انجام
+نمی‌شود؛ باید عوامل بنیادی و شرایط کل اقتصاد
+نیز بررسی شوند.
+"""
+
+
+def economics_monetary_text():
+
+    return """
+🏦 سیاست پولی
+
+━━━━━━━━━━━━━━━━━━
+
+سیاست پولی مجموعه اقداماتی است که بانک مرکزی
+برای تأثیرگذاری بر حجم پول، اعتبار و شرایط
+مالی اقتصاد انجام می‌دهد.
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 اهداف مهم:
+
+• کنترل تورم
+• حفظ ثبات قیمت‌ها
+• کمک به ثبات مالی
+• مدیریت نقدینگی
+• تأثیرگذاری بر شرایط اعتباری
+
+━━━━━━━━━━━━━━━━━━
+
+🔹 ابزارهای سیاست پولی می‌توانند شامل:
+
+• نرخ‌های سیاستی
+• عملیات بازار باز
+• مدیریت ذخایر بانکی
+• ابزارهای اعتباری
+
+باشند.
+
+━━━━━━━━━━━━━━━━━━
+
+📌 نکته آزمونی:
+
+افزایش نرخ بهره معمولاً باعث افزایش هزینه
+استقراض و کاهش انگیزه برخی فعالیت‌های
+مصرفی و سرمایه‌گذاری می‌شود.
+"""
+
+
+def economics_fiscal_text():
+
+    return """
+🏛️ سیاست مالی
+
+━━━━━━━━━━━━━━━━━━
+
+سیاست مالی به تصمیمات دولت درباره درآمدها
+و هزینه‌های عمومی مربوط می‌شود.
+
+━━━━━━━━━━━━━━━━━━
+
+💰 درآمدهای دولت:
+
+• مالیات
+• درآمدهای حاصل از منابع
+• عوارض و سایر درآمدها
+
+━━━━━━━━━━━━━━━━━━
+
+💸 مخارج دولت:
+
+• حقوق و دستمزد
+• پروژه‌های عمرانی
+• خدمات عمومی
+• حمایت‌های اجتماعی
+
+━━━━━━━━━━━━━━━━━━
+
+📈 سیاست مالی انبساطی
+
+افزایش مخارج دولت یا کاهش مالیات‌ها برای
+تحریک تقاضای کل.
+
+📉 سیاست مالی انقباضی
+
+کاهش مخارج یا افزایش مالیات‌ها با هدف
+کاهش فشارهای تقاضا و تورمی.
+"""
+
+
+def economics_inflation_growth_text():
+
+    return """
+📈 تورم و رشد اقتصادی
+
+━━━━━━━━━━━━━━━━━━
+
+🔥 تورم
+
+تورم به افزایش مستمر و عمومی سطح قیمت‌ها
+گفته می‌شود.
+
+━━━━━━━━━━━━━━━━━━
+
+📊 انواع مهم تورم:
+
+• تورم ناشی از افزایش تقاضا
+• تورم ناشی از افزایش هزینه
+• تورم ساختاری
+
+━━━━━━━━━━━━━━━━━━
+
+📈 رشد اقتصادی
+
+افزایش توان تولید کالاها و خدمات در اقتصاد.
+
+━━━━━━━━━━━━━━━━━━
+
+عوامل مؤثر بر رشد:
+
+• سرمایه‌گذاری
+• نیروی کار
+• بهره‌وری
+• فناوری
+• زیرساخت
+• کیفیت نهادها
+• ثبات اقتصادی
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 نکته:
+
+رشد اقتصادی با افزایش قیمت‌ها یکسان نیست.
+رشد واقعی باید اثر تغییر سطح قیمت‌ها را در
+اندازه‌گیری خود لحاظ کند.
+"""
+
+
+def economics_currency_interest_text():
+
+    return """
+💵 ارز و نرخ بهره
+
+━━━━━━━━━━━━━━━━━━
+
+💱 نرخ ارز
+
+قیمت یک واحد پول خارجی بر اساس پول داخلی
+یا برعکس است، بسته به شیوه بیان نرخ.
+
+━━━━━━━━━━━━━━━━━━
+
+عوامل مؤثر بر نرخ ارز:
+
+• تورم
+• نرخ بهره
+• عرضه و تقاضای ارز
+• صادرات و واردات
+• انتظارات اقتصادی
+• سیاست‌های پولی
+• شرایط سیاسی و بین‌المللی
+
+━━━━━━━━━━━━━━━━━━
+
+📌 رابطه نرخ بهره و ارز همیشه ساده و قطعی
+نیست و به شرایط اقتصاد، انتظارات و سیاست‌های
+اقتصادی بستگی دارد.
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 نکته آزمونی:
+
+در تحلیل نرخ ارز باید مجموعه‌ای از متغیرهای
+اقتصادی را همزمان بررسی کرد.
+"""
+
+
+# =========================================================
+# ECONOMICS EXAM
+# =========================================================
+
+ECONOMICS_QUESTIONS = [
+
+    {
+        "question": "کدام گزینه تعریف مناسب‌تری از تورم است؟",
+        "options": [
+            "افزایش یک‌باره قیمت یک کالا",
+            "افزایش مستمر و عمومی سطح قیمت‌ها",
+            "کاهش سطح تولید",
+            "افزایش درآمد خانوار"
+        ],
+        "correct": 1
+    },
+
+    {
+        "question": "کدام گزینه بیشتر با سیاست پولی ارتباط دارد؟",
+        "options": [
+            "مخارج دولت",
+            "مالیات",
+            "نرخ بهره و نقدینگی",
+            "بودجه عمرانی"
+        ],
+        "correct": 2
+    },
+
+    {
+        "question": "تولید ناخالص داخلی چه چیزی را اندازه‌گیری می‌کند؟",
+        "options": [
+            "ارزش دارایی‌های خانوارها",
+            "ارزش کالاها و خدمات نهایی تولیدشده در اقتصاد",
+            "مقدار پول نقد مردم",
+            "میزان صادرات یک کشور"
+        ],
+        "correct": 1
+    },
+
+    {
+        "question": "در شرایط برابر، افزایش قیمت معمولاً چه اثری بر مقدار تقاضا دارد؟",
+        "options": [
+            "افزایش",
+            "کاهش",
+            "بدون تغییر قطعی",
+            "دو برابر شدن"
+        ],
+        "correct": 1
+    },
+
+    {
+        "question": "کدام مورد از ابزارهای سیاست مالی است؟",
+        "options": [
+            "مالیات",
+            "عملیات بازار باز",
+            "ذخایر بانکی",
+            "نرخ سیاستی بانک مرکزی"
+        ],
+        "correct": 0
+    },
+
+    {
+        "question": "نقدینگی معمولاً شامل چه اجزایی است؟",
+        "options": [
+            "فقط اسکناس",
+            "فقط سکه",
+            "پول و شبه‌پول",
+            "فقط سپرده‌های بلندمدت"
+        ],
+        "correct": 2
+    },
+
+    {
+        "question": "کدام گزینه می‌تواند به رشد اقتصادی کمک کند؟",
+        "options": [
+            "کاهش بهره‌وری",
+            "کاهش سرمایه‌گذاری",
+            "افزایش بهره‌وری و فناوری",
+            "کاهش ظرفیت تولید"
+        ],
+        "correct": 2
+    },
+
+    {
+        "question": "بازار از تعامل کدام دو عامل اصلی شکل می‌گیرد؟",
+        "options": [
+            "دولت و بانک",
+            "عرضه و تقاضا",
+            "صادرات و واردات",
+            "تورم و بیکاری"
+        ],
+        "correct": 1
+    },
+
+    {
+        "question": "سیاست مالی عمدتاً مربوط به کدام بخش است؟",
+        "options": [
+            "تصمیمات دولت درباره درآمدها و مخارج",
+            "تنظیم حجم پول توسط بانک مرکزی",
+            "تعیین قیمت سهام",
+            "مدیریت شرکت‌های خصوصی"
+        ],
+        "correct": 0
+    },
+
+    {
+        "question": "کدام مورد می‌تواند بر نرخ ارز اثر بگذارد؟",
+        "options": [
+            "نرخ بهره",
+            "تورم",
+            "عرضه و تقاضای ارز",
+            "همه موارد"
+        ],
+        "correct": 3
+    },
+
+]
+
+
+def economics_exam_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    return None
+
+
+async def economics_exam_question_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    try:
+
+        data = query.data.split("_")
+
+        index = int(data[2])
+        score = int(data[3])
+
+    except (
+        IndexError,
+        ValueError
+    ):
+
+        await query.edit_message_text(
+            "⚠️ خطا در اطلاعات آزمون اقتصاد.",
+            reply_markup=economics_menu()
+        )
+
+        return
+
+    if index >= len(ECONOMICS_QUESTIONS):
+
+        await show_economics_result(
+            query,
+            score
+        )
+
+        return
+
+    question = ECONOMICS_QUESTIONS[index]
+
+    text = f"""
+📝 آزمون اقتصاد و بازار
+
+━━━━━━━━━━━━━━━━━━
+
+❓ سؤال {index + 1} از {len(ECONOMICS_QUESTIONS)}
+
+⭐ امتیاز فعلی: {score}
+
+━━━━━━━━━━━━━━━━━━
+
+{question["question"]}
+
+━━━━━━━━━━━━━━━━━━
+
+👇 گزینه صحیح را انتخاب کنید:
+"""
+
+    keyboard = []
+
+    for option_index, option in enumerate(
+        question["options"]
+    ):
+
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    option,
+                    callback_data=(
+                        f"economics_answer_"
+                        f"{index}_"
+                        f"{option_index}_"
+                        f"{score}"
+                    )
+                )
+            ]
+        )
+
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                "💰 خروج از آزمون",
+                callback_data="economics"
+            )
+        ]
+    )
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def economics_answer_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    try:
+
+        data = query.data.split("_")
+
+        index = int(data[2])
+        selected = int(data[3])
+        score = int(data[4])
+
+    except (
+        IndexError,
+        ValueError
+    ):
+
+        await query.edit_message_text(
+            "⚠️ خطا در پردازش پاسخ اقتصاد.",
+            reply_markup=economics_menu()
+        )
+
+        return
+
+    if index >= len(ECONOMICS_QUESTIONS):
+
+        await show_economics_result(
+            query,
+            score
+        )
+
+        return
+
+    question = ECONOMICS_QUESTIONS[index]
+
+    correct = question["correct"]
+
+    if selected == correct:
+
+        score += 1
+
+        result_text = f"""
+✅ پاسخ صحیح است.
+
+🎯 +۱ امتیاز
+
+⭐ امتیاز فعلی: {score}
+
+━━━━━━━━━━━━━━━━━━
+
+آفرین 👏
+"""
+
+    else:
+
+        correct_option = question["options"][correct]
+
+        result_text = f"""
+❌ پاسخ صحیح نیست.
+
+━━━━━━━━━━━━━━━━━━
+
+✅ پاسخ صحیح:
+
+{correct_option}
+
+━━━━━━━━━━━━━━━━━━
+
+⭐ امتیاز فعلی: {score}
+"""
+
+    next_index = index + 1
+
+    if next_index < len(ECONOMICS_QUESTIONS):
+
+        keyboard = [
+
+            [
+                InlineKeyboardButton(
+                    "➡️ سؤال بعدی",
+                    callback_data=(
+                        f"economics_exam_"
+                        f"{next_index}_"
+                        f"{score}"
+                    )
+                )
+            ],
+
+            [
+                InlineKeyboardButton(
+                    "💰 خروج از آزمون",
+                    callback_data="economics"
+                )
+            ]
+
+        ]
+
+        await query.edit_message_text(
+            result_text,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    else:
+
+        await show_economics_result(
+            query,
+            score
+        )
+
+
+async def show_economics_result(
+    query,
+    score
+):
+
+    total = len(ECONOMICS_QUESTIONS)
+
+    wrong = total - score
+
+    percentage = round(
+        (score / total) * 100
+    )
+
+    if percentage >= 90:
+
+        evaluation = "🏆 فوق‌العاده"
+
+    elif percentage >= 80:
+
+        evaluation = "🥇 عالی"
+
+    elif percentage >= 70:
+
+        evaluation = "🥈 خوب"
+
+    elif percentage >= 50:
+
+        evaluation = "🟡 متوسط"
+
+    else:
+
+        evaluation = "📚 نیازمند مطالعه بیشتر"
+
+    text = f"""
+🏁 آزمون اقتصاد و بازار به پایان رسید.
+
+━━━━━━━━━━━━━━━━━━
+
+📊 نتیجه آزمون
+
+📝 تعداد سؤالات: {total}
+
+✅ پاسخ صحیح: {score}
+
+❌ پاسخ غلط: {wrong}
+
+📈 درصد: {percentage}٪
+
+🎯 ارزیابی:
+
+{evaluation}
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 مسیر پیشنهادی:
+
+📖 مطالعه مفاهیم
++
+📝 آزمون
++
+🔍 بررسی اشتباهات
++
+🔄 مرور
+"""
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🔄 تکرار آزمون",
+                callback_data="economics_exam_0_0"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📚 آموزش اقتصاد",
+                callback_data="economics_lessons"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "💰 اقتصاد و بازار",
+                callback_data="economics"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ]
+
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
+# ECONOMICS MAIN CALLBACK
+# =========================================================
+
+async def economics_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    await query.edit_message_text(
+        economics_text(),
+        reply_markup=economics_menu()
+    )
+
+
+# =========================================================
+# ECONOMICS SUB SECTIONS
+# =========================================================
+
+async def economics_subsection_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    section = query.data
+
+    texts = {
+
+        "economics_lessons":
+            economics_lessons_text(),
+
+        "economics_concepts":
+            economics_concepts_text(),
+
+        "economics_market":
+            economics_market_text(),
+
+        "economics_monetary":
+            economics_monetary_text(),
+
+        "economics_fiscal":
+            economics_fiscal_text(),
+
+        "economics_inflation_growth":
+            economics_inflation_growth_text(),
+
+        "economics_currency_interest":
+            economics_currency_interest_text(),
+
+    }
+
+    text = texts.get(
+        section,
+        "❌ این بخش وجود ندارد."
+    )
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "💰 اقتصاد و بازار",
+                callback_data="economics"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ]
+
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
+# TEMPORARY SECTION
 # =========================================================
 
 async def temporary_section(
@@ -2151,6 +3126,46 @@ def create_application():
     )
 
     # -----------------------------------------------------
+    # ECONOMICS
+    # -----------------------------------------------------
+
+    application.add_handler(
+        CallbackQueryHandler(
+            economics_callback,
+            pattern=r"^economics$"
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            economics_subsection_callback,
+            pattern=(
+                r"^(economics_lessons|"
+                r"economics_concepts|"
+                r"economics_market|"
+                r"economics_monetary|"
+                r"economics_fiscal|"
+                r"economics_inflation_growth|"
+                r"economics_currency_interest)$"
+            )
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            economics_exam_question_callback,
+            pattern=r"^economics_exam_[0-9]+_[0-9]+$"
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            economics_answer_callback,
+            pattern=r"^economics_answer_[0-9]+_[0-9]+_[0-9]+$"
+        )
+    )
+
+    # -----------------------------------------------------
     # TEMPORARY
     # -----------------------------------------------------
 
@@ -2162,7 +3177,6 @@ def create_application():
                 r"employment_exam|"
                 r"random_questions|"
                 r"psychology_socialwork|"
-                r"economics|"
                 r"files|"
                 r"social)$"
             )
