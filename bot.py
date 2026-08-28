@@ -1,27 +1,40 @@
 # =========================================================
 # bot.py
 # 🏛️ اندیشکده مدیریت و بازار
-# نسخه هماهنگ با management.py و banking.py
+# نسخه کامل و هماهنگ با management.py و banking.py
 # سازگار با Render Free Web Service
 # =========================================================
+
 import os
 from threading import Thread
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Update,
 )
+
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
 )
+
+# =========================================================
+# 🤝 SUPPORT
+# =========================================================
+
 from support import (
     support_text,
     support_menu,
 )
+
+# =========================================================
+# 🏦 BANKING
+# =========================================================
+
 from banking import (
     banking_menu,
     banking_back_menu,
@@ -30,6 +43,11 @@ from banking import (
     CHAPTER_NAMES,
     BANKING_CHAPTER_QUESTIONS,
 )
+
+# =========================================================
+# 🧠 MANAGEMENT
+# =========================================================
+
 from management import (
     management_menu,
     management_back_menu,
@@ -41,184 +59,271 @@ from management import (
     management_answer_data,
     management_result_text,
     management_result_menu,
-    CHAPTER_NAMES as MANAGEMENT_CHAPTER_NAMES,
+    MANAGEMENT_CHAPTER_NAMES,
     MANAGEMENT_QUESTIONS,
 )
+
 # =========================================================
-# تنظیمات
+# ⚙️ SETTINGS
 # =========================================================
+
 TOKEN = os.getenv("BOT_TOKEN")
-PORT = int(os.getenv("PORT", "10000"))
+
+PORT = int(
+    os.getenv("PORT", "10000")
+)
+
+# =========================================================
+# 🔐 TOKEN CHECK
+# =========================================================
+
 if not TOKEN:
     raise RuntimeError(
         "❌ BOT_TOKEN در Environment Variables تنظیم نشده است."
     )
+
+
 # =========================================================
-# HTTP SERVER برای Render
+# 🌐 HTTP SERVER FOR RENDER
 # =========================================================
+
 class HealthHandler(BaseHTTPRequestHandler):
+
     def do_GET(self):
+
         if self.path in ["/", "/health"]:
+
             self.send_response(200)
+
             self.send_header(
                 "Content-Type",
                 "text/plain; charset=utf-8"
             )
+
             self.end_headers()
+
             self.wfile.write(
                 "Andishkadeh Market Bot is running."
                 .encode("utf-8")
             )
+
         else:
+
             self.send_response(404)
+
             self.end_headers()
-    def log_message(self, format, *args):
+
+    def log_message(
+        self,
+        format,
+        *args
+    ):
+
         return
+
+
+# =========================================================
+# 🌐 START HTTP SERVER
+# =========================================================
+
 def start_http_server():
+
     server = HTTPServer(
         ("0.0.0.0", PORT),
         HealthHandler
     )
+
     print(
         f"🌐 HTTP server running on 0.0.0.0:{PORT}"
     )
+
     server.serve_forever()
+
+
+# =========================================================
+# 🧵 RUN HTTP SERVER IN BACKGROUND
+# =========================================================
+
 def run_http_server():
+
     thread = Thread(
         target=start_http_server,
         daemon=True
     )
+
     thread.start()
+
+
 # =========================================================
-# منوی اصلی
+# 🏠 MAIN MENU
 # =========================================================
+
 def main_menu():
+
     keyboard = [
+
         [
             InlineKeyboardButton(
                 "📚 آموزش تخصصی",
                 callback_data="education"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "📝 آزمون استخدامی",
                 callback_data="employment_exam"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🎲 سوالات تصادفی",
                 callback_data="random_questions"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🧠 روانشناسی و مددکاری",
                 callback_data="psychology_socialwork"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🏦 بانکداری تخصصی",
                 callback_data="banking"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🌍 تجارت بین‌الملل",
                 callback_data="international_trade"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "📈 بازاریابی و فروش",
                 callback_data="marketing"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "💰 اقتصاد و بازار",
                 callback_data="economics"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "📂 فایل و منابع آموزشی",
                 callback_data="files"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "📱 شبکه‌های اجتماعی",
                 callback_data="social"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🤝 حمایت از اندیشکده",
                 callback_data="support"
             )
         ],
+
     ]
+
     return InlineKeyboardMarkup(keyboard)
+
+
 # =========================================================
-# آموزش تخصصی
+# 📚 EDUCATION MENU
 # =========================================================
+
 def education_menu():
+
     keyboard = [
+
         [
             InlineKeyboardButton(
                 "🧠 مدیریت و منیجمنت",
                 callback_data="management"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🌍 تجارت بین‌الملل",
                 callback_data="international_trade"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "📈 بازاریابی و فروش",
                 callback_data="marketing"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "💰 اقتصاد و بازار",
                 callback_data="economics"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🏦 بانکداری تخصصی",
                 callback_data="banking"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🧠 روانشناسی و مددکاری",
                 callback_data="psychology_socialwork"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🏠 منوی اصلی",
                 callback_data="home"
             )
         ],
+
     ]
+
     return InlineKeyboardMarkup(keyboard)
+
+
+# =========================================================
+# 📖 EDUCATION TEXT
+# =========================================================
+
 def education_text():
+
     return """
 📚 آموزش تخصصی
+
 ━━━━━━━━━━━━━━━━━━
+
 🏛️ اندیشکده مدیریت و بازار
+
 در این بخش مسیرهای آموزشی تخصصی
 اندیشکده قرار دارند.
+
 🎯 سیستم آموزشی:
+
 📖 درسنامه
 +
 💡 مثال کاربردی
@@ -230,17 +335,26 @@ def education_text():
 📊 ارزیابی
 +
 🔄 مرور
+
 ━━━━━━━━━━━━━━━━━━
+
 👇 حوزه موردنظر خود را انتخاب کنید.
 """
+
+
 # =========================================================
-# خوش‌آمدگویی
+# 👋 WELCOME TEXT
 # =========================================================
+
 def welcome_text():
+
     return """
 🏛️ اندیشکده مدیریت و بازار
+
 مرکز تخصصی آموزش، آزمون و توسعه مهارت
+
 ━━━━━━━━━━━━━━━━━━
+
 📚 آموزش تخصصی
 📝 آزمون‌های استخدامی
 🎲 سوالات تصادفی
@@ -249,8 +363,13 @@ def welcome_text():
 🌍 تجارت بین‌الملل
 📈 بازاریابی و فروش
 💰 اقتصاد و بازار
+📂 فایل و منابع آموزشی
+📱 شبکه‌های اجتماعی
+
 ━━━━━━━━━━━━━━━━━━
+
 🎯 سیستم آموزشی اندیشکده:
+
 📖 آموزش مفهومی
 +
 📝 تمرین و آزمون
@@ -258,115 +377,183 @@ def welcome_text():
 📊 ارزیابی
 +
 🔄 مرور و تکرار
+
 ━━━━━━━━━━━━━━━━━━
+
 👇 بخش موردنظر خود را انتخاب کنید.
 """
+
+
 # =========================================================
-# /start
+# /START
 # =========================================================
+
 async def start(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     if update.message:
+
         await update.message.reply_text(
             welcome_text(),
             reply_markup=main_menu()
         )
+
+
 # =========================================================
-# HOME
+# 🏠 HOME CALLBACK
 # =========================================================
+
 async def home_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     await query.answer()
+
     await query.edit_message_text(
         welcome_text(),
         reply_markup=main_menu()
     )
+
+
 # =========================================================
-# EDUCATION
+# 📚 EDUCATION CALLBACK
 # =========================================================
+
 async def education_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     await query.answer()
+
     await query.edit_message_text(
         education_text(),
         reply_markup=education_menu()
     )
+
+
 # =========================================================
-# SUPPORT
+# 🤝 SUPPORT CALLBACK
 # =========================================================
+
 async def support_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     await query.answer()
+
     await query.edit_message_text(
         support_text(),
         reply_markup=support_menu()
     )
+
+
 # =========================================================
-# MANAGEMENT
+# 🧠 MANAGEMENT CALLBACK
 # =========================================================
+
 async def management_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     await query.answer()
+
     await query.edit_message_text(
         management_intro_text(),
         reply_markup=management_menu()
     )
+
+
 # =========================================================
-# MANAGEMENT CHAPTER
+# 📖 MANAGEMENT CHAPTER
 # =========================================================
+
 async def management_chapter_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     await query.answer()
+
     try:
+
         chapter = int(
             query.data.replace(
                 "management_chapter_",
                 ""
             )
         )
+
     except ValueError:
+
         await query.edit_message_text(
             "❌ شماره فصل نامعتبر است.",
             reply_markup=management_back_menu()
         )
+
         return
+
     if chapter not in MANAGEMENT_CHAPTER_NAMES:
+
         await query.edit_message_text(
             "❌ این فصل وجود ندارد.",
             reply_markup=management_back_menu()
         )
+
         return
+
     try:
-        text = management_chapter_text(
+
+        result = management_chapter_text(
             chapter
         )
+
+        if isinstance(result, tuple):
+
+            text = result[0]
+
+        else:
+
+            text = result
+
     except Exception as error:
+
         print(
             f"❌ Management chapter error: {error}"
         )
+
         await query.edit_message_text(
-            "⚠️ خطا در بارگذاری درسنامه مدیریت.",
+            """
+⚠️ خطا در بارگذاری درسنامه مدیریت.
+
+لطفاً دوباره تلاش کنید.
+""",
             reply_markup=management_back_menu()
         )
+
         return
+
+    total_chapters = len(
+        MANAGEMENT_CHAPTER_NAMES
+    )
+
     keyboard = [
+
         [
             InlineKeyboardButton(
                 f"📝 آزمون فصل {chapter}",
@@ -375,6 +562,7 @@ async def management_chapter_callback(
                 )
             )
         ],
+
         [
             InlineKeyboardButton(
                 "⬅️ فصل قبل",
@@ -384,180 +572,325 @@ async def management_chapter_callback(
                     else "management"
                 )
             ),
+
             InlineKeyboardButton(
                 "فصل بعد ➡️",
                 callback_data=(
                     f"management_chapter_{chapter + 1}"
-                    if chapter < len(MANAGEMENT_CHAPTER_NAMES)
+                    if chapter < total_chapters
                     else "management"
                 )
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🧠 مدیریت",
                 callback_data="management"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🏠 منوی اصلی",
                 callback_data="home"
             )
         ],
+
     ]
+
     await query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
+
 # =========================================================
-# MANAGEMENT EXAM INTRO
+# 📝 MANAGEMENT EXAM INTRO
 # =========================================================
+
 async def management_exam_intro_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     await query.answer()
+
     try:
+
         chapter = int(
             query.data.replace(
                 "management_exam_intro_",
                 ""
             )
         )
+
     except ValueError:
+
         await query.edit_message_text(
             "❌ شماره فصل نامعتبر است.",
             reply_markup=management_back_menu()
         )
+
         return
+
     questions = MANAGEMENT_QUESTIONS.get(
         chapter,
         []
     )
+
     if not questions:
+
         await query.edit_message_text(
-            "❌ برای این فصل سؤال آزمون ثبت نشده است.",
+            """
+❌ برای این فصل هنوز سؤال آزمون ثبت نشده است.
+""",
             reply_markup=management_back_menu()
         )
+
         return
-    await query.edit_message_text(
-        management_exam_intro_text(chapter),
-        reply_markup=management_exam_menu(chapter)
+
+    text = management_exam_intro_text(
+        chapter
     )
+
+    await query.edit_message_text(
+        text,
+        reply_markup=management_exam_menu(
+            chapter
+        )
+    )
+
+
 # =========================================================
-# MANAGEMENT EXAM QUESTION
+# 📝 MANAGEMENT EXAM QUESTION
 # =========================================================
+
 async def management_exam_question_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     await query.answer()
+
     try:
+
         data = query.data.split("_")
+
         chapter = int(data[2])
         index = int(data[3])
         score = int(data[4])
+
     except (
         IndexError,
         ValueError
     ):
+
         await query.edit_message_text(
-            "⚠️ خطا در اطلاعات آزمون.",
+            """
+⚠️ خطا در اطلاعات آزمون.
+
+لطفاً آزمون را دوباره شروع کنید.
+""",
             reply_markup=management_back_menu()
         )
+
         return
+
     questions = MANAGEMENT_QUESTIONS.get(
         chapter,
         []
     )
+
     if not questions:
+
         await query.edit_message_text(
             "❌ سوالی برای این فصل وجود ندارد.",
             reply_markup=management_back_menu()
         )
+
         return
+
     if index >= len(questions):
+
+        text = management_result_text(
+            chapter,
+            score
+        )
+
         await query.edit_message_text(
-            management_result_text(
-                chapter,
-                score
-            ),
+            text,
             reply_markup=management_result_menu(
                 chapter
             )
         )
+
         return
-    result = management_question_data(
-        chapter,
-        index,
-        score
-    )
+
+    try:
+
+        result = management_question_data(
+            chapter,
+            index,
+            score
+        )
+
+    except Exception as error:
+
+        print(
+            f"❌ Management question error: {error}"
+        )
+
+        await query.edit_message_text(
+            """
+⚠️ خطا در بارگذاری سؤال.
+
+لطفاً آزمون را دوباره شروع کنید.
+""",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
     if not result:
+
         await query.edit_message_text(
             "❌ سؤال موردنظر پیدا نشد.",
             reply_markup=management_back_menu()
         )
+
         return
+
     text, keyboard = result
+
     await query.edit_message_text(
         text,
         reply_markup=keyboard
     )
+
+
 # =========================================================
-# MANAGEMENT ANSWER
+# 📝 MANAGEMENT ANSWER
 # =========================================================
+
 async def management_answer_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     await query.answer()
+
     try:
+
         data = query.data.split("_")
+
         chapter = int(data[2])
         index = int(data[3])
         selected = int(data[4])
         score = int(data[5])
+
     except (
         IndexError,
         ValueError
     ):
+
         await query.edit_message_text(
-            "⚠️ خطا در پردازش پاسخ.",
+            """
+⚠️ خطا در پردازش پاسخ.
+
+لطفاً آزمون را دوباره شروع کنید.
+""",
             reply_markup=management_back_menu()
         )
+
         return
-    result = management_answer_data(
+
+    questions = MANAGEMENT_QUESTIONS.get(
         chapter,
-        index,
-        selected,
-        score
+        []
     )
+
+    if not questions:
+
+        await query.edit_message_text(
+            "❌ سوالی برای این فصل وجود ندارد.",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
+    try:
+
+        result = management_answer_data(
+            chapter,
+            index,
+            selected,
+            score
+        )
+
+    except Exception as error:
+
+        print(
+            f"❌ Management answer error: {error}"
+        )
+
+        await query.edit_message_text(
+            """
+⚠️ خطا در پردازش پاسخ.
+
+لطفاً آزمون را دوباره شروع کنید.
+""",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
     if not result:
+
         await query.edit_message_text(
             "❌ اطلاعات سؤال معتبر نیست.",
             reply_markup=management_back_menu()
         )
+
         return
+
     new_score = result["score"]
     next_index = result["next_index"]
     result_text = result["result_text"]
     finished = result["finished"]
+
+    # =====================================================
+    # 🏁 FINISHED
+    # =====================================================
+
     if finished:
+
+        final_text = management_result_text(
+            chapter,
+            new_score
+        )
+
         await query.edit_message_text(
-            management_result_text(
-                chapter,
-                new_score
-            ),
+            final_text,
             reply_markup=management_result_menu(
                 chapter
             )
         )
+
         return
+
+    # =====================================================
+    # ➡️ NEXT QUESTION
+    # =====================================================
+
     keyboard = [
+
         [
             InlineKeyboardButton(
                 "➡️ سؤال بعدی",
@@ -569,6 +902,7 @@ async def management_answer_callback(
                 )
             )
         ],
+
         [
             InlineKeyboardButton(
                 "📖 مشاهده درسنامه",
@@ -577,83 +911,128 @@ async def management_answer_callback(
                 )
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🧠 خروج از آزمون",
                 callback_data="management"
             )
         ],
+
     ]
+
     await query.edit_message_text(
         result_text,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
+
 # =========================================================
-# BANKING
+# 🏦 BANKING CALLBACK
 # =========================================================
+
 async def banking_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     await query.answer()
+
     result = banking_intro_text()
+
     if isinstance(result, tuple):
+
         text = result[0]
         keyboard = result[1]
+
     else:
+
         text = result
         keyboard = banking_menu()
+
     await query.edit_message_text(
         text,
         reply_markup=keyboard
     )
+
+
 # =========================================================
-# BANKING CHAPTER
+# 📖 BANKING CHAPTER
 # =========================================================
+
 async def banking_chapter_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     await query.answer()
+
     try:
+
         chapter = int(
             query.data.replace(
                 "banking_chapter_",
                 ""
             )
         )
+
     except ValueError:
+
         await query.edit_message_text(
             "❌ شماره فصل نامعتبر است.",
             reply_markup=banking_back_menu()
         )
+
         return
+
     if chapter not in CHAPTER_NAMES:
+
         await query.edit_message_text(
             "❌ این فصل وجود ندارد.",
             reply_markup=banking_back_menu()
         )
+
         return
+
     try:
+
         result = banking_chapter_text(
             chapter
         )
+
         if isinstance(result, tuple):
+
             text = result[0]
+
         else:
+
             text = result
+
     except Exception as error:
+
         print(
             f"❌ Banking chapter error: {error}"
         )
+
         await query.edit_message_text(
-            "⚠️ خطا در بارگذاری درسنامه بانکداری.",
+            """
+⚠️ خطا در بارگذاری درسنامه بانکداری.
+
+لطفاً دوباره تلاش کنید.
+""",
             reply_markup=banking_back_menu()
         )
+
         return
+
+    total_chapters = len(CHAPTER_NAMES)
+
     keyboard = [
+
         [
             InlineKeyboardButton(
                 f"📝 آزمون فصل {chapter}",
@@ -662,6 +1041,7 @@ async def banking_chapter_callback(
                 )
             )
         ],
+
         [
             InlineKeyboardButton(
                 "⬅️ فصل قبل",
@@ -671,85 +1051,144 @@ async def banking_chapter_callback(
                     else "banking"
                 )
             ),
+
             InlineKeyboardButton(
                 "فصل بعد ➡️",
                 callback_data=(
                     f"banking_chapter_{chapter + 1}"
-                    if chapter < len(CHAPTER_NAMES)
+                    if chapter < total_chapters
                     else "banking"
                 )
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🏦 بانکداری",
                 callback_data="banking"
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🏠 منوی اصلی",
                 callback_data="home"
             )
         ],
+
     ]
+
     await query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
+
 # =========================================================
-# BANKING EXAM INTRO
+# 📝 BANKING EXAM INTRO
 # =========================================================
+
 async def banking_exam_intro_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     await query.answer()
+
     try:
+
         chapter = int(
             query.data.replace(
                 "banking_exam_intro_",
                 ""
             )
         )
+
     except ValueError:
+
         await query.edit_message_text(
             "❌ شماره فصل نامعتبر است.",
             reply_markup=banking_back_menu()
         )
+
         return
+
     questions = BANKING_CHAPTER_QUESTIONS.get(
         chapter,
         []
     )
+
     if not questions:
+
         await query.edit_message_text(
-            "❌ برای این فصل هنوز سؤال آزمون ثبت نشده است.",
-            reply_markup=banking_back_menu()
+            """
+❌ برای این فصل هنوز سؤال آزمون ثبت نشده است.
+""",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "📖 مشاهده درسنامه",
+                            callback_data=(
+                                f"banking_chapter_{chapter}"
+                            )
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            "🏦 بانکداری",
+                            callback_data="banking"
+                        )
+                    ],
+                ]
+            )
         )
+
         return
+
     name = CHAPTER_NAMES.get(
         chapter,
         "بانکداری"
     )
+
     text = f"""
 📝 آزمون پایان فصل {chapter}
+
 🏦 {name}
+
 ━━━━━━━━━━━━━━━━━━
+
 🎯 آزمون تخصصی و مفهومی
+
 📝 تعداد سؤالات:
 {len(questions)} سؤال
+
 ━━━━━━━━━━━━━━━━━━
-📌 قوانین آزمون:
+
+📌 قوانین آزمون
+
 • هر سؤال چهار گزینه دارد.
 • فقط یک گزینه صحیح است.
 • پاسخ صحیح یک امتیاز دارد.
+• امتیاز در طول آزمون محاسبه می‌شود.
 • نتیجه در پایان نمایش داده می‌شود.
+
 ━━━━━━━━━━━━━━━━━━
+
+💡 پیشنهاد:
+
+ابتدا درسنامه را مطالعه کنید،
+سپس آزمون را انجام دهید.
+
+━━━━━━━━━━━━━━━━━━
+
 👇 برای شروع آزمون:
 """
+
     keyboard = [
+
         [
             InlineKeyboardButton(
                 "🚀 شروع آزمون",
@@ -758,6 +1197,7 @@ async def banking_exam_intro_callback(
                 )
             )
         ],
+
         [
             InlineKeyboardButton(
                 "📖 بازگشت به درسنامه",
@@ -766,78 +1206,117 @@ async def banking_exam_intro_callback(
                 )
             )
         ],
+
         [
             InlineKeyboardButton(
                 "🏦 بانکداری",
                 callback_data="banking"
             )
         ],
+
     ]
+
     await query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
+
 # =========================================================
-# BANKING EXAM QUESTION
+# 📝 BANKING EXAM QUESTION
 # =========================================================
+
 async def banking_exam_question_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     await query.answer()
+
     try:
+
         data = query.data.split("_")
+
         chapter = int(data[2])
         index = int(data[3])
         score = int(data[4])
+
     except (
         IndexError,
         ValueError
     ):
+
         await query.edit_message_text(
-            "⚠️ خطا در اطلاعات آزمون.",
+            """
+⚠️ خطا در اطلاعات آزمون.
+
+لطفاً آزمون را دوباره شروع کنید.
+""",
             reply_markup=banking_back_menu()
         )
+
         return
+
     questions = BANKING_CHAPTER_QUESTIONS.get(
         chapter,
         []
     )
+
     if not questions:
+
         await query.edit_message_text(
             "❌ سوالی برای این فصل وجود ندارد.",
             reply_markup=banking_back_menu()
         )
+
         return
+
     if index >= len(questions):
+
         await show_exam_result(
             query,
             chapter,
             score
         )
+
         return
+
     question = questions[index]
+
     name = CHAPTER_NAMES.get(
         chapter,
         "بانکداری"
     )
+
     text = f"""
 📝 آزمون بانکداری
+
 📘 فصل {chapter}
 🏦 {name}
+
 ━━━━━━━━━━━━━━━━━━
+
 ❓ سؤال {index + 1} از {len(questions)}
+
 ⭐ امتیاز فعلی: {score}
+
 ━━━━━━━━━━━━━━━━━━
+
 {question["question"]}
+
 ━━━━━━━━━━━━━━━━━━
+
 👇 گزینه صحیح را انتخاب کنید:
 """
+
     keyboard = []
+
     for option_index, option in enumerate(
         question["options"]
     ):
+
         keyboard.append(
             [
                 InlineKeyboardButton(
@@ -852,6 +1331,7 @@ async def banking_exam_question_callback(
                 )
             ]
         )
+
     keyboard.append(
         [
             InlineKeyboardButton(
@@ -860,68 +1340,123 @@ async def banking_exam_question_callback(
             )
         ]
     )
+
     await query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
+
 # =========================================================
-# BANKING ANSWER
+# 📝 BANKING ANSWER
 # =========================================================
+
 async def banking_answer_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     await query.answer()
+
     try:
+
         data = query.data.split("_")
+
         chapter = int(data[2])
         index = int(data[3])
         selected = int(data[4])
         score = int(data[5])
+
     except (
         IndexError,
         ValueError
     ):
+
         await query.edit_message_text(
-            "⚠️ خطا در پردازش پاسخ.",
+            """
+⚠️ خطا در پردازش پاسخ.
+
+لطفاً آزمون را دوباره شروع کنید.
+""",
             reply_markup=banking_back_menu()
         )
+
         return
+
     questions = BANKING_CHAPTER_QUESTIONS.get(
         chapter,
         []
     )
+
     if not questions:
+
         await query.edit_message_text(
             "❌ سوالی برای این فصل وجود ندارد.",
             reply_markup=banking_back_menu()
         )
+
         return
+
+    if index >= len(questions):
+
+        await show_exam_result(
+            query,
+            chapter,
+            score
+        )
+
+        return
+
     question = questions[index]
+
     correct = question["correct"]
+
     if selected == correct:
+
         score += 1
+
         result_text = f"""
 ✅ پاسخ صحیح است.
+
 🎯 +۱ امتیاز
+
 ⭐ امتیاز فعلی: {score}
+
 ━━━━━━━━━━━━━━━━━━
+
 آفرین 👏
+
+به سؤال بعدی بروید.
 """
+
     else:
-        correct_option = question["options"][correct]
+
+        correct_option = (
+            question["options"][correct]
+        )
+
         result_text = f"""
 ❌ پاسخ صحیح نیست.
+
 ━━━━━━━━━━━━━━━━━━
+
 ✅ پاسخ صحیح:
+
 {correct_option}
+
 ━━━━━━━━━━━━━━━━━━
+
 ⭐ امتیاز فعلی: {score}
 """
+
     next_index = index + 1
+
     if next_index < len(questions):
+
         keyboard = [
+
             [
                 InlineKeyboardButton(
                     "➡️ سؤال بعدی",
@@ -933,6 +1468,7 @@ async def banking_answer_callback(
                     )
                 )
             ],
+
             [
                 InlineKeyboardButton(
                     "📖 مشاهده درسنامه",
@@ -941,73 +1477,138 @@ async def banking_answer_callback(
                     )
                 )
             ],
+
             [
                 InlineKeyboardButton(
                     "🏦 خروج از آزمون",
                     callback_data="banking"
                 )
             ],
+
         ]
+
         await query.edit_message_text(
             result_text,
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
+
     else:
+
         await show_exam_result(
             query,
             chapter,
             score
         )
+
+
 # =========================================================
-# BANKING RESULT
+# 🏁 BANKING EXAM RESULT
 # =========================================================
+
 async def show_exam_result(
     query,
     chapter,
     score
 ):
+
     questions = BANKING_CHAPTER_QUESTIONS.get(
         chapter,
         []
     )
+
     total = len(questions)
+
     if total == 0:
+
         await query.edit_message_text(
             "❌ آزمونی برای این فصل وجود ندارد.",
             reply_markup=banking_back_menu()
         )
+
         return
+
     wrong = total - score
+
     percentage = round(
         (score / total) * 100
     )
+
     if percentage >= 90:
+
         evaluation = "🏆 فوق‌العاده"
+
+        message = (
+            "تسلط شما بر این فصل بسیار عالی است."
+        )
+
     elif percentage >= 80:
+
         evaluation = "🥇 عالی"
+
+        message = (
+            "تسلط بسیار خوبی روی مباحث فصل دارید."
+        )
+
     elif percentage >= 70:
+
         evaluation = "🥈 خوب"
+
+        message = (
+            "تسلط مناسبی دارید، اما مرور فصل "
+            "باعث تسلط بیشتر شما می‌شود."
+        )
+
     elif percentage >= 50:
+
         evaluation = "🟡 متوسط"
+
+        message = (
+            "بعضی مفاهیم نیاز به مرور و تمرین "
+            "بیشتری دارند."
+        )
+
     else:
+
         evaluation = "📚 نیازمند مطالعه"
+
+        message = (
+            "پیشنهاد می‌شود درسنامه فصل را دوباره "
+            "مطالعه کنید و آزمون را تکرار کنید."
+        )
+
     name = CHAPTER_NAMES.get(
         chapter,
         "بانکداری"
     )
+
     text = f"""
 🏁 آزمون فصل {chapter} به پایان رسید.
+
 🏦 {name}
+
 ━━━━━━━━━━━━━━━━━━
+
 📊 نتیجه آزمون
+
 📝 تعداد سؤالات: {total}
+
 ✅ پاسخ صحیح: {score}
+
 ❌ پاسخ غلط: {wrong}
+
 📈 درصد: {percentage}٪
+
 🎯 ارزیابی:
 {evaluation}
+
 ━━━━━━━━━━━━━━━━━━
+
+💡 {message}
+
+━━━━━━━━━━━━━━━━━━
+
 🎯 مسیر یادگیری:
+
 مطالعه
 +
 آزمون
@@ -1016,7 +1617,9 @@ async def show_exam_result(
 +
 مرور
 """
+
     keyboard = [
+
         [
             InlineKeyboardButton(
                 "🔄 تکرار آزمون",
@@ -1025,6 +1628,7 @@ async def show_exam_result(
                 )
             )
         ],
+
         [
             InlineKeyboardButton(
                 "📖 مرور فصل",
@@ -1033,8 +1637,13 @@ async def show_exam_result(
                 )
             )
         ],
+
     ]
-    if chapter < len(CHAPTER_NAMES):
+
+    total_chapters = len(CHAPTER_NAMES)
+
+    if chapter < total_chapters:
+
         keyboard.append(
             [
                 InlineKeyboardButton(
@@ -1045,40 +1654,54 @@ async def show_exam_result(
                 )
             ]
         )
+
     keyboard.extend(
         [
+
             [
                 InlineKeyboardButton(
                     "🏦 بانکداری",
                     callback_data="banking"
                 )
             ],
+
             [
                 InlineKeyboardButton(
                     "🏠 منوی اصلی",
                     callback_data="home"
                 )
             ],
+
         ]
     )
+
     await query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
+
 # =========================================================
-# بخش‌های موقت
+# 🚧 TEMPORARY SECTIONS
 # =========================================================
+
 async def temporary_section(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     await query.answer()
+
     await query.edit_message_text(
         """
 🚧 این بخش در حال توسعه است.
+
 محتوای تخصصی این قسمت در حال آماده‌سازی است.
+
 ━━━━━━━━━━━━━━━━━━
+
 🏛️ اندیشکده مدیریت و بازار
 """,
         reply_markup=InlineKeyboardMarkup(
@@ -1092,126 +1715,223 @@ async def temporary_section(
             ]
         )
     )
+
+
 # =========================================================
-# UNKNOWN CALLBACK
+# ⚠️ UNKNOWN CALLBACK
 # =========================================================
+
 async def unknown_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
+
     if query:
+
         try:
+
             await query.answer(
                 "این گزینه در حال حاضر فعال نیست."
             )
+
         except Exception as error:
+
             print(
                 f"Callback answer error: {error}"
             )
+
+
 # =========================================================
-# ERROR HANDLER
+# ❌ ERROR HANDLER
 # =========================================================
+
 async def error_handler(
     update,
     context
 ):
-    print("❌ Telegram error:")
-    print(context.error)
+
+    print(
+        "❌ Telegram error:"
+    )
+
+    print(
+        context.error
+    )
+
+
 # =========================================================
-# APPLICATION
+# 🤖 CREATE APPLICATION
 # =========================================================
+
 def create_application():
+
     application = (
         Application
         .builder()
         .token(TOKEN)
         .build()
     )
+
+    # =====================================================
+    # /START
+    # =====================================================
+
     application.add_handler(
         CommandHandler(
             "start",
             start
         )
     )
+
+    # =====================================================
+    # HOME
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             home_callback,
             pattern=r"^home$"
         )
     )
+
+    # =====================================================
+    # EDUCATION
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             education_callback,
             pattern=r"^education$"
         )
     )
+
+    # =====================================================
+    # SUPPORT
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             support_callback,
             pattern=r"^support$"
         )
     )
+
+    # =====================================================
+    # MANAGEMENT
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             management_callback,
             pattern=r"^management$"
         )
     )
+
+    # =====================================================
+    # MANAGEMENT CHAPTER
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             management_chapter_callback,
             pattern=r"^management_chapter_[0-9]+$"
         )
     )
+
+    # =====================================================
+    # MANAGEMENT EXAM INTRO
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             management_exam_intro_callback,
             pattern=r"^management_exam_intro_[0-9]+$"
         )
     )
+
+    # =====================================================
+    # MANAGEMENT EXAM QUESTION
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             management_exam_question_callback,
             pattern=r"^management_exam_[0-9]+_[0-9]+_[0-9]+$"
         )
     )
+
+    # =====================================================
+    # MANAGEMENT ANSWER
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             management_answer_callback,
             pattern=r"^management_answer_[0-9]+_[0-9]+_[0-9]+_[0-9]+$"
         )
     )
+
+    # =====================================================
+    # BANKING
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             banking_callback,
             pattern=r"^banking$"
         )
     )
+
+    # =====================================================
+    # BANKING CHAPTER
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             banking_chapter_callback,
             pattern=r"^banking_chapter_[0-9]+$"
         )
     )
+
+    # =====================================================
+    # BANKING EXAM INTRO
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             banking_exam_intro_callback,
             pattern=r"^banking_exam_intro_[0-9]+$"
         )
     )
+
+    # =====================================================
+    # BANKING EXAM QUESTION
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             banking_exam_question_callback,
             pattern=r"^banking_exam_[0-9]+_[0-9]+_[0-9]+$"
         )
     )
+
+    # =====================================================
+    # BANKING ANSWER
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             banking_answer_callback,
             pattern=r"^banking_answer_[0-9]+_[0-9]+_[0-9]+_[0-9]+$"
         )
     )
+
+    # =====================================================
+    # TEMPORARY SECTIONS
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             temporary_section,
@@ -1227,34 +1947,83 @@ def create_application():
             )
         )
     )
+
+    # =====================================================
+    # UNKNOWN CALLBACK
+    # =====================================================
+
     application.add_handler(
         CallbackQueryHandler(
             unknown_callback
         )
     )
+
+    # =====================================================
+    # ERROR HANDLER
+    # =====================================================
+
     application.add_error_handler(
         error_handler
     )
+
     return application
+
+
 # =========================================================
-# MAIN
+# 🚀 MAIN
 # =========================================================
+
 def main():
-    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    print("🏛️ Andishkadeh Market Bot")
-    print("🚀 Starting...")
-    print(f"🌐 Render PORT: {PORT}")
-    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+    print(
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    )
+
+    print(
+        "🏛️ Andishkadeh Market Bot"
+    )
+
+    print(
+        "🚀 Starting..."
+    )
+
+    print(
+        f"🌐 Render PORT: {PORT}"
+    )
+
+    print(
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    )
+
+    # =====================================================
+    # HTTP SERVER
+    # =====================================================
+
     run_http_server()
+
+    # =====================================================
+    # TELEGRAM APPLICATION
+    # =====================================================
+
     application = create_application()
+
     print(
         "🤖 Telegram application starting..."
     )
+
+    # =====================================================
+    # POLLING
+    # =====================================================
+
     application.run_polling(
         drop_pending_updates=True
     )
+
+
 # =========================================================
 # START
 # =========================================================
+
 if __name__ == "__main__":
+
     main()
