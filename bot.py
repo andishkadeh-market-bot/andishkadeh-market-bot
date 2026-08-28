@@ -36,23 +36,22 @@ from banking import (
 )
 
 # =========================================================
-# 🧠 روانشناسی و مددکاری
+# 🧠 MANAGEMENT MODULE
 # =========================================================
 
-from psychology import (
-    psychology_menu,
-    psychology_back_menu,
-    psychology_intro_text,
-    psychology_chapter_text,
-    psychology_topic_text,
-    psychology_special_points_text,
-    psychology_exam_points_text,
-    psychology_example_text,
-    psychology_exam_intro_text,
-    psychology_question_text,
-    psychology_exam_result_text,
-    check_answer,
-    CHAPTER_NAMES as PSYCHOLOGY_CHAPTER_NAMES,
+from management import (
+    management_menu,
+    management_back_menu,
+    management_intro_text,
+    management_chapter_text,
+    management_exam_menu,
+    management_exam_intro_text,
+    management_question_data,
+    management_answer_data,
+    management_result_text,
+    management_result_menu,
+    CHAPTER_NAMES as MANAGEMENT_CHAPTER_NAMES,
+    MANAGEMENT_QUESTIONS,
 )
 
 
@@ -241,6 +240,104 @@ def main_menu():
 
 
 # =========================================================
+# 📚 منوی آموزش تخصصی
+# =========================================================
+
+def education_menu():
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🧠 مدیریت و منیجمنت",
+                callback_data="management"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🌍 تجارت بین‌الملل",
+                callback_data="international_trade"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📈 بازاریابی و فروش",
+                callback_data="marketing"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "💰 اقتصاد و بازار",
+                callback_data="economics"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏦 بانکداری تخصصی",
+                callback_data="banking"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🧠 روانشناسی و مددکاری",
+                callback_data="psychology_socialwork"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+# =========================================================
+# متن آموزش تخصصی
+# =========================================================
+
+def education_text():
+
+    return """
+📚 آموزش تخصصی
+
+━━━━━━━━━━━━━━━━━━
+
+🏛️ اندیشکده مدیریت و بازار
+
+در این بخش مسیرهای آموزشی تخصصی
+اندیشکده قرار دارند.
+
+🎯 سیستم آموزشی:
+
+📖 درسنامه
++
+💡 مثال کاربردی
++
+🎯 نکات تخصصی
++
+📝 آزمون
++
+📊 ارزیابی
++
+🔄 مرور
+
+━━━━━━━━━━━━━━━━━━
+
+👇 حوزه موردنظر خود را انتخاب کنید.
+"""
+
+
+# =========================================================
 # متن خوش‌آمدگویی
 # =========================================================
 
@@ -317,6 +414,25 @@ async def home_callback(
 
 
 # =========================================================
+# 📚 آموزش تخصصی
+# =========================================================
+
+async def education_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    await query.edit_message_text(
+        education_text(),
+        reply_markup=education_menu()
+    )
+
+
+# =========================================================
 # 🤝 حمایت
 # =========================================================
 
@@ -332,6 +448,502 @@ async def support_callback(
     await query.edit_message_text(
         support_text(),
         reply_markup=support_menu()
+    )
+
+
+# =========================================================
+# 🧠 مدیریت و منیجمنت
+# =========================================================
+
+async def management_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    await query.edit_message_text(
+        management_intro_text(),
+        reply_markup=management_menu()
+    )
+
+
+# =========================================================
+# 📖 فصل مدیریت
+# =========================================================
+
+async def management_chapter_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    try:
+
+        chapter = int(
+            query.data.replace(
+                "management_chapter_",
+                ""
+            )
+        )
+
+    except ValueError:
+
+        await query.edit_message_text(
+            "❌ شماره فصل نامعتبر است.",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
+
+    if chapter not in MANAGEMENT_CHAPTER_NAMES:
+
+        await query.edit_message_text(
+            "❌ این فصل وجود ندارد.",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
+
+    try:
+
+        result = management_chapter_text(
+            chapter
+        )
+
+        if isinstance(result, tuple):
+
+            text = result[0]
+
+        else:
+
+            text = result
+
+    except Exception as error:
+
+        print(
+            f"❌ Management chapter error: {error}"
+        )
+
+        await query.edit_message_text(
+            """
+⚠️ خطا در بارگذاری درسنامه مدیریت.
+
+لطفاً دوباره تلاش کنید.
+""",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                f"📝 آزمون فصل {chapter}",
+                callback_data=(
+                    f"management_exam_intro_{chapter}"
+                )
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "⬅️ فصل قبل",
+                callback_data=(
+                    f"management_chapter_{chapter - 1}"
+                    if chapter > 1
+                    else "management"
+                )
+            ),
+
+            InlineKeyboardButton(
+                "فصل بعد ➡️",
+                callback_data=(
+                    f"management_chapter_{chapter + 1}"
+                    if chapter < len(MANAGEMENT_CHAPTER_NAMES)
+                    else "management"
+                )
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🧠 مدیریت",
+                callback_data="management"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ],
+
+    ]
+
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(
+            keyboard
+        )
+    )
+
+
+# =========================================================
+# 📝 معرفی آزمون مدیریت
+# =========================================================
+
+async def management_exam_intro_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    try:
+
+        chapter = int(
+            query.data.replace(
+                "management_exam_intro_",
+                ""
+            )
+        )
+
+    except ValueError:
+
+        await query.edit_message_text(
+            "❌ شماره فصل نامعتبر است.",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
+
+    questions = MANAGEMENT_QUESTIONS.get(
+        chapter,
+        []
+    )
+
+
+    if not questions:
+
+        await query.edit_message_text(
+            """
+❌ برای این فصل هنوز سؤال آزمون ثبت نشده است.
+""",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
+
+    text = management_exam_intro_text(
+        chapter
+    )
+
+
+    await query.edit_message_text(
+        text,
+        reply_markup=management_exam_menu(
+            chapter
+        )
+    )
+
+
+# =========================================================
+# 📝 سؤال آزمون مدیریت
+# =========================================================
+
+async def management_exam_question_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    try:
+
+        data = query.data.split("_")
+
+        # management_exam_1_0_0
+
+        chapter = int(data[2])
+        index = int(data[3])
+        score = int(data[4])
+
+    except (
+        IndexError,
+        ValueError
+    ):
+
+        await query.edit_message_text(
+            """
+⚠️ خطا در اطلاعات آزمون.
+
+لطفاً آزمون را دوباره شروع کنید.
+""",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
+
+    questions = MANAGEMENT_QUESTIONS.get(
+        chapter,
+        []
+    )
+
+
+    if not questions:
+
+        await query.edit_message_text(
+            "❌ سوالی برای این فصل وجود ندارد.",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
+
+    if index >= len(questions):
+
+        text = management_result_text(
+            chapter,
+            score
+        )
+
+        await query.edit_message_text(
+            text,
+            reply_markup=management_result_menu(
+                chapter
+            )
+        )
+
+        return
+
+
+    try:
+
+        result = management_question_data(
+            chapter,
+            index,
+            score
+        )
+
+    except Exception as error:
+
+        print(
+            f"❌ Management question error: {error}"
+        )
+
+        await query.edit_message_text(
+            """
+⚠️ خطا در بارگذاری سؤال.
+
+لطفاً آزمون را دوباره شروع کنید.
+""",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
+
+    if not result:
+
+        await query.edit_message_text(
+            "❌ سؤال موردنظر پیدا نشد.",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
+
+    text, keyboard = result
+
+
+    await query.edit_message_text(
+        text,
+        reply_markup=keyboard
+    )
+
+
+# =========================================================
+# 📝 پاسخ سؤال مدیریت
+# =========================================================
+
+async def management_answer_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    try:
+
+        data = query.data.split("_")
+
+        # management_answer_1_0_0_0
+
+        chapter = int(data[2])
+        index = int(data[3])
+        selected = int(data[4])
+        score = int(data[5])
+
+    except (
+        IndexError,
+        ValueError
+    ):
+
+        await query.edit_message_text(
+            """
+⚠️ خطا در پردازش پاسخ.
+
+لطفاً آزمون را دوباره شروع کنید.
+""",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
+
+    questions = MANAGEMENT_QUESTIONS.get(
+        chapter,
+        []
+    )
+
+
+    if not questions:
+
+        await query.edit_message_text(
+            "❌ سوالی برای این فصل وجود ندارد.",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
+
+    try:
+
+        result = management_answer_data(
+            chapter,
+            index,
+            selected,
+            score
+        )
+
+    except Exception as error:
+
+        print(
+            f"❌ Management answer error: {error}"
+        )
+
+        await query.edit_message_text(
+            """
+⚠️ خطا در پردازش پاسخ.
+
+لطفاً آزمون را دوباره شروع کنید.
+""",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
+
+    if not result:
+
+        await query.edit_message_text(
+            "❌ اطلاعات سؤال معتبر نیست.",
+            reply_markup=management_back_menu()
+        )
+
+        return
+
+
+    new_score = result["score"]
+    next_index = result["next_index"]
+    result_text = result["result_text"]
+    finished = result["finished"]
+
+
+    # =====================================================
+    # پایان آزمون
+    # =====================================================
+
+    if finished:
+
+        final_text = management_result_text(
+            chapter,
+            new_score
+        )
+
+        await query.edit_message_text(
+            final_text,
+            reply_markup=management_result_menu(
+                chapter
+            )
+        )
+
+        return
+
+
+    # =====================================================
+    # سؤال بعدی
+    # =====================================================
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "➡️ سؤال بعدی",
+                callback_data=(
+                    f"management_exam_"
+                    f"{chapter}_"
+                    f"{next_index}_"
+                    f"{new_score}"
+                )
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📖 مشاهده درسنامه",
+                callback_data=(
+                    f"management_chapter_{chapter}"
+                )
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🧠 خروج از آزمون",
+                callback_data="management"
+            )
+        ],
+
+    ]
+
+
+    await query.edit_message_text(
+        result_text,
+        reply_markup=InlineKeyboardMarkup(
+            keyboard
+        )
     )
 
 
@@ -418,13 +1030,10 @@ async def banking_chapter_callback(
         if isinstance(result, tuple):
 
             text = result[0]
-            chapter_keyboard = result[1]
 
         else:
 
             text = result
-            chapter_keyboard = None
-
 
     except Exception as error:
 
@@ -501,7 +1110,7 @@ async def banking_chapter_callback(
 
 
 # =========================================================
-# 📝 معرفی آزمون فصل بانکداری
+# 📝 معرفی آزمون بانکداری
 # =========================================================
 
 async def banking_exam_intro_callback(
@@ -1126,579 +1735,6 @@ async def show_exam_result(
 
 
 # =========================================================
-# 🧠 روانشناسی و مددکاری
-# =========================================================
-
-async def psychology_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
-    query = update.callback_query
-
-    await query.answer()
-
-    try:
-
-        result = psychology_intro_text()
-
-        if isinstance(result, tuple):
-
-            text = result[0]
-            keyboard = result[1]
-
-        else:
-
-            text = result
-            keyboard = psychology_menu()
-
-        await query.edit_message_text(
-            text,
-            reply_markup=keyboard
-        )
-
-    except Exception as error:
-
-        print(
-            f"❌ Psychology intro error: {error}"
-        )
-
-        await query.edit_message_text(
-            """
-⚠️ خطا در بارگذاری بخش روانشناسی و مددکاری.
-
-لطفاً دوباره تلاش کنید.
-""",
-            reply_markup=psychology_back_menu()
-        )
-
-
-# =========================================================
-# 📘 فصل روانشناسی
-# =========================================================
-
-async def psychology_chapter_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
-    query = update.callback_query
-
-    await query.answer()
-
-    try:
-
-        chapter = int(
-            query.data.replace(
-                "psychology_chapter_",
-                ""
-            )
-        )
-
-        if chapter not in PSYCHOLOGY_CHAPTER_NAMES:
-
-            raise ValueError(
-                "Invalid psychology chapter"
-            )
-
-        result = psychology_chapter_text(
-            chapter
-        )
-
-        if isinstance(result, tuple):
-
-            text = result[0]
-            keyboard = result[1]
-
-        else:
-
-            text = result
-            keyboard = psychology_back_menu()
-
-        await query.edit_message_text(
-            text,
-            reply_markup=keyboard
-        )
-
-    except Exception as error:
-
-        print(
-            f"❌ Psychology chapter error: {error}"
-        )
-
-        await query.edit_message_text(
-            "❌ فصل موردنظر پیدا نشد.",
-            reply_markup=psychology_back_menu()
-        )
-
-
-# =========================================================
-# 📖 زیرموضوع روانشناسی
-# =========================================================
-
-async def psychology_topic_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
-    query = update.callback_query
-
-    await query.answer()
-
-    try:
-
-        data = query.data.split("_")
-
-        # psychology_topic_1_0
-
-        chapter = int(data[2])
-        topic_index = int(data[3])
-
-        result = psychology_topic_text(
-            chapter,
-            topic_index
-        )
-
-        if isinstance(result, tuple):
-
-            text = result[0]
-            keyboard = result[1]
-
-        else:
-
-            text = result
-            keyboard = psychology_back_menu()
-
-        await query.edit_message_text(
-            text,
-            reply_markup=keyboard
-        )
-
-    except (
-        IndexError,
-        ValueError,
-        Exception
-    ) as error:
-
-        print(
-            f"❌ Psychology topic error: {error}"
-        )
-
-        await query.edit_message_text(
-            "❌ زیرموضوع موردنظر پیدا نشد.",
-            reply_markup=psychology_back_menu()
-        )
-
-
-# =========================================================
-# 🎯 نکات تخصصی روانشناسی
-# =========================================================
-
-async def psychology_special_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
-    query = update.callback_query
-
-    await query.answer()
-
-    try:
-
-        chapter = int(
-            query.data.replace(
-                "psychology_special_",
-                ""
-            )
-        )
-
-        result = psychology_special_points_text(
-            chapter
-        )
-
-        await query.edit_message_text(
-            result[0],
-            reply_markup=result[1]
-        )
-
-    except Exception as error:
-
-        print(
-            f"❌ Psychology special error: {error}"
-        )
-
-        await query.edit_message_text(
-            "❌ خطا در بارگذاری نکات تخصصی.",
-            reply_markup=psychology_back_menu()
-        )
-
-
-# =========================================================
-# 📝 نکات آزمونی روانشناسی
-# =========================================================
-
-async def psychology_exam_points_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
-    query = update.callback_query
-
-    await query.answer()
-
-    try:
-
-        chapter = int(
-            query.data.replace(
-                "psychology_exam_points_",
-                ""
-            )
-        )
-
-        result = psychology_exam_points_text(
-            chapter
-        )
-
-        await query.edit_message_text(
-            result[0],
-            reply_markup=result[1]
-        )
-
-    except Exception as error:
-
-        print(
-            f"❌ Psychology exam points error: {error}"
-        )
-
-        await query.edit_message_text(
-            "❌ خطا در بارگذاری نکات آزمونی.",
-            reply_markup=psychology_back_menu()
-        )
-
-
-# =========================================================
-# 💼 مثال کاربردی روانشناسی
-# =========================================================
-
-async def psychology_example_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
-    query = update.callback_query
-
-    await query.answer()
-
-    try:
-
-        chapter = int(
-            query.data.replace(
-                "psychology_example_",
-                ""
-            )
-        )
-
-        result = psychology_example_text(
-            chapter
-        )
-
-        await query.edit_message_text(
-            result[0],
-            reply_markup=result[1]
-        )
-
-    except Exception as error:
-
-        print(
-            f"❌ Psychology example error: {error}"
-        )
-
-        await query.edit_message_text(
-            "❌ خطا در بارگذاری مثال کاربردی.",
-            reply_markup=psychology_back_menu()
-        )
-
-
-# =========================================================
-# 📝 معرفی آزمون روانشناسی
-# =========================================================
-
-async def psychology_exam_intro_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
-    query = update.callback_query
-
-    await query.answer()
-
-    try:
-
-        chapter = int(
-            query.data.replace(
-                "psychology_exam_intro_",
-                ""
-            )
-        )
-
-        result = psychology_exam_intro_text(
-            chapter
-        )
-
-        await query.edit_message_text(
-            result[0],
-            reply_markup=result[1]
-        )
-
-    except Exception as error:
-
-        print(
-            f"❌ Psychology exam intro error: {error}"
-        )
-
-        await query.edit_message_text(
-            "❌ خطا در آماده‌سازی آزمون.",
-            reply_markup=psychology_back_menu()
-        )
-
-
-# =========================================================
-# ❓ سؤال آزمون روانشناسی
-# =========================================================
-
-async def psychology_exam_question_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
-    query = update.callback_query
-
-    await query.answer()
-
-    try:
-
-        data = query.data.split("_")
-
-        # psychology_exam_1_0_0
-
-        chapter = int(data[2])
-        index = int(data[3])
-        score = int(data[4])
-
-        result = psychology_question_text(
-            chapter,
-            index,
-            score
-        )
-
-        if isinstance(result, tuple):
-
-            text = result[0]
-            keyboard = result[1]
-
-        else:
-
-            text = result
-            keyboard = psychology_back_menu()
-
-        await query.edit_message_text(
-            text,
-            reply_markup=keyboard
-        )
-
-    except (
-        IndexError,
-        ValueError,
-        Exception
-    ) as error:
-
-        print(
-            f"❌ Psychology question error: {error}"
-        )
-
-        await query.edit_message_text(
-            """
-⚠️ خطا در اطلاعات آزمون.
-
-لطفاً آزمون را دوباره شروع کنید.
-""",
-            reply_markup=psychology_back_menu()
-        )
-
-
-# =========================================================
-# ✅ پاسخ آزمون روانشناسی
-# =========================================================
-
-async def psychology_answer_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
-    query = update.callback_query
-
-    await query.answer()
-
-    try:
-
-        data = query.data.split("_")
-
-        # psychology_answer_1_0_0_0
-
-        chapter = int(data[2])
-        index = int(data[3])
-        selected = int(data[4])
-        score = int(data[5])
-
-        result = check_answer(
-            chapter,
-            index,
-            selected,
-            score
-        )
-
-        if not result["valid"]:
-
-            await query.edit_message_text(
-                """
-⚠️ سؤال موردنظر پیدا نشد.
-
-لطفاً آزمون را دوباره شروع کنید.
-""",
-                reply_markup=psychology_back_menu()
-            )
-
-            return
-
-
-        new_score = result["score"]
-
-
-        if result["correct"]:
-
-            result_text = f"""
-✅ پاسخ صحیح است.
-
-🎯 +۱ امتیاز
-
-⭐ امتیاز فعلی: {new_score}
-
-━━━━━━━━━━━━━━━━━━
-
-آفرین 👏
-
-{result["explanation"]}
-"""
-
-        else:
-
-            result_text = f"""
-❌ پاسخ صحیح نیست.
-
-━━━━━━━━━━━━━━━━━━
-
-✅ پاسخ صحیح:
-
-{result["correct_option"]}
-
-━━━━━━━━━━━━━━━━━━
-
-⭐ امتیاز فعلی: {new_score}
-
-💡 توضیح:
-
-{result["explanation"]}
-"""
-
-
-        from psychology import (
-            PSYCHOLOGY_QUESTIONS
-        )
-
-        questions = PSYCHOLOGY_QUESTIONS.get(
-            chapter,
-            []
-        )
-
-        next_index = index + 1
-
-
-        if next_index < len(questions):
-
-            keyboard = [
-
-                [
-                    InlineKeyboardButton(
-                        "➡️ سؤال بعدی",
-                        callback_data=(
-                            f"psychology_exam_"
-                            f"{chapter}_"
-                            f"{next_index}_"
-                            f"{new_score}"
-                        )
-                    )
-                ],
-
-                [
-                    InlineKeyboardButton(
-                        "📖 مشاهده درسنامه",
-                        callback_data=(
-                            f"psychology_chapter_{chapter}"
-                        )
-                    )
-                ],
-
-                [
-                    InlineKeyboardButton(
-                        "🧠 خروج از آزمون",
-                        callback_data=(
-                            "psychology_socialwork"
-                        )
-                    )
-                ],
-
-            ]
-
-            await query.edit_message_text(
-                result_text,
-                reply_markup=InlineKeyboardMarkup(
-                    keyboard
-                )
-            )
-
-        else:
-
-            final_result = psychology_exam_result_text(
-                chapter,
-                new_score
-            )
-
-            await query.edit_message_text(
-                final_result[0],
-                reply_markup=final_result[1]
-            )
-
-    except (
-        IndexError,
-        ValueError,
-        Exception
-    ) as error:
-
-        print(
-            f"❌ Psychology answer error: {error}"
-        )
-
-        await query.edit_message_text(
-            """
-⚠️ خطا در پردازش پاسخ.
-
-لطفاً آزمون را دوباره شروع کنید.
-""",
-            reply_markup=psychology_back_menu()
-        )
-
-
-# =========================================================
 # 🚧 بخش‌های موقت
 # =========================================================
 
@@ -1710,6 +1746,7 @@ async def temporary_section(
     query = update.callback_query
 
     await query.answer()
+
 
     await query.edit_message_text(
         """
@@ -1817,6 +1854,18 @@ def create_application():
 
 
     # =====================================================
+    # EDUCATION
+    # =====================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            education_callback,
+            pattern=r"^education$"
+        )
+    )
+
+
+    # =====================================================
     # SUPPORT
     # =====================================================
 
@@ -1824,6 +1873,66 @@ def create_application():
         CallbackQueryHandler(
             support_callback,
             pattern=r"^support$"
+        )
+    )
+
+
+    # =====================================================
+    # MANAGEMENT
+    # =====================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            management_callback,
+            pattern=r"^management$"
+        )
+    )
+
+
+    # =====================================================
+    # MANAGEMENT CHAPTER
+    # =====================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            management_chapter_callback,
+            pattern=r"^management_chapter_[0-9]+$"
+        )
+    )
+
+
+    # =====================================================
+    # MANAGEMENT EXAM INTRO
+    # =====================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            management_exam_intro_callback,
+            pattern=r"^management_exam_intro_[0-9]+$"
+        )
+    )
+
+
+    # =====================================================
+    # MANAGEMENT EXAM QUESTION
+    # =====================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            management_exam_question_callback,
+            pattern=r"^management_exam_[0-9]+_[0-9]+_[0-9]+$"
+        )
+    )
+
+
+    # =====================================================
+    # MANAGEMENT ANSWER
+    # =====================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            management_answer_callback,
+            pattern=r"^management_answer_[0-9]+_[0-9]+_[0-9]+_[0-9]+$"
         )
     )
 
@@ -1889,114 +1998,6 @@ def create_application():
 
 
     # =====================================================
-    # 🧠 PSYCHOLOGY
-    # =====================================================
-
-    application.add_handler(
-        CallbackQueryHandler(
-            psychology_callback,
-            pattern=r"^psychology_socialwork$"
-        )
-    )
-
-
-    # =====================================================
-    # 🧠 PSYCHOLOGY CHAPTER
-    # =====================================================
-
-    application.add_handler(
-        CallbackQueryHandler(
-            psychology_chapter_callback,
-            pattern=r"^psychology_chapter_[0-9]+$"
-        )
-    )
-
-
-    # =====================================================
-    # 🧠 PSYCHOLOGY TOPIC
-    # =====================================================
-
-    application.add_handler(
-        CallbackQueryHandler(
-            psychology_topic_callback,
-            pattern=r"^psychology_topic_[0-9]+_[0-9]+$"
-        )
-    )
-
-
-    # =====================================================
-    # 🧠 PSYCHOLOGY SPECIAL POINTS
-    # =====================================================
-
-    application.add_handler(
-        CallbackQueryHandler(
-            psychology_special_callback,
-            pattern=r"^psychology_special_[0-9]+$"
-        )
-    )
-
-
-    # =====================================================
-    # 🧠 PSYCHOLOGY EXAM POINTS
-    # =====================================================
-
-    application.add_handler(
-        CallbackQueryHandler(
-            psychology_exam_points_callback,
-            pattern=r"^psychology_exam_points_[0-9]+$"
-        )
-    )
-
-
-    # =====================================================
-    # 🧠 PSYCHOLOGY EXAMPLE
-    # =====================================================
-
-    application.add_handler(
-        CallbackQueryHandler(
-            psychology_example_callback,
-            pattern=r"^psychology_example_[0-9]+$"
-        )
-    )
-
-
-    # =====================================================
-    # 🧠 PSYCHOLOGY EXAM INTRO
-    # =====================================================
-
-    application.add_handler(
-        CallbackQueryHandler(
-            psychology_exam_intro_callback,
-            pattern=r"^psychology_exam_intro_[0-9]+$"
-        )
-    )
-
-
-    # =====================================================
-    # 🧠 PSYCHOLOGY EXAM QUESTION
-    # =====================================================
-
-    application.add_handler(
-        CallbackQueryHandler(
-            psychology_exam_question_callback,
-            pattern=r"^psychology_exam_[0-9]+_[0-9]+_[0-9]+$"
-        )
-    )
-
-
-    # =====================================================
-    # 🧠 PSYCHOLOGY ANSWER
-    # =====================================================
-
-    application.add_handler(
-        CallbackQueryHandler(
-            psychology_answer_callback,
-            pattern=r"^psychology_answer_[0-9]+_[0-9]+_[0-9]+_[0-9]+$"
-        )
-    )
-
-
-    # =====================================================
     # TEMPORARY SECTIONS
     # =====================================================
 
@@ -2004,9 +2005,9 @@ def create_application():
         CallbackQueryHandler(
             temporary_section,
             pattern=(
-                r"^(education|"
-                r"employment_exam|"
+                r"^(employment_exam|"
                 r"random_questions|"
+                r"psychology_socialwork|"
                 r"international_trade|"
                 r"marketing|"
                 r"economics|"
