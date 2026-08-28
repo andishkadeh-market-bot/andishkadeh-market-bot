@@ -22,6 +22,7 @@ from telegram.ext import (
     ContextTypes,
 )
 
+
 # =========================================================
 # SUPPORT
 # =========================================================
@@ -30,6 +31,7 @@ from support import (
     support_text,
     support_menu,
 )
+
 
 # =========================================================
 # BANKING
@@ -44,6 +46,7 @@ from banking import (
     BANKING_CHAPTER_QUESTIONS,
 )
 
+
 # =========================================================
 # INTERNATIONAL TRADE
 # =========================================================
@@ -56,6 +59,7 @@ from international_trade import (
     CHAPTER_NAMES as TRADE_CHAPTER_NAMES,
     INTERNATIONAL_TRADE_QUESTIONS,
 )
+
 
 # =========================================================
 # MARKETING
@@ -76,6 +80,7 @@ from marketing import (
     CHAPTER_NAMES as MARKETING_CHAPTER_NAMES,
 )
 
+
 # =========================================================
 # تنظیمات
 # =========================================================
@@ -86,6 +91,7 @@ PORT = int(
     os.getenv("PORT", "10000")
 )
 
+
 # =========================================================
 # بررسی توکن
 # =========================================================
@@ -94,6 +100,7 @@ if not TOKEN:
     raise RuntimeError(
         "❌ BOT_TOKEN در Environment Variables تنظیم نشده است."
     )
+
 
 # =========================================================
 # HTTP SERVER برای Render
@@ -1162,6 +1169,15 @@ async def trade_exam_intro_callback(
         "تجارت بین‌الملل"
     )
 
+    if not questions:
+
+        await query.edit_message_text(
+            "❌ برای این فصل هنوز سؤال آزمون ثبت نشده است.",
+            reply_markup=international_trade_back_menu()
+        )
+
+        return
+
     text = f"""
 📝 آزمون فصل {chapter}
 
@@ -1300,6 +1316,8 @@ async def trade_exam_question_callback(
 {question["question"]}
 
 ━━━━━━━━━━━━━━━━━━
+
+👇 گزینه صحیح را انتخاب کنید:
 """
 
     keyboard = []
@@ -1909,7 +1927,6 @@ async def marketing_answer_callback(
 
 # =========================================================
 # ECONOMICS / MARKET
-# بخش کامل اقتصاد و بازار
 # =========================================================
 
 def economics_menu():
@@ -2356,7 +2373,7 @@ def economics_currency_interest_text():
 
 
 # =========================================================
-# ECONOMICS EXAM
+# ECONOMICS EXAM QUESTIONS
 # =========================================================
 
 ECONOMICS_QUESTIONS = [
@@ -2474,15 +2491,93 @@ ECONOMICS_QUESTIONS = [
 ]
 
 
-def economics_exam_callback(
+# =========================================================
+# ECONOMICS EXAM START
+# =========================================================
+
+async def economics_exam_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
 
     query = update.callback_query
 
-    return None
+    await query.answer()
 
+    if not ECONOMICS_QUESTIONS:
+
+        await query.edit_message_text(
+            "❌ هنوز سؤالی برای آزمون اقتصاد ثبت نشده است.",
+            reply_markup=economics_menu()
+        )
+
+        return
+
+    text = f"""
+📝 آزمون اقتصاد و بازار
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 آزمون جامع مفاهیم اقتصاد
+
+📝 تعداد سؤالات:
+{len(ECONOMICS_QUESTIONS)} سؤال
+
+━━━━━━━━━━━━━━━━━━
+
+📌 قوانین آزمون:
+
+• هر سؤال چهار گزینه دارد.
+• فقط یک گزینه صحیح است.
+• هر پاسخ صحیح یک امتیاز دارد.
+• نتیجه در پایان نمایش داده می‌شود.
+
+━━━━━━━━━━━━━━━━━━
+
+👇 برای شروع آزمون:
+"""
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🚀 شروع آزمون",
+                callback_data="economics_exam_0_0"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📚 آموزش اقتصاد",
+                callback_data="economics_lessons"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "💰 اقتصاد و بازار",
+                callback_data="economics"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ]
+
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
+# ECONOMICS EXAM QUESTION
+# =========================================================
 
 async def economics_exam_question_callback(
     update: Update,
@@ -2575,6 +2670,10 @@ async def economics_exam_question_callback(
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
+
+# =========================================================
+# ECONOMICS ANSWER
+# =========================================================
 
 async def economics_answer_callback(
     update: Update,
@@ -2691,12 +2790,25 @@ async def economics_answer_callback(
         )
 
 
+# =========================================================
+# ECONOMICS RESULT
+# =========================================================
+
 async def show_economics_result(
     query,
     score
 ):
 
     total = len(ECONOMICS_QUESTIONS)
+
+    if total == 0:
+
+        await query.edit_message_text(
+            "❌ آزمونی برای اقتصاد وجود ندارد.",
+            reply_markup=economics_menu()
+        )
+
+        return
 
     wrong = total - score
 
@@ -2761,7 +2873,7 @@ async def show_economics_result(
         [
             InlineKeyboardButton(
                 "🔄 تکرار آزمون",
-                callback_data="economics_exam_0_0"
+                callback_data="economics_exam"
             )
         ],
 
@@ -2975,6 +3087,7 @@ def create_application():
         .build()
     )
 
+
     # -----------------------------------------------------
     # START
     # -----------------------------------------------------
@@ -2985,6 +3098,7 @@ def create_application():
             start
         )
     )
+
 
     # -----------------------------------------------------
     # HOME
@@ -2997,6 +3111,7 @@ def create_application():
         )
     )
 
+
     # -----------------------------------------------------
     # SUPPORT
     # -----------------------------------------------------
@@ -3007,6 +3122,7 @@ def create_application():
             pattern=r"^support$"
         )
     )
+
 
     # -----------------------------------------------------
     # BANKING
@@ -3047,6 +3163,7 @@ def create_application():
         )
     )
 
+
     # -----------------------------------------------------
     # INTERNATIONAL TRADE
     # -----------------------------------------------------
@@ -3085,6 +3202,7 @@ def create_application():
             pattern=r"^trade_answer_[0-9]+_[0-9]+_[0-9]+_[0-9]+$"
         )
     )
+
 
     # -----------------------------------------------------
     # MARKETING
@@ -3125,6 +3243,7 @@ def create_application():
         )
     )
 
+
     # -----------------------------------------------------
     # ECONOMICS
     # -----------------------------------------------------
@@ -3136,6 +3255,31 @@ def create_application():
         )
     )
 
+    # شروع آزمون اقتصاد
+    application.add_handler(
+        CallbackQueryHandler(
+            economics_exam_callback,
+            pattern=r"^economics_exam$"
+        )
+    )
+
+    # سؤال‌های آزمون اقتصاد
+    application.add_handler(
+        CallbackQueryHandler(
+            economics_exam_question_callback,
+            pattern=r"^economics_exam_[0-9]+_[0-9]+$"
+        )
+    )
+
+    # پاسخ‌های آزمون اقتصاد
+    application.add_handler(
+        CallbackQueryHandler(
+            economics_answer_callback,
+            pattern=r"^economics_answer_[0-9]+_[0-9]+_[0-9]+$"
+        )
+    )
+
+    # بخش‌های آموزشی اقتصاد
     application.add_handler(
         CallbackQueryHandler(
             economics_subsection_callback,
@@ -3151,19 +3295,6 @@ def create_application():
         )
     )
 
-    application.add_handler(
-        CallbackQueryHandler(
-            economics_exam_question_callback,
-            pattern=r"^economics_exam_[0-9]+_[0-9]+$"
-        )
-    )
-
-    application.add_handler(
-        CallbackQueryHandler(
-            economics_answer_callback,
-            pattern=r"^economics_answer_[0-9]+_[0-9]+_[0-9]+$"
-        )
-    )
 
     # -----------------------------------------------------
     # TEMPORARY
@@ -3183,6 +3314,7 @@ def create_application():
         )
     )
 
+
     # -----------------------------------------------------
     # UNKNOWN
     # -----------------------------------------------------
@@ -3192,6 +3324,7 @@ def create_application():
             unknown_callback
         )
     )
+
 
     # -----------------------------------------------------
     # ERROR
