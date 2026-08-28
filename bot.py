@@ -1,21 +1,26 @@
 # =========================================================
 # bot.py
 # 🏛️ اندیشکده مدیریت و بازار
-# نسخه جامع
+# نسخه حرفه‌ای و جامع
 #
 # اتصال:
+# 📚 آموزش تخصصی
 # 🏦 بانکداری
 # 🌍 تجارت بین‌الملل
 # 📈 بازاریابی و فروش
 # 💰 اقتصاد و بازار
 # 📝 آزمون استخدامی حرفه‌ای
 # 🧠 روانشناسی و مددکاری
+# 🎲 سوالات تصادفی
+# 📂 فایل و منابع آموزشی
+# 📱 شبکه‌های اجتماعی
 # 🤝 حمایت از اندیشکده
 #
 # سازگار با Render Free Web Service
 # =========================================================
 
 import os
+import random
 from threading import Thread
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -97,6 +102,7 @@ import employment_exam
 # =========================================================
 
 import psychology_socialwork
+
 
 # =========================================================
 # ECONOMICS QUESTIONS
@@ -216,6 +222,7 @@ ECONOMICS_QUESTIONS = [
 
 ]
 
+
 # =========================================================
 # SETTINGS
 # =========================================================
@@ -226,6 +233,7 @@ PORT = int(
     os.getenv("PORT", "10000")
 )
 
+
 # =========================================================
 # TOKEN CHECK
 # =========================================================
@@ -235,6 +243,7 @@ if not TOKEN:
     raise RuntimeError(
         "❌ BOT_TOKEN در Environment Variables تنظیم نشده است."
     )
+
 
 # =========================================================
 # HTTP SERVER FOR RENDER
@@ -303,7 +312,6 @@ def main_menu():
 
     keyboard = [
 
-        # آموزش
         [
             InlineKeyboardButton(
                 "📚 آموزش تخصصی",
@@ -311,63 +319,61 @@ def main_menu():
             )
         ],
 
-        # آزمون و سوالات
         [
             InlineKeyboardButton(
                 "📝 آزمون استخدامی",
                 callback_data="employment_exam"
-            ),
-            InlineKeyboardButton(
-                "🎲 سوالات تصادفی",
-                callback_data="random_questions"
             )
         ],
 
-        # روانشناسی و بانکداری
         [
-            InlineKeyboardButton(
-                "🧠 روانشناسی و مددکاری",
-                callback_data="psychology_socialwork"
-            ),
             InlineKeyboardButton(
                 "🏦 بانکداری تخصصی",
                 callback_data="banking"
-            )
-        ],
+            ),
 
-        # تجارت و بازاریابی
-        [
             InlineKeyboardButton(
                 "🌍 تجارت بین‌الملل",
                 callback_data="international_trade"
-            ),
+            )
+        ],
+
+        [
             InlineKeyboardButton(
                 "📈 بازاریابی و فروش",
                 callback_data="marketing"
-            )
-        ],
+            ),
 
-        # اقتصاد و منابع
-        [
             InlineKeyboardButton(
                 "💰 اقتصاد و بازار",
                 callback_data="economics"
-            ),
-            InlineKeyboardButton(
-                "📂 فایل و منابع آموزشی",
-                callback_data="files"
             )
         ],
 
-        # شبکه‌های اجتماعی
         [
+            InlineKeyboardButton(
+                "🎲 سوالات تصادفی",
+                callback_data="random_questions"
+            ),
+
+            InlineKeyboardButton(
+                "🧠 روانشناسی و مددکاری",
+                callback_data="psychology_socialwork"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📂 فایل و منابع آموزشی",
+                callback_data="files"
+            ),
+
             InlineKeyboardButton(
                 "📱 شبکه‌های اجتماعی",
                 callback_data="social"
             )
         ],
 
-        # حمایت
         [
             InlineKeyboardButton(
                 "🤝 حمایت از اندیشکده",
@@ -395,12 +401,11 @@ def welcome_text():
 
 📚 آموزش تخصصی
 📝 آزمون‌های استخدامی
-🎲 سوالات تصادفی
-🧠 روانشناسی و مددکاری
 🏦 بانکداری تخصصی
 🌍 تجارت بین‌الملل
 📈 بازاریابی و فروش
 💰 اقتصاد و بازار
+🧠 روانشناسی و مددکاری
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -415,6 +420,10 @@ def welcome_text():
 🔄 مرور و تکرار
 
 ━━━━━━━━━━━━━━━━━━
+
+🎓 برای دانشجویان، کارجویان،
+داوطلبان آزمون‌های استخدامی
+و علاقه‌مندان مدیریت و بازرگانی
 
 👇 بخش موردنظر خود را انتخاب کنید.
 """
@@ -3148,6 +3157,538 @@ async def show_economics_result(
 
 
 # =========================================================
+# RANDOM QUESTIONS
+# =========================================================
+
+def get_all_questions():
+
+    all_questions = []
+
+    # -----------------------------
+    # Economics
+    # -----------------------------
+
+    for question in ECONOMICS_QUESTIONS:
+
+        all_questions.append(
+            {
+                "category": "💰 اقتصاد و بازار",
+                "question": question["question"],
+                "options": question["options"],
+                "correct": question["correct"]
+            }
+        )
+
+    # -----------------------------
+    # Banking
+    # -----------------------------
+
+    for chapter, questions in BANKING_CHAPTER_QUESTIONS.items():
+
+        for question in questions:
+
+            all_questions.append(
+                {
+                    "category": (
+                        f"🏦 بانکداری - فصل {chapter}"
+                    ),
+                    "question": question["question"],
+                    "options": question["options"],
+                    "correct": question["correct"]
+                }
+            )
+
+    # -----------------------------
+    # International Trade
+    # -----------------------------
+
+    for chapter, questions in INTERNATIONAL_TRADE_QUESTIONS.items():
+
+        for question in questions:
+
+            all_questions.append(
+                {
+                    "category": (
+                        f"🌍 تجارت بین‌الملل - فصل {chapter}"
+                    ),
+                    "question": question["question"],
+                    "options": question["options"],
+                    "correct": question["correct"]
+                }
+            )
+
+    return all_questions
+
+
+async def random_questions_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    questions = get_all_questions()
+
+    if not questions:
+
+        await query.edit_message_text(
+            """
+🎲 سوالات تصادفی
+
+━━━━━━━━━━━━━━━━━━
+
+❌ در حال حاضر سوالی برای نمایش وجود ندارد.
+
+━━━━━━━━━━━━━━━━━━
+
+🏛️ اندیشکده مدیریت و بازار
+""",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "🏠 منوی اصلی",
+                            callback_data="home"
+                        )
+                    ]
+                ]
+            )
+        )
+
+        return
+
+    question = random.choice(
+        questions
+    )
+
+    # ذخیره سؤال فعلی برای همان کاربر
+    context.user_data[
+        "random_question"
+    ] = question
+
+    text = f"""
+🎲 سوال تصادفی اندیشکده
+
+━━━━━━━━━━━━━━━━━━
+
+📚 موضوع:
+
+{question["category"]}
+
+━━━━━━━━━━━━━━━━━━
+
+❓ سؤال:
+
+{question["question"]}
+
+━━━━━━━━━━━━━━━━━━
+
+👇 پاسخ خود را انتخاب کنید:
+"""
+
+    keyboard = []
+
+    for index, option in enumerate(
+        question["options"]
+    ):
+
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    option,
+                    callback_data=(
+                        f"random_answer_{index}"
+                    )
+                )
+            ]
+        )
+
+    keyboard.extend(
+        [
+            [
+                InlineKeyboardButton(
+                    "🎲 سوال جدید",
+                    callback_data="random_questions"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🏠 منوی اصلی",
+                    callback_data="home"
+                )
+            ]
+        ]
+    )
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def random_answer_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    try:
+
+        selected = int(
+            query.data.replace(
+                "random_answer_",
+                ""
+            )
+        )
+
+    except ValueError:
+
+        await query.edit_message_text(
+            "⚠️ خطا در پردازش پاسخ.",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "🎲 سوال جدید",
+                            callback_data="random_questions"
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            "🏠 منوی اصلی",
+                            callback_data="home"
+                        )
+                    ]
+                ]
+            )
+        )
+
+        return
+
+    question = context.user_data.get(
+        "random_question"
+    )
+
+    if not question:
+
+        await query.edit_message_text(
+            "⚠️ سؤال منقضی شده است. یک سؤال جدید دریافت کنید.",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "🎲 سوال جدید",
+                            callback_data="random_questions"
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            "🏠 منوی اصلی",
+                            callback_data="home"
+                        )
+                    ]
+                ]
+            )
+        )
+
+        return
+
+    correct = question["correct"]
+
+    if selected == correct:
+
+        text = f"""
+✅ پاسخ صحیح است!
+
+🎯 آفرین، پاسخ شما درست بود.
+
+━━━━━━━━━━━━━━━━━━
+
+📚 موضوع:
+
+{question["category"]}
+
+━━━━━━━━━━━━━━━━━━
+
+💡 نکته:
+
+{question["options"][correct]}
+"""
+
+    else:
+
+        text = f"""
+❌ پاسخ صحیح نیست.
+
+━━━━━━━━━━━━━━━━━━
+
+📚 موضوع:
+
+{question["category"]}
+
+━━━━━━━━━━━━━━━━━━
+
+✅ پاسخ صحیح:
+
+{question["options"][correct]}
+
+━━━━━━━━━━━━━━━━━━
+
+📖 پیشنهاد:
+مفهوم مربوط به این سؤال را دوباره مرور کنید.
+"""
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🎲 سوال جدید",
+                callback_data="random_questions"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ]
+
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
+# EDUCATION
+# =========================================================
+
+async def education_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    text = """
+📚 آموزش تخصصی
+
+━━━━━━━━━━━━━━━━━━
+
+🏛️ اندیشکده مدیریت و بازار
+
+مسیرهای آموزشی تخصصی:
+
+🏦 بانکداری
+🌍 تجارت بین‌الملل
+📈 بازاریابی و فروش
+💰 اقتصاد و بازار
+🧠 روانشناسی و مددکاری
+
+━━━━━━━━━━━━━━━━━━
+
+🎯 پیشنهاد مطالعه:
+
+ابتدا یک حوزه را انتخاب کنید،
+سپس درسنامه را مطالعه کرده و
+در آزمون همان بخش شرکت کنید.
+
+👇 حوزه موردنظر را انتخاب کنید.
+"""
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🏦 بانکداری",
+                callback_data="banking"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🌍 تجارت بین‌الملل",
+                callback_data="international_trade"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📈 بازاریابی و فروش",
+                callback_data="marketing"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "💰 اقتصاد و بازار",
+                callback_data="economics"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🧠 روانشناسی و مددکاری",
+                callback_data="psychology_socialwork"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ]
+
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
+# FILES
+# =========================================================
+
+async def files_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    text = """
+📂 فایل و منابع آموزشی
+
+━━━━━━━━━━━━━━━━━━
+
+📚 منابع آموزشی اندیشکده
+
+در این بخش می‌توان منابع زیر را
+به کاربران ارائه کرد:
+
+📕 کتاب‌ها
+📄 جزوات
+📝 نمونه سؤالات
+📊 خلاصه‌های آموزشی
+🎓 منابع آزمون استخدامی
+🌍 منابع تجارت بین‌الملل
+🏦 منابع بانکداری
+
+━━━━━━━━━━━━━━━━━━
+
+🚧 بخش مدیریت و انتشار فایل‌ها
+در حال توسعه است.
+
+━━━━━━━━━━━━━━━━━━
+
+🏛️ اندیشکده مدیریت و بازار
+"""
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "📝 آزمون استخدامی",
+                callback_data="employment_exam"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "📚 آموزش تخصصی",
+                callback_data="education"
+            )
+        ],
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ]
+
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
+# SOCIAL
+# =========================================================
+
+async def social_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    text = """
+📱 شبکه‌های اجتماعی
+
+━━━━━━━━━━━━━━━━━━
+
+🏛️ اندیشکده مدیریت و بازار
+
+برای دنبال کردن آموزش‌ها،
+محتوای تخصصی و اطلاع‌رسانی‌های اندیشکده
+از شبکه‌های اجتماعی ما استفاده کنید.
+
+━━━━━━━━━━━━━━━━━━
+
+📸 Instagram
+🎥 YouTube
+📢 Telegram
+💬 WhatsApp
+
+━━━━━━━━━━━━━━━━━━
+
+🔗 لینک‌های رسمی شبکه‌های اجتماعی
+در حال تکمیل است.
+
+━━━━━━━━━━━━━━━━━━
+
+🏛️ اندیشکده مدیریت و بازار
+"""
+
+    keyboard = [
+
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="home"
+            )
+        ]
+
+    ]
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+# =========================================================
 # EMPLOYMENT EXAM
 # =========================================================
 
@@ -3377,7 +3918,7 @@ async def employment_exam_category_callback(
                         InlineKeyboardButton(
                             "📝 آزمون استخدامی",
                             callback_data="employment_exam"
-                        )
+                        ]
                     ]
                 ]
             )
@@ -3604,7 +4145,7 @@ async def employment_next_callback(
 
 
 # =========================================================
-# TEMPORARY SECTIONS
+# TEMPORARY REMAINING SECTIONS
 # =========================================================
 
 async def temporary_section(
@@ -3726,6 +4267,57 @@ def create_application():
         CallbackQueryHandler(
             support_callback,
             pattern=r"^support$"
+        )
+    )
+
+    # =====================================================
+    # EDUCATION
+    # =====================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            education_callback,
+            pattern=r"^education$"
+        )
+    )
+
+    # =====================================================
+    # RANDOM QUESTIONS
+    # =====================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            random_questions_callback,
+            pattern=r"^random_questions$"
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            random_answer_callback,
+            pattern=r"^random_answer_[0-9]+$"
+        )
+    )
+
+    # =====================================================
+    # FILES
+    # =====================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            files_callback,
+            pattern=r"^files$"
+        )
+    )
+
+    # =====================================================
+    # SOCIAL
+    # =====================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            social_callback,
+            pattern=r"^social$"
         )
     )
 
@@ -3970,22 +4562,6 @@ def create_application():
     )
 
     # =====================================================
-    # TEMPORARY
-    # =====================================================
-
-    application.add_handler(
-        CallbackQueryHandler(
-            temporary_section,
-            pattern=(
-                r"^(education|"
-                r"random_questions|"
-                r"files|"
-                r"social)$"
-            )
-        )
-    )
-
-    # =====================================================
     # UNKNOWN
     # =====================================================
 
@@ -4034,6 +4610,22 @@ def main():
 
     print(
         "🧠 Psychology & Social Work Module: LOADED"
+    )
+
+    print(
+        "🎲 Random Questions: LOADED"
+    )
+
+    print(
+        "📚 Education Menu: LOADED"
+    )
+
+    print(
+        "📂 Files Menu: LOADED"
+    )
+
+    print(
+        "📱 Social Menu: LOADED"
     )
 
     print(
