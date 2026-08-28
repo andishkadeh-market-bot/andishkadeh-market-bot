@@ -1,14 +1,7 @@
 # =========================================================
 # bot.py
 # 🏛️ اندیشکده مدیریت و بازار
-# نسخه جامع
-# اتصال:
-# 🏦 بانکداری
-# 🌍 تجارت بین‌الملل
-# 📈 بازاریابی و فروش
-# 💰 اقتصاد و بازار
-# 📝 آزمون استخدامی
-# 🤝 حمایت
+# نسخه جامع + اتصال آزمون استخدامی
 # سازگار با Render Free Web Service
 # =========================================================
 
@@ -29,7 +22,6 @@ from telegram.ext import (
     ContextTypes,
 )
 
-
 # =========================================================
 # SUPPORT
 # =========================================================
@@ -38,7 +30,6 @@ from support import (
     support_text,
     support_menu,
 )
-
 
 # =========================================================
 # BANKING
@@ -53,7 +44,6 @@ from banking import (
     BANKING_CHAPTER_QUESTIONS,
 )
 
-
 # =========================================================
 # INTERNATIONAL TRADE
 # =========================================================
@@ -66,7 +56,6 @@ from international_trade import (
     CHAPTER_NAMES as TRADE_CHAPTER_NAMES,
     INTERNATIONAL_TRADE_QUESTIONS,
 )
-
 
 # =========================================================
 # MARKETING
@@ -87,21 +76,22 @@ from marketing import (
     CHAPTER_NAMES as MARKETING_CHAPTER_NAMES,
 )
 
-
 # =========================================================
 # EMPLOYMENT EXAM
 # =========================================================
 
 from employment_exam import (
-    employment_exam_menu,
     employment_exam_callback,
-    employment_exam_category_callback,
-    employment_exam_level_callback,
-    employment_exam_question_callback,
-    employment_exam_answer_callback,
-    employment_exam_result_callback,
+    employment_exam_menu,
+    employment_bank_callback,
+    employment_difficulty_callback,
+    employment_start_callback,
+    employment_random_callback,
+    employment_simulation_callback,
+    employment_simulation_start_callback,
+    employment_answer_callback,
+    employment_next_callback,
 )
-
 
 # =========================================================
 # تنظیمات
@@ -113,20 +103,14 @@ PORT = int(
     os.getenv("PORT", "10000")
 )
 
-
-# =========================================================
-# بررسی توکن
-# =========================================================
-
 if not TOKEN:
-
     raise RuntimeError(
         "❌ BOT_TOKEN در Environment Variables تنظیم نشده است."
     )
 
 
 # =========================================================
-# HTTP SERVER برای Render
+# HTTP SERVER
 # =========================================================
 
 class HealthHandler(BaseHTTPRequestHandler):
@@ -185,7 +169,7 @@ def run_http_server():
 
 
 # =========================================================
-# منوی اصلی
+# MAIN MENU
 # =========================================================
 
 def main_menu():
@@ -275,7 +259,7 @@ def main_menu():
 
 
 # =========================================================
-# متن خوش‌آمدگویی
+# WELCOME
 # =========================================================
 
 def welcome_text():
@@ -318,10 +302,7 @@ def welcome_text():
 # START
 # =========================================================
 
-async def start(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def start(update, context):
 
     if update.message:
 
@@ -335,10 +316,7 @@ async def start(
 # HOME
 # =========================================================
 
-async def home_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def home_callback(update, context):
 
     query = update.callback_query
 
@@ -354,10 +332,7 @@ async def home_callback(
 # SUPPORT
 # =========================================================
 
-async def support_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def support_callback(update, context):
 
     query = update.callback_query
 
@@ -370,13 +345,10 @@ async def support_callback(
 
 
 # =========================================================
-# BANKING MAIN
+# BANKING
 # =========================================================
 
-async def banking_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def banking_callback(update, context):
 
     query = update.callback_query
 
@@ -400,14 +372,7 @@ async def banking_callback(
     )
 
 
-# =========================================================
-# BANKING CHAPTER
-# =========================================================
-
-async def banking_chapter_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def banking_chapter_callback(update, context):
 
     query = update.callback_query
 
@@ -440,41 +405,18 @@ async def banking_chapter_callback(
 
         return
 
-    try:
+    text = banking_chapter_text(chapter)
 
-        result = banking_chapter_text(
-            chapter
-        )
+    if isinstance(text, tuple):
 
-        if isinstance(result, tuple):
-
-            text = result[0]
-
-        else:
-
-            text = result
-
-    except Exception as error:
-
-        print(
-            f"❌ Banking chapter error: {error}"
-        )
-
-        await query.edit_message_text(
-            "⚠️ خطا در بارگذاری درسنامه بانکداری.",
-            reply_markup=banking_back_menu()
-        )
-
-        return
+        text = text[0]
 
     keyboard = [
 
         [
             InlineKeyboardButton(
                 f"📝 آزمون فصل {chapter}",
-                callback_data=(
-                    f"banking_exam_intro_{chapter}"
-                )
+                callback_data=f"banking_exam_intro_{chapter}"
             )
         ],
 
@@ -520,14 +462,7 @@ async def banking_chapter_callback(
     )
 
 
-# =========================================================
-# BANKING EXAM INTRO
-# =========================================================
-
-async def banking_exam_intro_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def banking_exam_intro_callback(update, context):
 
     query = update.callback_query
 
@@ -559,7 +494,7 @@ async def banking_exam_intro_callback(
     if not questions:
 
         await query.edit_message_text(
-            "❌ برای این فصل هنوز سؤال آزمون ثبت نشده است.",
+            "❌ برای این فصل هنوز سؤال ثبت نشده است.",
             reply_markup=banking_back_menu()
         )
 
@@ -577,19 +512,8 @@ async def banking_exam_intro_callback(
 
 ━━━━━━━━━━━━━━━━━━
 
-🎯 آزمون تخصصی و مفهومی
-
 📝 تعداد سؤالات:
-{len(questions)} سؤال
-
-━━━━━━━━━━━━━━━━━━
-
-📌 قوانین آزمون
-
-• هر سؤال چهار گزینه دارد.
-• فقط یک گزینه صحیح است.
-• پاسخ صحیح یک امتیاز دارد.
-• نتیجه در پایان نمایش داده می‌شود.
+{len(questions)}
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -601,25 +525,14 @@ async def banking_exam_intro_callback(
         [
             InlineKeyboardButton(
                 "🚀 شروع آزمون",
-                callback_data=(
-                    f"banking_exam_{chapter}_0_0"
-                )
+                callback_data=f"banking_exam_{chapter}_0_0"
             )
         ],
 
         [
             InlineKeyboardButton(
                 "📖 بازگشت به درسنامه",
-                callback_data=(
-                    f"banking_chapter_{chapter}"
-                )
-            )
-        ],
-
-        [
-            InlineKeyboardButton(
-                "🏦 بانکداری",
-                callback_data="banking"
+                callback_data=f"banking_chapter_{chapter}"
             )
         ],
 
@@ -631,14 +544,7 @@ async def banking_exam_intro_callback(
     )
 
 
-# =========================================================
-# BANKING EXAM QUESTION
-# =========================================================
-
-async def banking_exam_question_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def banking_exam_question_callback(update, context):
 
     query = update.callback_query
 
@@ -668,15 +574,6 @@ async def banking_exam_question_callback(
         chapter,
         []
     )
-
-    if not questions:
-
-        await query.edit_message_text(
-            "❌ سوالی برای این فصل وجود ندارد.",
-            reply_markup=banking_back_menu()
-        )
-
-        return
 
     if index >= len(questions):
 
@@ -712,8 +609,6 @@ async def banking_exam_question_callback(
 {question["question"]}
 
 ━━━━━━━━━━━━━━━━━━
-
-👇 گزینه صحیح را انتخاب کنید:
 """
 
     keyboard = []
@@ -737,29 +632,13 @@ async def banking_exam_question_callback(
             ]
         )
 
-    keyboard.append(
-        [
-            InlineKeyboardButton(
-                "🏦 خروج از آزمون",
-                callback_data="banking"
-            )
-        ]
-    )
-
     await query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
-# =========================================================
-# BANKING ANSWER
-# =========================================================
-
-async def banking_answer_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def banking_answer_callback(update, context):
 
     query = update.callback_query
 
@@ -791,52 +670,30 @@ async def banking_answer_callback(
         []
     )
 
-    if index >= len(questions):
-
-        await show_banking_result(
-            query,
-            chapter,
-            score
-        )
-
-        return
-
     question = questions[index]
 
-    correct = question["correct"]
-
-    if selected == correct:
+    if selected == question["correct"]:
 
         score += 1
 
-        result_text = f"""
+        result = f"""
 ✅ پاسخ صحیح است.
 
 🎯 +۱ امتیاز
 
-⭐ امتیاز فعلی: {score}
-
-━━━━━━━━━━━━━━━━━━
-
-آفرین 👏
+⭐ امتیاز: {score}
 """
 
     else:
 
-        correct_option = question["options"][correct]
-
-        result_text = f"""
-❌ پاسخ صحیح نیست.
-
-━━━━━━━━━━━━━━━━━━
+        result = f"""
+❌ پاسخ اشتباه است.
 
 ✅ پاسخ صحیح:
 
-{correct_option}
+{question["options"][question["correct"]]}
 
-━━━━━━━━━━━━━━━━━━
-
-⭐ امتیاز فعلی: {score}
+⭐ امتیاز: {score}
 """
 
     next_index = index + 1
@@ -859,15 +716,15 @@ async def banking_answer_callback(
 
             [
                 InlineKeyboardButton(
-                    "🏦 خروج از آزمون",
+                    "🏦 خروج",
                     callback_data="banking"
                 )
-            ],
+            ]
 
         ]
 
         await query.edit_message_text(
-            result_text,
+            result,
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
@@ -880,15 +737,7 @@ async def banking_answer_callback(
         )
 
 
-# =========================================================
-# BANKING RESULT
-# =========================================================
-
-async def show_banking_result(
-    query,
-    chapter,
-    score
-):
+async def show_banking_result(query, chapter, score):
 
     questions = BANKING_CHAPTER_QUESTIONS.get(
         chapter,
@@ -900,89 +749,60 @@ async def show_banking_result(
     if total == 0:
 
         await query.edit_message_text(
-            "❌ آزمونی برای این فصل وجود ندارد.",
+            "❌ آزمون وجود ندارد.",
             reply_markup=banking_back_menu()
         )
 
         return
 
-    wrong = total - score
-
     percentage = round(
         (score / total) * 100
     )
 
+    wrong = total - score
+
     if percentage >= 90:
         evaluation = "🏆 فوق‌العاده"
-
     elif percentage >= 80:
         evaluation = "🥇 عالی"
-
     elif percentage >= 70:
         evaluation = "🥈 خوب"
-
     elif percentage >= 50:
         evaluation = "🟡 متوسط"
-
     else:
         evaluation = "📚 نیازمند مطالعه"
 
-    name = BANKING_CHAPTER_NAMES.get(
-        chapter,
-        "بانکداری"
-    )
-
     text = f"""
-🏁 آزمون فصل {chapter} به پایان رسید.
-
-🏦 {name}
+🏁 آزمون پایان یافت.
 
 ━━━━━━━━━━━━━━━━━━
 
-📊 نتیجه آزمون
+📝 کل سوالات: {total}
 
-📝 تعداد سؤالات: {total}
+✅ صحیح: {score}
 
-✅ پاسخ صحیح: {score}
-
-❌ پاسخ غلط: {wrong}
+❌ غلط: {wrong}
 
 📈 درصد: {percentage}٪
 
 🎯 ارزیابی:
 
 {evaluation}
-
-━━━━━━━━━━━━━━━━━━
-
-🎯 مسیر یادگیری:
-
-مطالعه
-+
-آزمون
-+
-تحلیل اشتباهات
-+
-مرور
 """
 
     keyboard = [
 
         [
             InlineKeyboardButton(
-                "🔄 تکرار آزمون",
-                callback_data=(
-                    f"banking_exam_{chapter}_0_0"
-                )
+                "🔄 تکرار",
+                callback_data=f"banking_exam_{chapter}_0_0"
             )
         ],
 
         [
             InlineKeyboardButton(
                 "📖 مرور فصل",
-                callback_data=(
-                    f"banking_chapter_{chapter}"
-                )
+                callback_data=f"banking_chapter_{chapter}"
             )
         ],
 
@@ -1009,13 +829,10 @@ async def show_banking_result(
 
 
 # =========================================================
-# INTERNATIONAL TRADE MAIN
+# INTERNATIONAL TRADE
 # =========================================================
 
-async def international_trade_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def international_trade_callback(update, context):
 
     query = update.callback_query
 
@@ -1039,14 +856,7 @@ async def international_trade_callback(
     )
 
 
-# =========================================================
-# INTERNATIONAL TRADE CHAPTER
-# =========================================================
-
-async def international_trade_chapter_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def international_trade_chapter_callback(update, context):
 
     query = update.callback_query
 
@@ -1079,53 +889,16 @@ async def international_trade_chapter_callback(
 
         return
 
-    try:
-
-        text = international_trade_chapter_text(
-            chapter
-        )
-
-    except Exception as error:
-
-        print(
-            f"❌ Trade chapter error: {error}"
-        )
-
-        await query.edit_message_text(
-            "⚠️ خطا در بارگذاری درسنامه تجارت بین‌الملل.",
-            reply_markup=international_trade_back_menu()
-        )
-
-        return
+    text = international_trade_chapter_text(
+        chapter
+    )
 
     keyboard = [
 
         [
             InlineKeyboardButton(
                 f"📝 آزمون فصل {chapter}",
-                callback_data=(
-                    f"trade_exam_intro_{chapter}"
-                )
-            )
-        ],
-
-        [
-            InlineKeyboardButton(
-                "⬅️ فصل قبل",
-                callback_data=(
-                    f"international_trade_chapter_{chapter - 1}"
-                    if chapter > 1
-                    else "international_trade"
-                )
-            ),
-
-            InlineKeyboardButton(
-                "فصل بعد ➡️",
-                callback_data=(
-                    f"international_trade_chapter_{chapter + 1}"
-                    if chapter < len(TRADE_CHAPTER_NAMES)
-                    else "international_trade"
-                )
+                callback_data=f"trade_exam_intro_{chapter}"
             )
         ],
 
@@ -1151,14 +924,7 @@ async def international_trade_chapter_callback(
     )
 
 
-# =========================================================
-# INTERNATIONAL TRADE EXAM INTRO
-# =========================================================
-
-async def trade_exam_intro_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def trade_exam_intro_callback(update, context):
 
     query = update.callback_query
 
@@ -1187,29 +953,15 @@ async def trade_exam_intro_callback(
         []
     )
 
-    name = TRADE_CHAPTER_NAMES.get(
-        chapter,
-        "تجارت بین‌الملل"
-    )
-
     text = f"""
-📝 آزمون فصل {chapter}
+📝 آزمون تجارت بین‌الملل
 
-🌍 {name}
-
-━━━━━━━━━━━━━━━━━━
-
-🎯 آزمون تخصصی تجارت بین‌الملل
-
-📝 تعداد سؤالات:
-
-{len(questions)} سؤال
+📘 فصل {chapter}
 
 ━━━━━━━━━━━━━━━━━━
 
-📌 هر سؤال چهار گزینه دارد.
-📌 فقط یک گزینه صحیح است.
-📌 نتیجه در پایان نمایش داده می‌شود.
+📝 تعداد سوالات:
+{len(questions)}
 
 ━━━━━━━━━━━━━━━━━━
 """
@@ -1219,18 +971,7 @@ async def trade_exam_intro_callback(
         [
             InlineKeyboardButton(
                 "🚀 شروع آزمون",
-                callback_data=(
-                    f"trade_exam_{chapter}_0_0"
-                )
-            )
-        ],
-
-        [
-            InlineKeyboardButton(
-                "📖 مطالعه فصل",
-                callback_data=(
-                    f"international_trade_chapter_{chapter}"
-                )
+                callback_data=f"trade_exam_{chapter}_0_0"
             )
         ],
 
@@ -1249,14 +990,7 @@ async def trade_exam_intro_callback(
     )
 
 
-# =========================================================
-# INTERNATIONAL TRADE EXAM QUESTION
-# =========================================================
-
-async def trade_exam_question_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def trade_exam_question_callback(update, context):
 
     query = update.callback_query
 
@@ -1276,7 +1010,7 @@ async def trade_exam_question_callback(
     ):
 
         await query.edit_message_text(
-            "⚠️ خطا در اطلاعات آزمون.",
+            "⚠️ خطا در آزمون.",
             reply_markup=international_trade_back_menu()
         )
 
@@ -1286,15 +1020,6 @@ async def trade_exam_question_callback(
         chapter,
         []
     )
-
-    if not questions:
-
-        await query.edit_message_text(
-            "❌ سوالی برای این فصل ثبت نشده است.",
-            reply_markup=international_trade_back_menu()
-        )
-
-        return
 
     if index >= len(questions):
 
@@ -1308,28 +1033,18 @@ async def trade_exam_question_callback(
 
     question = questions[index]
 
-    name = TRADE_CHAPTER_NAMES.get(
-        chapter,
-        "تجارت بین‌الملل"
-    )
-
     text = f"""
 📝 آزمون تجارت بین‌الملل
 
 📘 فصل {chapter}
-🌍 {name}
-
-━━━━━━━━━━━━━━━━━━
 
 ❓ سؤال {index + 1} از {len(questions)}
 
-⭐ امتیاز فعلی: {score}
+⭐ امتیاز: {score}
 
 ━━━━━━━━━━━━━━━━━━
 
 {question["question"]}
-
-━━━━━━━━━━━━━━━━━━
 """
 
     keyboard = []
@@ -1353,29 +1068,13 @@ async def trade_exam_question_callback(
             ]
         )
 
-    keyboard.append(
-        [
-            InlineKeyboardButton(
-                "🌍 خروج از آزمون",
-                callback_data="international_trade"
-            )
-        ]
-    )
-
     await query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
-# =========================================================
-# INTERNATIONAL TRADE ANSWER
-# =========================================================
-
-async def trade_answer_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def trade_answer_callback(update, context):
 
     query = update.callback_query
 
@@ -1396,7 +1095,7 @@ async def trade_answer_callback(
     ):
 
         await query.edit_message_text(
-            "⚠️ خطا در پردازش پاسخ.",
+            "⚠️ خطا.",
             reply_markup=international_trade_back_menu()
         )
 
@@ -1407,53 +1106,21 @@ async def trade_answer_callback(
         []
     )
 
-    if index >= len(questions):
-
-        await show_trade_result(
-            query,
-            chapter,
-            score
-        )
-
-        return
-
     question = questions[index]
 
-    correct = question["correct"]
-
-    if selected == correct:
+    if selected == question["correct"]:
 
         score += 1
 
-        result_text = f"""
-✅ پاسخ صحیح است.
-
-🎯 +۱ امتیاز
-
-⭐ امتیاز فعلی: {score}
-
-━━━━━━━━━━━━━━━━━━
-
-آفرین 👏
-"""
+        result = "✅ پاسخ صحیح است.\n\n🎯 +۱ امتیاز"
 
     else:
 
-        correct_option = question["options"][correct]
-
-        result_text = f"""
-❌ پاسخ صحیح نیست.
-
-━━━━━━━━━━━━━━━━━━
-
-✅ پاسخ صحیح:
-
-{correct_option}
-
-━━━━━━━━━━━━━━━━━━
-
-⭐ امتیاز فعلی: {score}
-"""
+        result = (
+            "❌ پاسخ اشتباه است.\n\n"
+            "✅ پاسخ صحیح:\n\n"
+            + question["options"][question["correct"]]
+        )
 
     next_index = index + 1
 
@@ -1475,15 +1142,15 @@ async def trade_answer_callback(
 
             [
                 InlineKeyboardButton(
-                    "🌍 خروج از آزمون",
+                    "🌍 خروج",
                     callback_data="international_trade"
                 )
-            ],
+            ]
 
         ]
 
         await query.edit_message_text(
-            result_text,
+            result,
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
@@ -1496,15 +1163,7 @@ async def trade_answer_callback(
         )
 
 
-# =========================================================
-# INTERNATIONAL TRADE RESULT
-# =========================================================
-
-async def show_trade_result(
-    query,
-    chapter,
-    score
-):
+async def show_trade_result(query, chapter, score):
 
     questions = INTERNATIONAL_TRADE_QUESTIONS.get(
         chapter,
@@ -1516,89 +1175,49 @@ async def show_trade_result(
     if total == 0:
 
         await query.edit_message_text(
-            "❌ آزمونی برای این فصل وجود ندارد.",
+            "❌ آزمون وجود ندارد.",
             reply_markup=international_trade_back_menu()
         )
 
         return
 
-    wrong = total - score
-
     percentage = round(
         (score / total) * 100
     )
 
+    wrong = total - score
+
     if percentage >= 90:
         evaluation = "🏆 فوق‌العاده"
-
     elif percentage >= 80:
         evaluation = "🥇 عالی"
-
     elif percentage >= 70:
         evaluation = "🥈 خوب"
-
     elif percentage >= 50:
         evaluation = "🟡 متوسط"
-
     else:
         evaluation = "📚 نیازمند مطالعه"
 
-    name = TRADE_CHAPTER_NAMES.get(
-        chapter,
-        "تجارت بین‌الملل"
-    )
-
     text = f"""
-🏁 آزمون فصل {chapter} به پایان رسید.
+🏁 آزمون پایان یافت.
 
-🌍 {name}
+📝 کل سوالات: {total}
 
-━━━━━━━━━━━━━━━━━━
+✅ صحیح: {score}
 
-📊 نتیجه آزمون
-
-📝 تعداد سؤالات: {total}
-
-✅ پاسخ صحیح: {score}
-
-❌ پاسخ غلط: {wrong}
+❌ غلط: {wrong}
 
 📈 درصد: {percentage}٪
 
-🎯 ارزیابی:
-
-{evaluation}
-
-━━━━━━━━━━━━━━━━━━
-
-🎯 مسیر یادگیری:
-
-📖 مطالعه
-+
-📝 آزمون
-+
-🔍 تحلیل اشتباهات
-+
-🔄 مرور
+🎯 {evaluation}
 """
 
     keyboard = [
 
         [
             InlineKeyboardButton(
-                "🔄 تکرار آزمون",
-                callback_data=(
-                    f"trade_exam_{chapter}_0_0"
-                )
-            )
-        ],
-
-        [
-            InlineKeyboardButton(
-                "📖 مرور فصل",
-                callback_data=(
-                    f"international_trade_chapter_{chapter}"
-                )
+                "🔄 تکرار",
+                callback_data=f"trade_exam_{chapter}_0_0"
             )
         ],
 
@@ -1625,34 +1244,22 @@ async def show_trade_result(
 
 
 # =========================================================
-# MARKETING MAIN
+# MARKETING
 # =========================================================
 
-async def marketing_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def marketing_callback(update, context):
 
     query = update.callback_query
 
     await query.answer()
 
-    result = marketing_intro_text()
-
     await query.edit_message_text(
-        result,
+        marketing_intro_text(),
         reply_markup=marketing_menu()
     )
 
 
-# =========================================================
-# MARKETING CHAPTER
-# =========================================================
-
-async def marketing_chapter_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def marketing_chapter_callback(update, context):
 
     query = update.callback_query
 
@@ -1694,29 +1301,7 @@ async def marketing_chapter_callback(
         [
             InlineKeyboardButton(
                 f"📝 آزمون فصل {chapter}",
-                callback_data=(
-                    f"marketing_exam_intro_{chapter}"
-                )
-            )
-        ],
-
-        [
-            InlineKeyboardButton(
-                "⬅️ فصل قبل",
-                callback_data=(
-                    f"marketing_chapter_{chapter - 1}"
-                    if chapter > 1
-                    else "marketing"
-                )
-            ),
-
-            InlineKeyboardButton(
-                "فصل بعد ➡️",
-                callback_data=(
-                    f"marketing_chapter_{chapter + 1}"
-                    if chapter < len(MARKETING_CHAPTER_NAMES)
-                    else "marketing"
-                )
+                callback_data=f"marketing_exam_intro_{chapter}"
             )
         ],
 
@@ -1742,14 +1327,7 @@ async def marketing_chapter_callback(
     )
 
 
-# =========================================================
-# MARKETING EXAM INTRO
-# =========================================================
-
-async def marketing_exam_intro_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def marketing_exam_intro_callback(update, context):
 
     query = update.callback_query
 
@@ -1773,24 +1351,13 @@ async def marketing_exam_intro_callback(
 
         return
 
-    text = marketing_exam_intro_text(
-        chapter
-    )
-
     await query.edit_message_text(
-        text,
+        marketing_exam_intro_text(chapter),
         reply_markup=marketing_exam_menu(chapter)
     )
 
 
-# =========================================================
-# MARKETING EXAM QUESTION
-# =========================================================
-
-async def marketing_exam_question_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def marketing_exam_question_callback(update, context):
 
     query = update.callback_query
 
@@ -1810,7 +1377,7 @@ async def marketing_exam_question_callback(
     ):
 
         await query.edit_message_text(
-            "⚠️ خطا در اطلاعات آزمون.",
+            "⚠️ خطا.",
             reply_markup=marketing_back_menu()
         )
 
@@ -1844,14 +1411,7 @@ async def marketing_exam_question_callback(
     )
 
 
-# =========================================================
-# MARKETING ANSWER
-# =========================================================
-
-async def marketing_answer_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def marketing_answer_callback(update, context):
 
     query = update.callback_query
 
@@ -1872,7 +1432,7 @@ async def marketing_answer_callback(
     ):
 
         await query.edit_message_text(
-            "⚠️ خطا در پردازش پاسخ.",
+            "⚠️ خطا.",
             reply_markup=marketing_back_menu()
         )
 
@@ -1924,7 +1484,7 @@ async def marketing_answer_callback(
 
         [
             InlineKeyboardButton(
-                "📈 خروج از آزمون",
+                "📈 خروج",
                 callback_data="marketing"
             )
         ]
@@ -1943,7 +1503,7 @@ async def marketing_answer_callback(
 
 def economics_menu():
 
-    keyboard = [
+    return InlineKeyboardMarkup([
 
         [
             InlineKeyboardButton(
@@ -1997,7 +1557,7 @@ def economics_menu():
         [
             InlineKeyboardButton(
                 "📝 آزمون اقتصاد",
-                callback_data="economics_exam_0_0"
+                callback_data="economics_exam"
             )
         ],
 
@@ -2008,9 +1568,7 @@ def economics_menu():
             )
         ],
 
-    ]
-
-    return InlineKeyboardMarkup(keyboard)
+    ])
 
 
 def economics_text():
@@ -2027,9 +1585,9 @@ def economics_text():
 
 ━━━━━━━━━━━━━━━━━━
 
-📚 موضوعات:
+📚 مباحث:
 
-• مبانی علم اقتصاد
+• مبانی اقتصاد
 • عرضه و تقاضا
 • بازار و قیمت
 • تورم
@@ -2041,13 +1599,9 @@ def economics_text():
 • نرخ ارز
 • بانک مرکزی
 • نقدینگی
-• تولید ناخالص داخلی
-• رکود و رونق اقتصادی
+• GDP
+• رکود و رونق
 • بازارهای مالی
-
-━━━━━━━━━━━━━━━━━━
-
-👇 بخش موردنظر را انتخاب کنید.
 """
 
 
@@ -2058,43 +1612,28 @@ def economics_lessons_text():
 
 ━━━━━━━━━━━━━━━━━━
 
-1️⃣ اقتصاد چیست؟
-
-اقتصاد علمی است که بررسی می‌کند منابع محدود
-چگونه برای تأمین نیازها و خواسته‌های نامحدود
-انسان‌ها تخصیص پیدا می‌کنند.
+اقتصاد علمی است که نحوه تخصیص منابع
+محدود برای نیازهای نامحدود را بررسی می‌کند.
 
 ━━━━━━━━━━━━━━━━━━
 
-2️⃣ عرضه و تقاضا
+🔹 عرضه
 
-🔹 عرضه:
-مقدار کالا یا خدمتی که تولیدکنندگان حاضرند
-در قیمت مشخص به بازار عرضه کنند.
+مقدار کالا یا خدماتی که فروشندگان حاضر
+به عرضه آن هستند.
 
-🔹 تقاضا:
-مقدار کالا یا خدمتی که مصرف‌کنندگان حاضرند
-در قیمت مشخص خریداری کنند.
+🔹 تقاضا
 
-━━━━━━━━━━━━━━━━━━
-
-3️⃣ قانون تقاضا
-
-در شرایط برابر، با افزایش قیمت یک کالا،
-مقدار تقاضا برای آن کاهش پیدا می‌کند.
+مقدار کالا یا خدماتی که خریداران حاضر
+به خرید آن هستند.
 
 ━━━━━━━━━━━━━━━━━━
 
-4️⃣ قانون عرضه
+📌 در شرایط برابر:
 
-در شرایط برابر، افزایش قیمت معمولاً باعث
-افزایش تمایل تولیدکنندگان به عرضه می‌شود.
+افزایش قیمت → کاهش مقدار تقاضا
 
-━━━━━━━━━━━━━━━━━━
-
-5️⃣ تعادل بازار
-
-نقطه‌ای که عرضه و تقاضا برابر می‌شوند.
+افزایش قیمت → افزایش تمایل به عرضه
 """
 
 
@@ -2105,37 +1644,24 @@ def economics_concepts_text():
 
 ━━━━━━━━━━━━━━━━━━
 
-💰 تورم
+🔥 تورم:
+افزایش مستمر و عمومی سطح قیمت‌ها.
 
-افزایش مستمر و عمومی سطح قیمت کالاها
-و خدمات در طول زمان.
+📈 رشد اقتصادی:
+افزایش ظرفیت تولید کالا و خدمات.
 
-━━━━━━━━━━━━━━━━━━
+👷 بیکاری:
+فرد آماده و مایل به کار است ولی شغل ندارد.
 
-📈 رشد اقتصادی
-
-افزایش ظرفیت تولید کالاها و خدمات
-در اقتصاد.
-
-━━━━━━━━━━━━━━━━━━
-
-👷 بیکاری
-
-وضعیتی که فرد آماده و مایل به کار است
-اما شغل مناسب پیدا نکرده است.
-
-━━━━━━━━━━━━━━━━━━
-
-🏭 تولید ناخالص داخلی
-
+🏭 GDP:
 ارزش کالاها و خدمات نهایی تولیدشده
-در داخل مرزهای کشور طی یک دوره مشخص.
+در اقتصاد طی یک دوره مشخص.
 
-━━━━━━━━━━━━━━━━━━
+💧 نقدینگی:
+پول و شبه‌پول موجود در اقتصاد.
 
-💧 نقدینگی
-
-مجموع پول و شبه‌پول موجود در اقتصاد.
+💵 نرخ بهره:
+هزینه استفاده از پول در طول زمان.
 """
 
 
@@ -2146,22 +1672,7 @@ def economics_market_text():
 
 ━━━━━━━━━━━━━━━━━━
 
-بازار محل تعامل عرضه‌کنندگان و
-تقاضاکنندگان است.
-
-━━━━━━━━━━━━━━━━━━
-
-📈 بازار صعودی
-
-روند عمومی افزایش قیمت دارایی‌ها.
-
-📉 بازار نزولی
-
-روند عمومی کاهش قیمت دارایی‌ها.
-
-━━━━━━━━━━━━━━━━━━
-
-عوامل مؤثر:
+عوامل مهم:
 
 • تورم
 • نرخ بهره
@@ -2172,6 +1683,7 @@ def economics_market_text():
 • رشد اقتصادی
 • عرضه و تقاضا
 • انتظارات
+• شرایط سیاسی
 """
 
 
@@ -2182,26 +1694,16 @@ def economics_monetary_text():
 
 ━━━━━━━━━━━━━━━━━━
 
-سیاست پولی مجموعه اقداماتی است که
-بانک مرکزی برای تأثیرگذاری بر پول،
-اعتبار و شرایط مالی انجام می‌دهد.
-
-━━━━━━━━━━━━━━━━━━
-
-اهداف:
-
-• کنترل تورم
-• ثبات قیمت‌ها
-• ثبات مالی
-• مدیریت نقدینگی
-
-━━━━━━━━━━━━━━━━━━
+سیاست پولی مجموعه اقدامات بانک مرکزی
+برای اثرگذاری بر پول، اعتبار و شرایط
+مالی اقتصاد است.
 
 ابزارها:
 
 • نرخ‌های سیاستی
 • عملیات بازار باز
 • مدیریت ذخایر
+• ابزارهای اعتباری
 """
 
 
@@ -2212,32 +1714,23 @@ def economics_fiscal_text():
 
 ━━━━━━━━━━━━━━━━━━
 
-سیاست مالی مربوط به تصمیمات دولت
-درباره درآمدها و مخارج عمومی است.
-
-━━━━━━━━━━━━━━━━━━
+سیاست مالی مربوط به درآمدها و مخارج دولت است.
 
 💰 درآمد:
-
 • مالیات
-• عوارض
 • درآمدهای عمومی
+• عوارض
 
 💸 مخارج:
-
-• حقوق
-• پروژه‌های عمرانی
 • خدمات عمومی
+• پروژه‌های عمرانی
+• حقوق
 • حمایت‌های اجتماعی
 
-━━━━━━━━━━━━━━━━━━
-
 📈 انبساطی:
-
 افزایش مخارج یا کاهش مالیات.
 
 📉 انقباضی:
-
 کاهش مخارج یا افزایش مالیات.
 """
 
@@ -2249,25 +1742,10 @@ def economics_inflation_growth_text():
 
 ━━━━━━━━━━━━━━━━━━
 
-🔥 تورم:
+تورم با رشد اقتصادی یکسان نیست.
 
-افزایش مستمر و عمومی سطح قیمت‌ها.
-
-━━━━━━━━━━━━━━━━━━
-
-📊 انواع:
-
-• تقاضا
-• هزینه
-• ساختاری
-
-━━━━━━━━━━━━━━━━━━
-
-📈 رشد اقتصادی:
-
-افزایش توان تولید کالا و خدمات.
-
-━━━━━━━━━━━━━━━━━━
+رشد اقتصادی به افزایش تولید و ظرفیت تولید
+اقتصاد مربوط می‌شود.
 
 عوامل رشد:
 
@@ -2276,7 +1754,7 @@ def economics_inflation_growth_text():
 • بهره‌وری
 • فناوری
 • زیرساخت
-• ثبات اقتصادی
+• کیفیت نهادها
 """
 
 
@@ -2287,152 +1765,98 @@ def economics_currency_interest_text():
 
 ━━━━━━━━━━━━━━━━━━
 
-💱 نرخ ارز:
-
-قیمت یک واحد پول خارجی بر اساس
-واحد پول داخلی.
-
-━━━━━━━━━━━━━━━━━━
+نرخ ارز قیمت یک پول نسبت به پول دیگر است.
 
 عوامل مؤثر:
 
 • تورم
 • نرخ بهره
 • عرضه و تقاضای ارز
-• صادرات و واردات
+• صادرات
+• واردات
 • انتظارات
 • سیاست پولی
-• شرایط سیاسی
+• شرایط بین‌المللی
 """
 
-
-# =========================================================
-# ECONOMICS QUESTIONS
-# =========================================================
 
 ECONOMICS_QUESTIONS = [
 
     {
         "question": "کدام گزینه تعریف مناسب‌تری از تورم است؟",
         "options": [
-            "افزایش یک‌باره قیمت یک کالا",
+            "افزایش یک کالا",
             "افزایش مستمر و عمومی سطح قیمت‌ها",
-            "کاهش سطح تولید",
-            "افزایش درآمد خانوار"
+            "کاهش تولید",
+            "افزایش درآمد"
         ],
         "correct": 1
     },
 
     {
-        "question": "کدام گزینه بیشتر با سیاست پولی ارتباط دارد؟",
+        "question": "کدام گزینه با سیاست پولی ارتباط بیشتری دارد؟",
         "options": [
-            "مخارج دولت",
             "مالیات",
+            "بودجه دولت",
             "نرخ بهره و نقدینگی",
-            "بودجه عمرانی"
+            "هزینه عمرانی"
         ],
         "correct": 2
     },
 
     {
-        "question": "تولید ناخالص داخلی چه چیزی را اندازه‌گیری می‌کند؟",
+        "question": "GDP چه چیزی را اندازه‌گیری می‌کند؟",
         "options": [
-            "ارزش دارایی‌های خانوارها",
-            "ارزش کالاها و خدمات نهایی تولیدشده در اقتصاد",
-            "مقدار پول نقد مردم",
-            "میزان صادرات یک کشور"
+            "دارایی خانوارها",
+            "ارزش کالاها و خدمات نهایی تولیدشده",
+            "پول نقد",
+            "فقط صادرات"
         ],
         "correct": 1
     },
 
     {
-        "question": "در شرایط برابر، افزایش قیمت معمولاً چه اثری بر مقدار تقاضا دارد؟",
+        "question": "در شرایط برابر، افزایش قیمت چه اثری بر مقدار تقاضا دارد؟",
         "options": [
             "افزایش",
             "کاهش",
-            "بدون تغییر قطعی",
-            "دو برابر شدن"
+            "دو برابر",
+            "بدون تغییر قطعی"
         ],
         "correct": 1
     },
 
     {
-        "question": "کدام مورد از ابزارهای سیاست مالی است؟",
+        "question": "کدام مورد ابزار سیاست مالی است؟",
         "options": [
             "مالیات",
             "عملیات بازار باز",
             "ذخایر بانکی",
-            "نرخ سیاستی بانک مرکزی"
+            "نرخ سیاستی"
         ],
         "correct": 0
-    },
-
-    {
-        "question": "نقدینگی معمولاً شامل چه اجزایی است؟",
-        "options": [
-            "فقط اسکناس",
-            "فقط سکه",
-            "پول و شبه‌پول",
-            "فقط سپرده‌های بلندمدت"
-        ],
-        "correct": 2
-    },
-
-    {
-        "question": "کدام گزینه می‌تواند به رشد اقتصادی کمک کند؟",
-        "options": [
-            "کاهش بهره‌وری",
-            "کاهش سرمایه‌گذاری",
-            "افزایش بهره‌وری و فناوری",
-            "کاهش ظرفیت تولید"
-        ],
-        "correct": 2
-    },
-
-    {
-        "question": "بازار از تعامل کدام دو عامل اصلی شکل می‌گیرد؟",
-        "options": [
-            "دولت و بانک",
-            "عرضه و تقاضا",
-            "صادرات و واردات",
-            "تورم و بیکاری"
-        ],
-        "correct": 1
-    },
-
-    {
-        "question": "سیاست مالی عمدتاً مربوط به کدام بخش است؟",
-        "options": [
-            "تصمیمات دولت درباره درآمدها و مخارج",
-            "تنظیم حجم پول توسط بانک مرکزی",
-            "تعیین قیمت سهام",
-            "مدیریت شرکت‌های خصوصی"
-        ],
-        "correct": 0
-    },
-
-    {
-        "question": "کدام مورد می‌تواند بر نرخ ارز اثر بگذارد؟",
-        "options": [
-            "نرخ بهره",
-            "تورم",
-            "عرضه و تقاضای ارز",
-            "همه موارد"
-        ],
-        "correct": 3
     },
 
 ]
 
 
-# =========================================================
-# ECONOMICS QUESTION
-# =========================================================
+async def economics_exam_callback(update, context):
 
-async def economics_exam_question_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+    query = update.callback_query
+
+    await query.answer()
+
+    context.user_data["economics_questions"] = (
+        ECONOMICS_QUESTIONS
+    )
+
+    await economics_exam_question_callback(
+        update,
+        context
+    )
+
+
+async def economics_exam_question_callback(update, context):
 
     query = update.callback_query
 
@@ -2451,7 +1875,7 @@ async def economics_exam_question_callback(
     ):
 
         await query.edit_message_text(
-            "⚠️ خطا در اطلاعات آزمون اقتصاد.",
+            "⚠️ خطا در آزمون اقتصاد.",
             reply_markup=economics_menu()
         )
 
@@ -2475,15 +1899,11 @@ async def economics_exam_question_callback(
 
 ❓ سؤال {index + 1} از {len(ECONOMICS_QUESTIONS)}
 
-⭐ امتیاز فعلی: {score}
+⭐ امتیاز: {score}
 
 ━━━━━━━━━━━━━━━━━━
 
 {question["question"]}
-
-━━━━━━━━━━━━━━━━━━
-
-👇 گزینه صحیح را انتخاب کنید:
 """
 
     keyboard = []
@@ -2506,29 +1926,13 @@ async def economics_exam_question_callback(
             ]
         )
 
-    keyboard.append(
-        [
-            InlineKeyboardButton(
-                "💰 خروج از آزمون",
-                callback_data="economics"
-            )
-        ]
-    )
-
     await query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
-# =========================================================
-# ECONOMICS ANSWER
-# =========================================================
-
-async def economics_answer_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def economics_answer_callback(update, context):
 
     query = update.callback_query
 
@@ -2548,7 +1952,7 @@ async def economics_answer_callback(
     ):
 
         await query.edit_message_text(
-            "⚠️ خطا در پردازش پاسخ اقتصاد.",
+            "⚠️ خطا.",
             reply_markup=economics_menu()
         )
 
@@ -2556,41 +1960,19 @@ async def economics_answer_callback(
 
     question = ECONOMICS_QUESTIONS[index]
 
-    correct = question["correct"]
-
-    if selected == correct:
+    if selected == question["correct"]:
 
         score += 1
 
-        result_text = f"""
-✅ پاسخ صحیح است.
-
-🎯 +۱ امتیاز
-
-⭐ امتیاز فعلی: {score}
-
-━━━━━━━━━━━━━━━━━━
-
-آفرین 👏
-"""
+        result = "✅ پاسخ صحیح است.\n\n🎯 +۱ امتیاز"
 
     else:
 
-        correct_option = question["options"][correct]
-
-        result_text = f"""
-❌ پاسخ صحیح نیست.
-
-━━━━━━━━━━━━━━━━━━
-
-✅ پاسخ صحیح:
-
-{correct_option}
-
-━━━━━━━━━━━━━━━━━━
-
-⭐ امتیاز فعلی: {score}
-"""
+        result = (
+            "❌ پاسخ اشتباه است.\n\n"
+            "✅ پاسخ صحیح:\n\n"
+            + question["options"][question["correct"]]
+        )
 
     next_index = index + 1
 
@@ -2611,7 +1993,7 @@ async def economics_answer_callback(
 
             [
                 InlineKeyboardButton(
-                    "💰 خروج از آزمون",
+                    "💰 خروج",
                     callback_data="economics"
                 )
             ]
@@ -2619,7 +2001,7 @@ async def economics_answer_callback(
         ]
 
         await query.edit_message_text(
-            result_text,
+            result,
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
@@ -2631,14 +2013,7 @@ async def economics_answer_callback(
         )
 
 
-# =========================================================
-# ECONOMICS RESULT
-# =========================================================
-
-async def show_economics_result(
-    query,
-    score
-):
+async def show_economics_result(query, score):
 
     total = len(ECONOMICS_QUESTIONS)
 
@@ -2649,53 +2024,30 @@ async def show_economics_result(
     )
 
     if percentage >= 90:
-
         evaluation = "🏆 فوق‌العاده"
-
     elif percentage >= 80:
-
         evaluation = "🥇 عالی"
-
     elif percentage >= 70:
-
         evaluation = "🥈 خوب"
-
     elif percentage >= 50:
-
         evaluation = "🟡 متوسط"
-
     else:
-
-        evaluation = "📚 نیازمند مطالعه بیشتر"
+        evaluation = "📚 نیازمند مطالعه"
 
     text = f"""
-🏁 آزمون اقتصاد و بازار به پایان رسید.
+🏁 آزمون اقتصاد پایان یافت.
 
 ━━━━━━━━━━━━━━━━━━
 
-📊 نتیجه آزمون
+📝 سوالات: {total}
 
-📝 تعداد سؤالات: {total}
+✅ صحیح: {score}
 
-✅ پاسخ صحیح: {score}
-
-❌ پاسخ غلط: {wrong}
+❌ غلط: {wrong}
 
 📈 درصد: {percentage}٪
 
-🎯 ارزیابی:
-
-{evaluation}
-
-━━━━━━━━━━━━━━━━━━
-
-📖 مطالعه
-+
-📝 آزمون
-+
-🔍 بررسی اشتباهات
-+
-🔄 مرور
+🎯 {evaluation}
 """
 
     keyboard = [
@@ -2716,17 +2068,10 @@ async def show_economics_result(
 
         [
             InlineKeyboardButton(
-                "💰 اقتصاد و بازار",
+                "💰 اقتصاد",
                 callback_data="economics"
             )
         ],
-
-        [
-            InlineKeyboardButton(
-                "🏠 منوی اصلی",
-                callback_data="home"
-            )
-        ]
 
     ]
 
@@ -2736,14 +2081,7 @@ async def show_economics_result(
     )
 
 
-# =========================================================
-# ECONOMICS MAIN
-# =========================================================
-
-async def economics_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def economics_callback(update, context):
 
     query = update.callback_query
 
@@ -2755,20 +2093,11 @@ async def economics_callback(
     )
 
 
-# =========================================================
-# ECONOMICS SUBSECTIONS
-# =========================================================
-
-async def economics_subsection_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def economics_subsection_callback(update, context):
 
     query = update.callback_query
 
     await query.answer()
-
-    section = query.data
 
     texts = {
 
@@ -2796,7 +2125,7 @@ async def economics_subsection_callback(
     }
 
     text = texts.get(
-        section,
+        query.data,
         "❌ این بخش وجود ندارد."
     )
 
@@ -2814,7 +2143,7 @@ async def economics_subsection_callback(
                 "🏠 منوی اصلی",
                 callback_data="home"
             )
-        ]
+        ],
 
     ]
 
@@ -2825,13 +2154,10 @@ async def economics_subsection_callback(
 
 
 # =========================================================
-# TEMPORARY SECTIONS
+# TEMPORARY
 # =========================================================
 
-async def temporary_section(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def temporary_section(update, context):
 
     query = update.callback_query
 
@@ -2841,8 +2167,6 @@ async def temporary_section(
         """
 🚧 این بخش در حال توسعه است.
 
-محتوای تخصصی این قسمت در حال آماده‌سازی است.
-
 ━━━━━━━━━━━━━━━━━━
 
 🏛️ اندیشکده مدیریت و بازار
@@ -2851,7 +2175,7 @@ async def temporary_section(
             [
                 [
                     InlineKeyboardButton(
-                        "🔙 منوی اصلی",
+                        "🏠 منوی اصلی",
                         callback_data="home"
                     )
                 ]
@@ -2861,13 +2185,10 @@ async def temporary_section(
 
 
 # =========================================================
-# UNKNOWN CALLBACK
+# UNKNOWN
 # =========================================================
 
-async def unknown_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def unknown_callback(update, context):
 
     query = update.callback_query
 
@@ -2879,29 +2200,18 @@ async def unknown_callback(
                 "این گزینه در حال حاضر فعال نیست."
             )
 
-        except Exception as error:
-
-            print(
-                f"Callback answer error: {error}"
-            )
+        except Exception:
+            pass
 
 
 # =========================================================
-# ERROR HANDLER
+# ERROR
 # =========================================================
 
-async def error_handler(
-    update,
-    context
-):
+async def error_handler(update, context):
 
-    print(
-        "❌ Telegram error:"
-    )
-
-    print(
-        context.error
-    )
+    print("❌ Telegram error:")
+    print(context.error)
 
 
 # =========================================================
@@ -2917,10 +2227,9 @@ def create_application():
         .build()
     )
 
-
-    # =====================================================
+    # -----------------------------------------------------
     # START
-    # =====================================================
+    # -----------------------------------------------------
 
     application.add_handler(
         CommandHandler(
@@ -2929,10 +2238,9 @@ def create_application():
         )
     )
 
-
-    # =====================================================
+    # -----------------------------------------------------
     # HOME
-    # =====================================================
+    # -----------------------------------------------------
 
     application.add_handler(
         CallbackQueryHandler(
@@ -2941,10 +2249,9 @@ def create_application():
         )
     )
 
-
-    # =====================================================
+    # -----------------------------------------------------
     # SUPPORT
-    # =====================================================
+    # -----------------------------------------------------
 
     application.add_handler(
         CallbackQueryHandler(
@@ -2952,7 +2259,6 @@ def create_application():
             pattern=r"^support$"
         )
     )
-
 
     # =====================================================
     # EMPLOYMENT EXAM
@@ -2967,39 +2273,63 @@ def create_application():
 
     application.add_handler(
         CallbackQueryHandler(
-            employment_exam_category_callback,
-            pattern=r"^employment_category_"
+            employment_bank_callback,
+            pattern=r"^employment_bank_(refah|shahr|mehr|government)$"
         )
     )
 
     application.add_handler(
         CallbackQueryHandler(
-            employment_exam_level_callback,
-            pattern=r"^employment_level_"
+            employment_difficulty_callback,
+            pattern=r"^employment_difficulty_(easy|medium|hard)$"
         )
     )
 
     application.add_handler(
         CallbackQueryHandler(
-            employment_exam_question_callback,
-            pattern=r"^employment_question_"
+            employment_start_callback,
+            pattern=(
+                r"^employment_start_"
+                r"(bank_(refah|shahr|mehr|government)_(easy|medium|hard|all)"
+                r"|difficulty_(easy|medium|hard))$"
+            )
         )
     )
 
     application.add_handler(
         CallbackQueryHandler(
-            employment_exam_answer_callback,
-            pattern=r"^employment_answer_"
+            employment_random_callback,
+            pattern=r"^employment_random$"
         )
     )
 
     application.add_handler(
         CallbackQueryHandler(
-            employment_exam_result_callback,
-            pattern=r"^employment_result"
+            employment_simulation_callback,
+            pattern=r"^employment_simulation$"
         )
     )
 
+    application.add_handler(
+        CallbackQueryHandler(
+            employment_simulation_start_callback,
+            pattern=r"^employment_simulation_start$"
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            employment_answer_callback,
+            pattern=r"^employment_answer_[0-9]+_[0-9]+_[0-9]+$"
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            employment_next_callback,
+            pattern=r"^employment_next_[0-9]+_[0-9]+$"
+        )
+    )
 
     # =====================================================
     # BANKING
@@ -3040,7 +2370,6 @@ def create_application():
         )
     )
 
-
     # =====================================================
     # INTERNATIONAL TRADE
     # =====================================================
@@ -3080,7 +2409,6 @@ def create_application():
         )
     )
 
-
     # =====================================================
     # MARKETING
     # =====================================================
@@ -3119,7 +2447,6 @@ def create_application():
             pattern=r"^marketing_answer_[0-9]+_[0-9]+_[0-9]+_[0-9]+$"
         )
     )
-
 
     # =====================================================
     # ECONOMICS
@@ -3161,7 +2488,6 @@ def create_application():
         )
     )
 
-
     # =====================================================
     # TEMPORARY
     # =====================================================
@@ -3171,6 +2497,7 @@ def create_application():
             temporary_section,
             pattern=(
                 r"^(education|"
+                r"employment_exam|"
                 r"random_questions|"
                 r"psychology_socialwork|"
                 r"files|"
@@ -3178,7 +2505,6 @@ def create_application():
             )
         )
     )
-
 
     # =====================================================
     # UNKNOWN
@@ -3189,11 +2515,6 @@ def create_application():
             unknown_callback
         )
     )
-
-
-    # =====================================================
-    # ERROR
-    # =====================================================
 
     application.add_error_handler(
         error_handler
