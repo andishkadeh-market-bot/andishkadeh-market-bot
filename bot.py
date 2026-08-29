@@ -37,7 +37,13 @@ from telegram.ext import (
     CommandHandler,
     ContextTypes,
 )
-
+try:
+    import education
+except ImportError as error:
+    print(
+        f"⚠️ Education module error: {error}"
+    )
+    education = None
 
 # =========================================================
 # OPTIONAL MODULES
@@ -4778,6 +4784,23 @@ def create_application():
         .build()
     )
 
+    # =====================================================
+# EDUCATION
+# =====================================================
+
+application.add_handler(
+    CallbackQueryHandler(
+        education_callback,
+        pattern=r"^education$"
+    )
+)
+
+application.add_handler(
+    CallbackQueryHandler(
+        education_section_callback,
+        pattern=r"^(files|social)$"
+    )
+)
     # =====================================================
     # START
     # =====================================================
