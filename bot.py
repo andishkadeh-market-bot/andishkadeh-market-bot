@@ -1,5 +1,6 @@
 # =========================================================
-# # 🏛️ اندیشکده مدیریت و بازار
+# bot.py
+# 🏛️ اندیشکده مدیریت و بازار
 # نسخه حرفه‌ای
 #
 # ساختار اصلی:
@@ -9,7 +10,7 @@
 # 🌍 تجارت بین‌الملل
 # 📈 بازاریابی و فروش
 # 💰 اقتصاد و بازار
-# 🧾 حسابداری
+# 🧠 روانشناسی و مددکاری
 # 🎲 سوالات تصادفی
 # 📊 عملکرد و پروفایل
 # 📂 فایل و منابع آموزشی
@@ -18,6 +19,7 @@
 #
 # سازگار با Render Free Web Service
 # =========================================================
+
 import os
 import random
 from threading import Thread
@@ -215,129 +217,20 @@ except ImportError as error:
     employment_exam = None
 
 
-# =========================================================
-# ACCOUNTING EXAM QUESTION
-# =========================================================
+# ---------------------------------------------------------
+# PSYCHOLOGY & SOCIAL WORK
+# ---------------------------------------------------------
 
-async def accounting_exam_question_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
-    query = update.callback_query
-
-    await query.answer()
-
-    try:
-
-        data = query.data.split("_")
-
-        index = int(data[2])
-        score = int(data[3])
-
-    except (
-        IndexError,
-        ValueError
-    ):
-
-        await query.edit_message_text(
-            "⚠️ خطا در اطلاعات آزمون حسابداری.",
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton(
-                        "🧾 حسابداری",
-                        callback_data="accounting"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "🏠 منوی اصلی",
-                        callback_data="home"
-                    )
-                ],
-            ])
-        )
-
-        return
-
-    questions = globals().get(
-        "ACCOUNTING_QUESTIONS",
-        []
+try:
+    import psychology_socialwork
+except ImportError as error:
+    print(
+        f"⚠️ Psychology/Social Work module error: {error}"
     )
 
-    if index >= len(questions):
+    psychology_socialwork = None
 
-        await query.edit_message_text(
-            "🏁 آزمون حسابداری به پایان رسید.",
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton(
-                        "🧾 حسابداری",
-                        callback_data="accounting"
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "🏠 منوی اصلی",
-                        callback_data="home"
-                    )
-                ],
-            ])
-        )
 
-        return
-
-    question = questions[index]
-
-    text = f"""
-🧾 آزمون حسابداری
-
-━━━━━━━━━━━━━━━━━━
-
-❓ سؤال {index + 1} از {len(questions)}
-
-⭐ امتیاز فعلی: {score}
-
-━━━━━━━━━━━━━━━━━━
-
-{question["question"]}
-
-━━━━━━━━━━━━━━━━━━
-
-👇 گزینه صحیح را انتخاب کنید:
-"""
-
-    keyboard = []
-
-    for option_index, option in enumerate(
-        question["options"]
-    ):
-
-        keyboard.append([
-            InlineKeyboardButton(
-                option,
-                callback_data=(
-                    f"accounting_answer_"
-                    f"{index}_"
-                    f"{option_index}_"
-                    f"{score}"
-                )
-            )
-        ])
-
-    keyboard.append([
-        InlineKeyboardButton(
-            "🧾 خروج از آزمون",
-            callback_data="accounting"
-        )
-    ])
-
-    await query.edit_message_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(
-            keyboard
-        )
-    )
 # =========================================================
 # ECONOMICS
 # =========================================================
@@ -627,13 +520,7 @@ def profile_menu():
 
 class HealthHandler(BaseHTTPRequestHandler):
 
-    def _send_health_response(self, include_body=True):
-
-        body = (
-            "Andishkadeh Market Bot is running."
-            .encode("utf-8")
-        )
-
+    def _send_health_response(self):
         self.send_response(200)
 
         self.send_header(
@@ -643,25 +530,28 @@ class HealthHandler(BaseHTTPRequestHandler):
 
         self.send_header(
             "Content-Length",
-            str(len(body))
+            str(len("Andishkadeh Market Bot is running.".encode("utf-8")))
         )
 
         self.end_headers()
 
-        if include_body:
-            self.wfile.write(body)
-
     def do_GET(self):
 
         if self.path in ["/", "/health"]:
-            self._send_health_response(include_body=True)
+            self._send_health_response()
+
+            if self.command == "GET":
+                self.wfile.write(
+                    "Andishkadeh Market Bot is running."
+                    .encode("utf-8")
+                )
         else:
             self.send_error(404)
 
     def do_HEAD(self):
 
         if self.path in ["/", "/health"]:
-            self._send_health_response(include_body=False)
+            self._send_health_response()
         else:
             self.send_error(404)
 
@@ -669,7 +559,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         return
 
 
-def start_http_server():
+def run_http_server():
 
     server = HTTPServer(
         ("0.0.0.0", PORT),
@@ -767,16 +657,17 @@ def main_menu():
             ),
         ],
 
-        ## -----------------------------------------------
-# حسابداری
-# -----------------------------------------------
+        # -----------------------------------------------
+        # روانشناسی
+        # -----------------------------------------------
 
-[
-    InlineKeyboardButton(
-        "🧾 حسابداری",
-        callback_data="accounting"
-    )
-],
+        [
+            InlineKeyboardButton(
+                "🧠 روانشناسی و مددکاری",
+                callback_data="psychology_socialwork"
+            )
+        ],
+
         # -----------------------------------------------
         # منابع
         # -----------------------------------------------
@@ -830,7 +721,7 @@ def welcome_text():
 🌍 تجارت بین‌الملل
 📈 بازاریابی و فروش
 💰 اقتصاد و بازار
-🧾 حسابداری
+🧠 روانشناسی و مددکاری
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -854,12 +745,13 @@ def welcome_text():
 🌍 علاقه‌مندان تجارت
 📈 علاقه‌مندان بازاریابی
 📊 علاقه‌مندان اقتصاد
-🧾 علاقه‌مندان حسابداری
 
 ━━━━━━━━━━━━━━━━━━
 
 👇 بخش موردنظر خود را انتخاب کنید.
 """
+
+
 # =========================================================
 # START
 # =========================================================
@@ -1010,10 +902,10 @@ async def support_callback(
 
 
 # =========================================================
-# ACCOUNTING
+# PSYCHOLOGY
 # =========================================================
 
-async def accounting_callback(
+async def psychology_socialwork_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
@@ -1022,11 +914,11 @@ async def accounting_callback(
 
     await query.answer()
 
-    if accounting:
+    if psychology_socialwork:
 
         handler = getattr(
-            accounting,
-            "accounting_callback",
+            psychology_socialwork,
+            "psychology_socialwork_callback",
             None
         )
 
@@ -1042,23 +934,23 @@ async def accounting_callback(
             except Exception as error:
 
                 print(
-                    f"❌ Accounting callback error: {error}"
+                    f"❌ Psychology callback error: {error}"
                 )
 
     intro_function = None
     menu_function = None
 
-    if accounting:
+    if psychology_socialwork:
 
         intro_function = getattr(
-            accounting,
-            "accounting_intro_text",
+            psychology_socialwork,
+            "psychology_socialwork_intro_text",
             None
         )
 
         menu_function = getattr(
-            accounting,
-            "accounting_menu",
+            psychology_socialwork,
+            "psychology_socialwork_menu",
             None
         )
 
@@ -1071,12 +963,12 @@ async def accounting_callback(
         except Exception:
 
             text = """
-🧾 حسابداری
+🧠 روانشناسی و مددکاری
 
 ━━━━━━━━━━━━━━━━━━
 
-مرکز آموزش حسابداری،
-مفاهیم مالی و حسابداری کاربردی.
+مرکز آموزش مفاهیم روانشناسی،
+مهارت‌های ارتباطی و مددکاری اجتماعی.
 
 ━━━━━━━━━━━━━━━━━━
 """
@@ -1084,18 +976,16 @@ async def accounting_callback(
     else:
 
         text = """
-🧾 حسابداری
+🧠 روانشناسی و مددکاری
 
 ━━━━━━━━━━━━━━━━━━
 
-📚 آموزش حسابداری
-📖 مفاهیم حسابداری
-💰 حسابداری مالی
-🏢 حسابداری مدیریت
-🧮 اصول و ثبت‌های حسابداری
-📊 صورت‌های مالی
-🧾 مالیات و حسابداری
-📝 آزمون حسابداری
+🧠 مبانی روانشناسی
+🤝 مددکاری اجتماعی
+💬 مهارت‌های ارتباطی
+👥 رفتار و شخصیت
+📝 آزمون روانشناسی
+📝 آزمون مددکاری
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -1110,11 +1000,11 @@ async def accounting_callback(
 
         except Exception:
 
-            keyboard = accounting_default_menu()
+            keyboard = psychology_default_menu()
 
     else:
 
-        keyboard = accounting_default_menu()
+        keyboard = psychology_default_menu()
 
     await query.edit_message_text(
         text,
@@ -1122,63 +1012,56 @@ async def accounting_callback(
     )
 
 
-def accounting_default_menu():
+def psychology_default_menu():
 
     return InlineKeyboardMarkup([
 
         [
             InlineKeyboardButton(
-                "📚 آموزش حسابداری",
-                callback_data="accounting_lessons"
+                "📚 آموزش روانشناسی",
+                callback_data="psychology_lessons"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "📖 مفاهیم حسابداری",
-                callback_data="accounting_concepts"
+                "🤝 مددکاری اجتماعی",
+                callback_data="socialwork"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "💰 حسابداری مالی",
-                callback_data="accounting_financial"
+                "🧠 مفاهیم روانشناسی",
+                callback_data="psychology_concepts"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "🏢 حسابداری مدیریت",
-                callback_data="accounting_management"
+                "💬 مهارت‌های ارتباطی",
+                callback_data="psychology_communication"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "🧮 اصول و ثبت‌های حسابداری",
-                callback_data="accounting_entries"
+                "👥 رفتار و شخصیت",
+                callback_data="psychology_behavior"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "📊 صورت‌های مالی",
-                callback_data="accounting_statements"
+                "📝 آزمون روانشناسی",
+                callback_data="psychology_exam"
             )
         ],
 
         [
             InlineKeyboardButton(
-                "🧾 مالیات و حسابداری",
-                callback_data="accounting_tax"
-            )
-        ],
-
-        [
-            InlineKeyboardButton(
-                "📝 آزمون حسابداری",
-                callback_data="accounting_exam"
+                "📝 آزمون مددکاری",
+                callback_data="socialwork_exam"
             )
         ],
 
@@ -1193,10 +1076,10 @@ def accounting_default_menu():
 
 
 # =========================================================
-# ACCOUNTING GENERIC
+# PSYCHOLOGY GENERIC
 # =========================================================
 
-async def accounting_section_callback(
+async def psychology_generic_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
@@ -1205,11 +1088,11 @@ async def accounting_section_callback(
 
     await query.answer()
 
-    if accounting:
+    if psychology_socialwork:
 
         handler = getattr(
-            accounting,
-            "accounting_section_callback",
+            psychology_socialwork,
+            "psychology_callback",
             None
         )
 
@@ -1225,36 +1108,33 @@ async def accounting_section_callback(
             except Exception as error:
 
                 print(
-                    f"❌ Accounting section error: {error}"
+                    f"❌ Psychology generic error: {error}"
                 )
 
     data = query.data
 
     function_names = {
 
-        "accounting_lessons":
-            "accounting_lessons_text",
+        "psychology_lessons":
+            "psychology_lessons_text",
 
-        "accounting_concepts":
-            "accounting_concepts_text",
+        "psychology_concepts":
+            "psychology_concepts_text",
 
-        "accounting_financial":
-            "accounting_financial_text",
+        "psychology_communication":
+            "psychology_communication_text",
 
-        "accounting_management":
-            "accounting_management_text",
+        "psychology_behavior":
+            "psychology_behavior_text",
 
-        "accounting_entries":
-            "accounting_entries_text",
+        "socialwork":
+            "socialwork_text",
 
-        "accounting_statements":
-            "accounting_statements_text",
+        "psychology_exam":
+            "psychology_exam_intro_text",
 
-        "accounting_tax":
-            "accounting_tax_text",
-
-        "accounting_exam":
-            "accounting_exam_intro_text",
+        "socialwork_exam":
+            "socialwork_exam_intro_text",
 
     }
 
@@ -1264,10 +1144,10 @@ async def accounting_section_callback(
 
     function = None
 
-    if accounting and function_name:
+    if psychology_socialwork and function_name:
 
         function = getattr(
-            accounting,
+            psychology_socialwork,
             function_name,
             None
         )
@@ -1291,7 +1171,7 @@ async def accounting_section_callback(
         except Exception as error:
 
             print(
-                f"❌ Accounting content error: {error}"
+                f"❌ Psychology section error: {error}"
             )
 
             text = "⚠️ خطا در بارگذاری این بخش."
@@ -1300,36 +1180,33 @@ async def accounting_section_callback(
 
         titles = {
 
-            "accounting_lessons":
-                "📚 آموزش حسابداری",
+            "psychology_lessons":
+                "📚 آموزش روانشناسی",
 
-            "accounting_concepts":
-                "📖 مفاهیم حسابداری",
+            "psychology_concepts":
+                "🧠 مفاهیم روانشناسی",
 
-            "accounting_financial":
-                "💰 حسابداری مالی",
+            "psychology_communication":
+                "💬 مهارت‌های ارتباطی",
 
-            "accounting_management":
-                "🏢 حسابداری مدیریت",
+            "psychology_behavior":
+                "👥 رفتار و شخصیت",
 
-            "accounting_entries":
-                "🧮 اصول و ثبت‌های حسابداری",
+            "socialwork":
+                "🤝 مددکاری اجتماعی",
 
-            "accounting_statements":
-                "📊 صورت‌های مالی",
+            "psychology_exam":
+                "📝 آزمون روانشناسی",
 
-            "accounting_tax":
-                "🧾 مالیات و حسابداری",
-
-            "accounting_exam":
-                "📝 آزمون حسابداری",
+            "socialwork_exam":
+                "📝 آزمون مددکاری",
 
         }
 
         text = f"""
 {titles.get(
     data,
-    "🧾 حسابداری"
+    "🧠 روانشناسی و مددکاری"
 )}
 
 ━━━━━━━━━━━━━━━━━━
@@ -1344,8 +1221,8 @@ async def accounting_section_callback(
 
         [
             InlineKeyboardButton(
-                "🧾 حسابداری",
-                callback_data="accounting"
+                "🧠 روانشناسی و مددکاری",
+                callback_data="psychology_socialwork"
             )
         ],
 
@@ -1362,6 +1239,8 @@ async def accounting_section_callback(
         text,
         reply_markup=keyboard
     )
+
+
 # =========================================================
 # BANKING
 # =========================================================
@@ -4962,46 +4841,31 @@ def create_application():
     )
 
     # =====================================================
-    # ACCOUNTING
+    # PSYCHOLOGY
     # =====================================================
 
     application.add_handler(
         CallbackQueryHandler(
-            accounting_callback,
-            pattern=r"^accounting$"
+            psychology_socialwork_callback,
+            pattern=r"^psychology_socialwork$"
         )
     )
 
     application.add_handler(
         CallbackQueryHandler(
-            accounting_section_callback,
+            psychology_generic_callback,
             pattern=(
-                r"^(accounting_lessons|"
-                r"accounting_concepts|"
-                r"accounting_financial|"
-                r"accounting_management|"
-                r"accounting_entries|"
-                r"accounting_statements|"
-                r"accounting_tax|"
-                r"accounting_exam)$"
+                r"^(psychology_lessons|"
+                r"psychology_concepts|"
+                r"psychology_communication|"
+                r"psychology_behavior|"
+                r"socialwork|"
+                r"psychology_exam|"
+                r"socialwork_exam)$"
             )
         )
     )
 
-    application.add_handler(
-        CallbackQueryHandler(
-            accounting_exam_question_callback,
-            pattern=r"^accounting_exam_[0-9]+_[0-9]+$"
-        )
-    )
-
-    application.add_handler(
-        CallbackQueryHandler(
-            accounting_answer_callback,
-            pattern=r"^accounting_answer_[0-9]+_[0-9]+_[0-9]+$"
-        )
-    )  
-    
     # =====================================================
     # BANKING
     # =====================================================
