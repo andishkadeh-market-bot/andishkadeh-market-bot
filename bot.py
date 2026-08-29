@@ -215,20 +215,129 @@ except ImportError as error:
     employment_exam = None
 
 
-# ---------------------------------------------------------
-# PSYCHOLOGY & SOCIAL WORK
-# ---------------------------------------------------------
+# =========================================================
+# ACCOUNTING EXAM QUESTION
+# =========================================================
 
-try:
-    import psychology_socialwork
-except ImportError as error:
-    print(
-        f"⚠️ Psychology/Social Work module error: {error}"
+async def accounting_exam_question_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    try:
+
+        data = query.data.split("_")
+
+        index = int(data[2])
+        score = int(data[3])
+
+    except (
+        IndexError,
+        ValueError
+    ):
+
+        await query.edit_message_text(
+            "⚠️ خطا در اطلاعات آزمون حسابداری.",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton(
+                        "🧾 حسابداری",
+                        callback_data="accounting"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "🏠 منوی اصلی",
+                        callback_data="home"
+                    )
+                ],
+            ])
+        )
+
+        return
+
+    questions = globals().get(
+        "ACCOUNTING_QUESTIONS",
+        []
     )
 
-    psychology_socialwork = None
+    if index >= len(questions):
 
+        await query.edit_message_text(
+            "🏁 آزمون حسابداری به پایان رسید.",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton(
+                        "🧾 حسابداری",
+                        callback_data="accounting"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "🏠 منوی اصلی",
+                        callback_data="home"
+                    )
+                ],
+            ])
+        )
 
+        return
+
+    question = questions[index]
+
+    text = f"""
+🧾 آزمون حسابداری
+
+━━━━━━━━━━━━━━━━━━
+
+❓ سؤال {index + 1} از {len(questions)}
+
+⭐ امتیاز فعلی: {score}
+
+━━━━━━━━━━━━━━━━━━
+
+{question["question"]}
+
+━━━━━━━━━━━━━━━━━━
+
+👇 گزینه صحیح را انتخاب کنید:
+"""
+
+    keyboard = []
+
+    for option_index, option in enumerate(
+        question["options"]
+    ):
+
+        keyboard.append([
+            InlineKeyboardButton(
+                option,
+                callback_data=(
+                    f"accounting_answer_"
+                    f"{index}_"
+                    f"{option_index}_"
+                    f"{score}"
+                )
+            )
+        ])
+
+    keyboard.append([
+        InlineKeyboardButton(
+            "🧾 خروج از آزمون",
+            callback_data="accounting"
+        )
+    ])
+
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(
+            keyboard
+        )
+    )
 # =========================================================
 # ECONOMICS
 # =========================================================
