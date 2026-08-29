@@ -520,7 +520,13 @@ def profile_menu():
 
 class HealthHandler(BaseHTTPRequestHandler):
 
-    def _send_health_response(self):
+    def _send_health_response(self, include_body=True):
+
+        body = (
+            "Andishkadeh Market Bot is running."
+            .encode("utf-8")
+        )
+
         self.send_response(200)
 
         self.send_header(
@@ -530,28 +536,25 @@ class HealthHandler(BaseHTTPRequestHandler):
 
         self.send_header(
             "Content-Length",
-            str(len("Andishkadeh Market Bot is running.".encode("utf-8")))
+            str(len(body))
         )
 
         self.end_headers()
 
+        if include_body:
+            self.wfile.write(body)
+
     def do_GET(self):
 
         if self.path in ["/", "/health"]:
-            self._send_health_response()
-
-            if self.command == "GET":
-                self.wfile.write(
-                    "Andishkadeh Market Bot is running."
-                    .encode("utf-8")
-                )
+            self._send_health_response(include_body=True)
         else:
             self.send_error(404)
 
     def do_HEAD(self):
 
         if self.path in ["/", "/health"]:
-            self._send_health_response()
+            self._send_health_response(include_body=False)
         else:
             self.send_error(404)
 
@@ -559,7 +562,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         return
 
 
-def run_http_server():
+def start_http_server():
 
     server = HTTPServer(
         ("0.0.0.0", PORT),
