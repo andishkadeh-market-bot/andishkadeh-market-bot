@@ -4852,46 +4852,47 @@ def create_application():
         )
     )
 
-# =====================================================
-# ACCOUNTING
-# =====================================================
+    # =====================================================
+    # ACCOUNTING
+    # =====================================================
 
-application.add_handler(
-    CallbackQueryHandler(
-        accounting_callback,
-        pattern=r"^accounting$"
-    )
-)
-
-application.add_handler(
-    CallbackQueryHandler(
-        accounting_section_callback,
-        pattern=(
-            r"^(accounting_lessons|"
-            r"accounting_concepts|"
-            r"accounting_financial|"
-            r"accounting_management|"
-            r"accounting_entries|"
-            r"accounting_statements|"
-            r"accounting_tax|"
-            r"accounting_exam)$"
+    application.add_handler(
+        CallbackQueryHandler(
+            accounting_callback,
+            pattern=r"^accounting$"
         )
     )
-)
 
-application.add_handler(
-    CallbackQueryHandler(
-        accounting_exam_question_callback,
-        pattern=r"^accounting_exam_[0-9]+_[0-9]+$"
+    application.add_handler(
+        CallbackQueryHandler(
+            accounting_section_callback,
+            pattern=(
+                r"^(accounting_lessons|"
+                r"accounting_concepts|"
+                r"accounting_financial|"
+                r"accounting_management|"
+                r"accounting_entries|"
+                r"accounting_statements|"
+                r"accounting_tax|"
+                r"accounting_exam)$"
+            )
+        )
     )
-)
 
-application.add_handler(
-    CallbackQueryHandler(
-        accounting_answer_callback,
-        pattern=r"^accounting_answer_[0-9]+_[0-9]+_[0-9]+$"
+    application.add_handler(
+        CallbackQueryHandler(
+            accounting_exam_question_callback,
+            pattern=r"^accounting_exam_[0-9]+_[0-9]+$"
+        )
     )
-)
+
+    application.add_handler(
+        CallbackQueryHandler(
+            accounting_answer_callback,
+            pattern=r"^accounting_answer_[0-9]+_[0-9]+_[0-9]+$"
+        )
+    )  
+    
     # =====================================================
     # BANKING
     # =====================================================
