@@ -4852,7 +4852,7 @@ def create_application():
         )
     )
 
-  # =====================================================
+# =====================================================
 # ACCOUNTING
 # =====================================================
 
@@ -4876,6 +4876,7 @@ application.add_handler(
             r"accounting_tax|"
             r"accounting_exam)$"
         )
+    )
 )
 
 application.add_handler(
