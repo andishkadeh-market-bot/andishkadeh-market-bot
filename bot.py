@@ -518,53 +518,51 @@ def profile_menu():
 # HTTP SERVER
 # =========================================================
 
-class HealthHandler(
-    BaseHTTPRequestHandler
-):
+class HealthHandler(BaseHTTPRequestHandler):
+
+    def _send_health_response(self):
+        self.send_response(200)
+
+        self.send_header(
+            "Content-Type",
+            "text/plain; charset=utf-8"
+        )
+
+        self.send_header(
+            "Content-Length",
+            str(len("Andishkadeh Market Bot is running.".encode("utf-8")))
+        )
+
+        self.end_headers()
 
     def do_GET(self):
 
-        if self.path in [
-            "/",
-            "/health"
-        ]:
+        if self.path in ["/", "/health"]:
+            self._send_health_response()
 
-            self.send_response(200)
-
-            self.send_header(
-                "Content-Type",
-                "text/plain; charset=utf-8"
-            )
-
-            self.end_headers()
-
-            self.wfile.write(
-                "Andishkadeh Market Bot is running."
-                .encode("utf-8")
-            )
-
+            if self.command == "GET":
+                self.wfile.write(
+                    "Andishkadeh Market Bot is running."
+                    .encode("utf-8")
+                )
         else:
+            self.send_error(404)
 
-            self.send_response(404)
+    def do_HEAD(self):
 
-            self.end_headers()
+        if self.path in ["/", "/health"]:
+            self._send_health_response()
+        else:
+            self.send_error(404)
 
-    def log_message(
-        self,
-        format,
-        *args
-    ):
-
+    def log_message(self, format, *args):
         return
 
 
-def start_http_server():
+def run_http_server():
 
     server = HTTPServer(
-        (
-            "0.0.0.0",
-            PORT
-        ),
+        ("0.0.0.0", PORT),
         HealthHandler
     )
 
