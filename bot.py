@@ -8,18 +8,17 @@ import logging
 from telegram import Update
 from telegram.ext import (
     Application,
+    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
-    CallbackQueryHandler,
 )
 
 from config import BOT_TOKEN, APP_NAME, APP_VERSION
 from database import Database
 
 from core.menu import (
+    route_menu_callback,
     show_main_menu,
-    show_section_placeholder,
-    SECTION_TITLES,
 )
 
 
@@ -71,41 +70,7 @@ async def start(
 
 
 # ==========================================================
-# Callback Router
-# ==========================================================
-
-async def callback_router(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    """Route callback queries to the correct menu handler."""
-
-    query = update.callback_query
-
-    if query is None:
-        return
-
-    if query.data == "menu_main":
-        await show_main_menu(
-            update,
-            context,
-        )
-        return
-
-    if query.data in SECTION_TITLES:
-        await show_section_placeholder(
-            update,
-            context,
-        )
-        return
-
-    await query.answer(
-        "این گزینه هنوز فعال نشده است."
-    )
-
-
-# ==========================================================
-# Application
+# Application Factory
 # ==========================================================
 
 def build_application() -> Application:
@@ -126,7 +91,7 @@ def build_application() -> Application:
 
     application.add_handler(
         CallbackQueryHandler(
-            callback_router
+            route_menu_callback
         )
     )
 
