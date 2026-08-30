@@ -28,6 +28,10 @@ from modules.management.lessons.lesson_02 import (
     LESSON_02,
 )
 
+from modules.management.lessons.lesson_03 import (
+    LESSON_03,
+)
+
 
 # ==========================================================
 # Quiz session storage
@@ -43,6 +47,7 @@ QUIZ_SESSIONS: dict[int, QuizSession] = {}
 MANAGEMENT_LESSONS = {
     LESSON_01["id"]: LESSON_01,
     LESSON_02["id"]: LESSON_02,
+    LESSON_03["id"]: LESSON_03,
 }
 
 
@@ -365,6 +370,7 @@ def get_management_lesson(
     lesson_ids = [
         LESSON_01["id"],
         LESSON_02["id"],
+        LESSON_03["id"],
     ]
 
     if lesson_index >= len(lesson_ids):
@@ -667,9 +673,8 @@ async def start_management_quiz(
                         InlineKeyboardButton(
                             "🔙 بازگشت به درس",
                             callback_data=(
-                                f"management_lesson:"
-                                f"management_basics:"
-                                f"{0 if lesson_id == LESSON_01['id'] else 1}"
+                                "management_chapter:"
+                                "management_basics"
                             ),
                         )
                     ]
@@ -795,9 +800,8 @@ async def answer_management_quiz(
                 InlineKeyboardButton(
                     "🔄 مرور دوباره درس",
                     callback_data=(
-                        "management_lesson:"
-                        "management_basics:"
-                        "0"
+                        "management_chapter:"
+                        "management_basics"
                     ),
                 )
             ],
@@ -885,10 +889,10 @@ async def cancel_management_quiz(
             [
                 [
                     InlineKeyboardButton(
-                        "🔙 بازگشت به درس",
+                        "🔙 بازگشت به درس‌ها",
                         callback_data=(
-                            "management_lesson:"
-                            "management_basics:0"
+                            "management_chapter:"
+                            "management_basics"
                         ),
                     )
                 ],
