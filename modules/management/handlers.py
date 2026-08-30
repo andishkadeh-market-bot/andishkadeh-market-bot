@@ -677,7 +677,7 @@ async def start_management_quiz(
                 [
                     [
                         InlineKeyboardButton(
-                            "🔙 بازگشت به فصل",
+                            "🔙 بازگشت به درس",
                             callback_data=(
                                 "management_chapter:"
                                 "management_basics"
@@ -808,22 +808,7 @@ async def answer_management_quiz(
                     callback_data=(
                         "management_lesson:"
                         "management_basics:"
-                        f"{next(
-                            (
-                                index
-                                for index, lesson_id
-                                in enumerate(
-                                    [
-                                        LESSON_01["id"],
-                                        LESSON_02["id"],
-                                        LESSON_03["id"],
-                                        LESSON_04["id"],
-                                    ]
-                                )
-                                if lesson_id == question.lesson_id
-                            ),
-                            0,
-                        )}"
+                        "0"
                     ),
                 )
             ],
@@ -921,7 +906,7 @@ async def cancel_management_quiz(
                 [
                     InlineKeyboardButton(
                         "🏠 منوی اصلی",
-                        callback_data="menu_main"
+                        callback_data="menu_main",
                     )
                 ],
             ]
