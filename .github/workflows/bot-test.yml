@@ -2,6 +2,9 @@ name: Bot Core Test
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - refactor-architecture
 
 jobs:
   test-bot:
@@ -32,7 +35,5 @@ jobs:
           BOT_TOKEN: test_token
         run: python -c "from bot import build_application; print('BOT CORE IMPORT PASSED')"
 
-      - name: Test bot startup
-        env:
-          BOT_TOKEN: test_token
-        run: python test_bot_startup.py
+      - name: Run utility tests
+        run: python test_utils.py
