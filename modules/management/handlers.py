@@ -9,11 +9,31 @@ from telegram import (
 )
 from telegram.ext import ContextTypes
 
+from core.quiz import (
+    QuizSession,
+    build_questions,
+    format_quiz_result,
+)
 from core.utils import send_long_text
 
-from modules.management.curriculum import MANAGEMENT_CURRICULUM
-from modules.management.lessons.lesson_01 import LESSON_01
+from modules.management.curriculum import (
+    MANAGEMENT_CURRICULUM,
+)
+from modules.management.lessons.lesson_01 import (
+    LESSON_01,
+)
 
+
+# ==========================================================
+# Quiz session storage
+# ==========================================================
+
+QUIZ_SESSIONS: dict[int, QuizSession] = {}
+
+
+# ==========================================================
+# Management menu
+# ==========================================================
 
 def management_menu_keyboard() -> InlineKeyboardMarkup:
     """Create management chapter menu."""
@@ -26,7 +46,8 @@ def management_menu_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     chapter["title"],
                     callback_data=(
-                        f"management_chapter:{chapter['id']}"
+                        f"management_chapter:"
+                        f"{chapter['id']}"
                     ),
                 )
             ]
@@ -43,6 +64,10 @@ def management_menu_keyboard() -> InlineKeyboardMarkup:
 
     return InlineKeyboardMarkup(keyboard)
 
+
+# ==========================================================
+# Chapter menu
+# ==========================================================
 
 def management_chapter_keyboard(
     chapter_id: str,
@@ -103,6 +128,10 @@ def management_chapter_keyboard(
     return InlineKeyboardMarkup(keyboard)
 
 
+# ==========================================================
+# Management main menu
+# ==========================================================
+
 async def show_management_menu(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -139,6 +168,10 @@ async def show_management_menu(
         parse_mode="HTML",
     )
 
+
+# ==========================================================
+# Chapter lessons
+# ==========================================================
 
 async def show_management_chapter(
     update: Update,
@@ -198,6 +231,10 @@ async def show_management_chapter(
         parse_mode="HTML",
     )
 
+
+# ==========================================================
+# Lesson formatting
+# ==========================================================
 
 def format_lesson_text(
     lesson: dict,
@@ -276,6 +313,10 @@ def format_lesson_text(
 {review}
 """
 
+
+# ==========================================================
+# Lesson handler
+# ==========================================================
 
 async def show_management_lesson(
     update: Update,
@@ -404,4 +445,345 @@ async def show_management_lesson(
             keyboard
         ),
         parse_mode="HTML",
+    )
+
+
+# ==========================================================
+# Quiz keyboard
+# ==========================================================
+
+def quiz_keyboard(
+    session: QuizSession,
+) -> InlineKeyboardMarkup:
+    """Create answer buttons for current question."""
+
+    question = session.current_question
+
+    if question is None:
+        return InlineKeyboardMarkup([])
+
+    keyboard = []
+
+    for index, option in enumerate(
+        question.options
+    ):
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    f"{index + 1}. {option}",
+                    callback_data=(
+                        f"quiz_answer:{index}"
+                    ),
+                )
+            ]
+        )
+
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                "❌ خروج از آزمون",
+                callback_data="quiz_cancel",
+            )
+        ]
+    )
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+# ==========================================================
+# Quiz question formatter
+# ==========================================================
+
+def format_quiz_question(
+    session: QuizSession,
+) -> str:
+    """Format the current quiz question."""
+
+    question = session.current_question
+
+    if question is None:
+        return "آزمون به پایان رسیده است."
+
+    number = session.current_index + 1
+    total = session.total_questions
+
+    return f"""
+<b>📝 آزمون درس</b>
+
+سوال {number} از {total}
+
+━━━━━━━━━━━━━━
+
+<b>{question.question}</b>
+
+یک گزینه را انتخاب کنید:
+"""
+
+
+# ==========================================================
+# Start quiz
+# ==========================================================
+
+async def start_management_quiz(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """Start the lesson quiz."""
+
+    query = update.callback_query
+
+    if query is None:
+        return
+
+    await query.answer()
+
+    data = query.data or ""
+
+    if ":" not in data:
+        return
+
+    _, lesson_id = data.split(
+        ":",
+        1,
+    )
+
+    if lesson_id != "management_01_01":
+        await query.edit_message_text(
+            "آزمون این درس هنوز فعال نشده است.",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "🔙 بازگشت به درس",
+                            callback_data=(
+                                "management_lesson:"
+                                "management_chapter_01:0"
+                            ),
+                        )
+                    ]
+                ]
+            ),
+        )
+        return
+
+    user = update.effective_user
+
+    if user is None:
+        return
+
+    questions = build_questions(
+        LESSON_01["quiz"]
+    )
+
+    session = QuizSession(
+        questions
+    )
+
+    QUIZ_SESSIONS[user.id] = session
+
+    await query.edit_message_text(
+        format_quiz_question(session),
+        reply_markup=quiz_keyboard(session),
+        parse_mode="HTML",
+    )
+
+
+# ==========================================================
+# Answer quiz question
+# ==========================================================
+
+async def answer_management_quiz(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """Process a quiz answer."""
+
+    query = update.callback_query
+
+    if query is None:
+        return
+
+    await query.answer()
+
+    user = update.effective_user
+
+    if user is None:
+        return
+
+    session = QUIZ_SESSIONS.get(
+        user.id
+    )
+
+    if session is None:
+        await query.edit_message_text(
+            "آزمون فعالی برای شما پیدا نشد."
+        )
+        return
+
+    data = query.data or ""
+
+    if ":" not in data:
+        return
+
+    _, answer_index = data.split(
+        ":",
+        1,
+    )
+
+    try:
+        selected_option = int(
+            answer_index
+        )
+    except ValueError:
+        return
+
+    question = session.current_question
+
+    if question is None:
+        return
+
+    correct_option = question.answer
+
+    is_correct = session.answer(
+        selected_option
+    )
+
+    if is_correct:
+        feedback = "✅ پاسخ شما درست است."
+    else:
+        feedback = (
+            "❌ پاسخ شما نادرست است.\n\n"
+            f"پاسخ صحیح: "
+            f"{correct_option + 1}. "
+            f"{question.options[correct_option]}"
+        )
+
+    explanation = question.explanation
+
+    if session.is_finished:
+        result = session.result()
+
+        result_text = format_quiz_result(
+            result
+        )
+
+        final_text = f"""
+<b>{feedback}</b>
+
+{explanation}
+
+━━━━━━━━━━━━━━
+
+{result_text}
+"""
+
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "🔄 مرور دوباره درس",
+                    callback_data=(
+                        "management_lesson:"
+                        "management_chapter_01:0"
+                    ),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "📚 بازگشت به فصل",
+                    callback_data=(
+                        "management_chapter:"
+                        "management_chapter_01"
+                    ),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🏠 منوی اصلی",
+                    callback_data="menu_main",
+                )
+            ],
+        ]
+
+        await query.edit_message_text(
+            final_text,
+            reply_markup=InlineKeyboardMarkup(
+                keyboard
+            ),
+            parse_mode="HTML",
+        )
+
+        QUIZ_SESSIONS.pop(
+            user.id,
+            None,
+        )
+
+        return
+
+    next_question_text = format_quiz_question(
+        session
+    )
+
+    text = f"""
+<b>{feedback}</b>
+
+{explanation}
+
+━━━━━━━━━━━━━━
+
+{next_question_text}
+"""
+
+    await query.edit_message_text(
+        text,
+        reply_markup=quiz_keyboard(session),
+        parse_mode="HTML",
+    )
+
+
+# ==========================================================
+# Cancel quiz
+# ==========================================================
+
+async def cancel_management_quiz(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """Cancel an active quiz."""
+
+    query = update.callback_query
+
+    if query is None:
+        return
+
+    await query.answer()
+
+    user = update.effective_user
+
+    if user is not None:
+        QUIZ_SESSIONS.pop(
+            user.id,
+            None,
+        )
+
+    await query.edit_message_text(
+        "آزمون متوقف شد.",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "🔙 بازگشت به درس",
+                        callback_data=(
+                            "management_lesson:"
+                            "management_chapter_01:0"
+                        ),
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "🏠 منوی اصلی",
+                        callback_data="menu_main",
+                    )
+                ],
+            ]
+        ),
     )
