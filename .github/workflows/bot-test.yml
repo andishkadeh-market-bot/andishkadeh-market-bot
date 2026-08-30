@@ -49,3 +49,6 @@ jobs:
 
       - name: Run management router test
         run: python test_management_router.py
+
+      - name: Run lesson 02 test
+        run: python test_lesson_02.py
