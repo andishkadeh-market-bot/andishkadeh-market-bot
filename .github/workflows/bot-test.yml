@@ -43,3 +43,6 @@ jobs:
 
       - name: Run management quiz integration test
         run: python test_management_quiz.py
+
+      - name: Run management module test
+        run: python test_management_module.py
