@@ -55,3 +55,6 @@ jobs:
 
       - name: Run lesson handler test
         run: python test_lesson_handler.py
+
+      - name: Run lesson 02 quiz test
+        run: python test_management_lesson_02_quiz.py
