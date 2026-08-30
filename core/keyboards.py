@@ -11,8 +11,8 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
         [
             InlineKeyboardButton(
-                "📚 آموزش تخصصی",
-                callback_data="menu_education",
+                "📚 آموزش مدیریت",
+                callback_data="menu_management",
             ),
             InlineKeyboardButton(
                 "📝 آزمون استخدامی",
