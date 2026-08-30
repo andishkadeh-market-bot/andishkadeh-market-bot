@@ -32,6 +32,10 @@ from modules.management.lessons.lesson_03 import (
     LESSON_03,
 )
 
+from modules.management.lessons.lesson_04 import (
+    LESSON_04,
+)
+
 
 # ==========================================================
 # Quiz session storage
@@ -48,6 +52,7 @@ MANAGEMENT_LESSONS = {
     LESSON_01["id"]: LESSON_01,
     LESSON_02["id"]: LESSON_02,
     LESSON_03["id"]: LESSON_03,
+    LESSON_04["id"]: LESSON_04,
 }
 
 
@@ -371,6 +376,7 @@ def get_management_lesson(
         LESSON_01["id"],
         LESSON_02["id"],
         LESSON_03["id"],
+        LESSON_04["id"],
     ]
 
     if lesson_index >= len(lesson_ids):
@@ -671,7 +677,7 @@ async def start_management_quiz(
                 [
                     [
                         InlineKeyboardButton(
-                            "🔙 بازگشت به درس",
+                            "🔙 بازگشت به فصل",
                             callback_data=(
                                 "management_chapter:"
                                 "management_basics"
@@ -800,8 +806,24 @@ async def answer_management_quiz(
                 InlineKeyboardButton(
                     "🔄 مرور دوباره درس",
                     callback_data=(
-                        "management_chapter:"
-                        "management_basics"
+                        "management_lesson:"
+                        "management_basics:"
+                        f"{next(
+                            (
+                                index
+                                for index, lesson_id
+                                in enumerate(
+                                    [
+                                        LESSON_01["id"],
+                                        LESSON_02["id"],
+                                        LESSON_03["id"],
+                                        LESSON_04["id"],
+                                    ]
+                                )
+                                if lesson_id == question.lesson_id
+                            ),
+                            0,
+                        )}"
                     ),
                 )
             ],
@@ -899,7 +921,7 @@ async def cancel_management_quiz(
                 [
                     InlineKeyboardButton(
                         "🏠 منوی اصلی",
-                        callback_data="menu_main",
+                        callback_data="menu_main"
                     )
                 ],
             ]
