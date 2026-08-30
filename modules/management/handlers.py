@@ -36,6 +36,18 @@ from modules.management.lessons.lesson_04 import (
     LESSON_04,
 )
 
+from modules.management.lessons.lesson_05 import (
+    LESSON_05,
+)
+
+from modules.management.lessons.lesson_06 import (
+    LESSON_06,
+)
+
+from modules.management.lessons.lesson_07 import (
+    LESSON_07,
+)
+
 
 # ==========================================================
 # Quiz session storage
@@ -53,7 +65,25 @@ MANAGEMENT_LESSONS = {
     LESSON_02["id"]: LESSON_02,
     LESSON_03["id"]: LESSON_03,
     LESSON_04["id"]: LESSON_04,
+    LESSON_05["id"]: LESSON_05,
+    LESSON_06["id"]: LESSON_06,
+    LESSON_07["id"]: LESSON_07,
 }
+
+
+# ==========================================================
+# Lesson order in Chapter 01
+# ==========================================================
+
+MANAGEMENT_BASIC_LESSON_IDS = [
+    LESSON_01["id"],
+    LESSON_02["id"],
+    LESSON_03["id"],
+    LESSON_04["id"],
+    LESSON_05["id"],
+    LESSON_06["id"],
+    LESSON_07["id"],
+]
 
 
 # ==========================================================
@@ -372,17 +402,14 @@ def get_management_lesson(
     ):
         return None
 
-    lesson_ids = [
-        LESSON_01["id"],
-        LESSON_02["id"],
-        LESSON_03["id"],
-        LESSON_04["id"],
-    ]
-
-    if lesson_index >= len(lesson_ids):
+    if lesson_index >= len(
+        MANAGEMENT_BASIC_LESSON_IDS
+    ):
         return None
 
-    lesson_id = lesson_ids[lesson_index]
+    lesson_id = MANAGEMENT_BASIC_LESSON_IDS[
+        lesson_index
+    ]
 
     return MANAGEMENT_LESSONS.get(
         lesson_id
@@ -679,8 +706,9 @@ async def start_management_quiz(
                         InlineKeyboardButton(
                             "🔙 بازگشت به درس",
                             callback_data=(
-                                "management_chapter:"
-                                "management_basics"
+                                f"management_lesson:"
+                                f"management_basics:"
+                                f"{MANAGEMENT_BASIC_LESSON_IDS.index(lesson_id)}"
                             ),
                         )
                     ]
@@ -806,9 +834,18 @@ async def answer_management_quiz(
                 InlineKeyboardButton(
                     "🔄 مرور دوباره درس",
                     callback_data=(
-                        "management_lesson:"
-                        "management_basics:"
-                        "0"
+                        f"management_lesson:"
+                        f"management_basics:"
+                        f"{MANAGEMENT_BASIC_LESSON_IDS.index(
+                            next(
+                                (
+                                    lesson_id
+                                    for lesson_id, lesson in MANAGEMENT_LESSONS.items()
+                                    if lesson.get("quiz") == []
+                                ),
+                                LESSON_01["id"],
+                            )
+                        )}"
                     ),
                 )
             ],
@@ -828,6 +865,16 @@ async def answer_management_quiz(
                 )
             ],
         ]
+
+        # The quiz session does not currently store lesson_id.
+        # Therefore the safest review destination is Lesson 01.
+        keyboard[0][0] = InlineKeyboardButton(
+            "🔄 مرور درس‌های فصل",
+            callback_data=(
+                "management_chapter:"
+                "management_basics"
+            ),
+        )
 
         await query.edit_message_text(
             final_text,
