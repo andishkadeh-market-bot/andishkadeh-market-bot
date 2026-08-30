@@ -1,6 +1,6 @@
 """
 Andishkadeh Management & Market
-New lightweight bot core
+Lightweight bot core.
 """
 
 import logging
@@ -10,10 +10,17 @@ from telegram.ext import (
     Application,
     CommandHandler,
     ContextTypes,
+    CallbackQueryHandler,
 )
 
 from config import BOT_TOKEN, APP_NAME, APP_VERSION
 from database import Database
+
+from core.menu import (
+    show_main_menu,
+    show_section_placeholder,
+    SECTION_TITLES,
+)
 
 
 # ==========================================================
@@ -36,18 +43,18 @@ db = Database()
 
 
 # ==========================================================
-# Start
+# /start
 # ==========================================================
 
 async def start(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    """Handle /start."""
+    """Handle /start command."""
 
     user = update.effective_user
 
-    if user is None:
+    if user is None or update.message is None:
         return
 
     db.create_or_update_user(
@@ -57,11 +64,43 @@ async def start(
         last_name=user.last_name,
     )
 
-    await update.message.reply_text(
-        f"سلام {user.first_name} 🌱\n\n"
-        f"به {APP_NAME} خوش آمدید.\n\n"
-        f"نسخه: {APP_VERSION}\n\n"
-        "هسته جدید ربات با موفقیت فعال شد."
+    await show_main_menu(
+        update,
+        context,
+    )
+
+
+# ==========================================================
+# Callback Router
+# ==========================================================
+
+async def callback_router(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """Route callback queries to the correct menu handler."""
+
+    query = update.callback_query
+
+    if query is None:
+        return
+
+    if query.data == "menu_main":
+        await show_main_menu(
+            update,
+            context,
+        )
+        return
+
+    if query.data in SECTION_TITLES:
+        await show_section_placeholder(
+            update,
+            context,
+        )
+        return
+
+    await query.answer(
+        "این گزینه هنوز فعال نشده است."
     )
 
 
@@ -70,7 +109,7 @@ async def start(
 # ==========================================================
 
 def build_application() -> Application:
-    """Create and configure Telegram application."""
+    """Create and configure the Telegram application."""
 
     application = (
         Application.builder()
@@ -79,7 +118,16 @@ def build_application() -> Application:
     )
 
     application.add_handler(
-        CommandHandler("start", start)
+        CommandHandler(
+            "start",
+            start,
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            callback_router
+        )
     )
 
     return application
@@ -90,7 +138,7 @@ def build_application() -> Application:
 # ==========================================================
 
 def main() -> None:
-    """Start the bot."""
+    """Start the Telegram bot."""
 
     application = build_application()
 
