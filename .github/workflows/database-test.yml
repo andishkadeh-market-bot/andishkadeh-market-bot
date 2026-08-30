@@ -1,0 +1,25 @@
+name: Database Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-database:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Run database test
+        env:
+          BOT_TOKEN: test_token
+        run: python test_database.py
