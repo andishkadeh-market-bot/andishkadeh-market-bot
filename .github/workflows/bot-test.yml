@@ -22,7 +22,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run bot import test
+      - name: Check bot syntax
         env:
           BOT_TOKEN: test_token
-        run: python test_bot_import.py
+        run: python -m py_compile bot.py
+
+      - name: Check bot imports
+        env:
+          BOT_TOKEN: test_token
+        run: python -c "from bot import build_application; print('BOT CORE IMPORT PASSED')"
