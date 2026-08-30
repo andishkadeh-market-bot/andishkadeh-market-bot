@@ -1,11 +1,16 @@
 """
-Telegram handlers for the management education module.
+Telegram handlers for the Management education module.
 """
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
 from telegram.ext import ContextTypes
 
 from modules.management.curriculum import MANAGEMENT_CURRICULUM
+from modules.management.lessons.lesson_01 import LESSON_01
 
 
 def management_menu_keyboard() -> InlineKeyboardMarkup:
@@ -18,7 +23,9 @@ def management_menu_keyboard() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     chapter["title"],
-                    callback_data=f"management_chapter:{chapter['id']}",
+                    callback_data=(
+                        f"management_chapter:{chapter['id']}"
+                    ),
                 )
             ]
         )
@@ -67,15 +74,17 @@ def management_chapter_keyboard(
         chapter["lessons"],
         start=1,
     ):
+        callback_data = (
+            f"management_lesson:"
+            f"{chapter_id}:"
+            f"{index - 1}"
+        )
+
         keyboard.append(
             [
                 InlineKeyboardButton(
                     f"📖 درس {index}: {lesson}",
-                    callback_data=(
-                        f"management_lesson:"
-                        f"{chapter_id}:"
-                        f"{index - 1}"
-                    ),
+                    callback_data=callback_data,
                 )
             ]
         )
@@ -108,11 +117,18 @@ async def show_management_menu(
     text = """
 <b>📚 آموزش مدیریت</b>
 
-مسیر آموزشی مدیریت از مفاهیم پایه تا مباحث پیشرفته طراحی شده است.
+یک مسیر آموزشی مرحله‌ای برای یادگیری مدیریت،
+از مفاهیم پایه تا مباحث تخصصی.
 
-هر فصل شامل مجموعه‌ای از درس‌های تخصصی است که در مراحل بعدی با درسنامه کامل، مثال‌های کاربردی، نکات آزمونی و آزمون‌های پایان فصل تکمیل می‌شود.
+📖 درسنامه جامع
+💡 نکات تخصصی
+📝 نکات آزمونی
+📌 مثال کاربردی
+❓ آزمون
+📊 تحلیل نتیجه
+🔄 مرور
 
-<b>یک فصل را انتخاب کنید:</b>
+<b>فصل موردنظر را انتخاب کنید:</b>
 """
 
     await query.edit_message_text(
@@ -164,17 +180,10 @@ async def show_management_chapter(
     text = f"""
 <b>{chapter["title"]}</b>
 
-تعداد درس‌ها: {len(chapter["lessons"])}
+📚 تعداد درس‌ها: {len(chapter["lessons"])}
 
-هر درس در مرحله تولید محتوا شامل موارد زیر خواهد بود:
-
-📖 درسنامه مفصل
-🎯 اهداف یادگیری
-💡 نکات تخصصی
-📝 نکات آزمونی
-📌 مثال کاربردی
-❓ سوالات
-🔄 مرور
+هر درس شامل درسنامه، نکات تخصصی،
+مثال کاربردی، سوالات آزمونی و مرور است.
 
 <b>درس موردنظر را انتخاب کنید:</b>
 """
@@ -188,11 +197,87 @@ async def show_management_chapter(
     )
 
 
+def format_lesson_text(lesson: dict) -> str:
+    """Build a complete lesson message."""
+
+    objectives = "\n".join(
+        f"• {item}"
+        for item in lesson["objectives"]
+    )
+
+    concepts = "\n\n".join(
+        f"<b>{item['title']}</b>\n"
+        f"{item['description']}"
+        for item in lesson["key_concepts"]
+    )
+
+    specialized = "\n".join(
+        f"• {item}"
+        for item in lesson["specialized_points"]
+    )
+
+    exam_points = "\n".join(
+        f"• {item}"
+        for item in lesson["exam_points"]
+    )
+
+    review = "\n".join(
+        f"• {item}"
+        for item in lesson["review"]
+    )
+
+    return f"""
+<b>{lesson["title"]}</b>
+
+━━━━━━━━━━━━━━
+
+🎯 <b>اهداف یادگیری</b>
+
+{objectives}
+
+━━━━━━━━━━━━━━
+
+📖 <b>درسنامه</b>
+
+{lesson["lesson"]}
+
+━━━━━━━━━━━━━━
+
+🔍 <b>مفاهیم کلیدی</b>
+
+{concepts}
+
+━━━━━━━━━━━━━━
+
+💡 <b>نکات تخصصی</b>
+
+{specialized}
+
+━━━━━━━━━━━━━━
+
+📝 <b>نکات آزمونی</b>
+
+{exam_points}
+
+━━━━━━━━━━━━━━
+
+📌 <b>مثال کاربردی</b>
+
+{lesson["practical_example"]}
+
+━━━━━━━━━━━━━━
+
+🔄 <b>مرور و جمع‌بندی</b>
+
+{review}
+"""
+
+
 async def show_management_lesson(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    """Show a management lesson placeholder."""
+    """Show a management lesson."""
 
     query = update.callback_query
 
@@ -202,7 +287,6 @@ async def show_management_lesson(
     await query.answer()
 
     data = query.data or ""
-
     parts = data.split(":")
 
     if len(parts) != 3:
@@ -227,41 +311,69 @@ async def show_management_lesson(
     if chapter is None:
         return
 
-    lessons = chapter["lessons"]
-
-    if lesson_index < 0 or lesson_index >= len(lessons):
+    if lesson_index < 0:
         return
 
-    lesson_title = lessons[lesson_index]
+    if lesson_index >= len(
+        chapter["lessons"]
+    ):
+        return
+
+    # Only lesson 01 has real content at this stage.
+    if (
+        chapter_id == "management_chapter_01"
+        and lesson_index == 0
+    ):
+        text = format_lesson_text(
+            LESSON_01
+        )
+
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "📝 شروع آزمون درس",
+                    callback_data=(
+                        "management_quiz:"
+                        "management_01_01"
+                    ),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🔙 بازگشت به درس‌ها",
+                    callback_data=(
+                        f"management_chapter:"
+                        f"{chapter_id}"
+                    ),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🏠 منوی اصلی",
+                    callback_data="menu_main",
+                )
+            ],
+        ]
+
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(
+                keyboard
+            ),
+            parse_mode="HTML",
+        )
+
+        return
+
+    lesson_title = chapter["lessons"][lesson_index]
 
     text = f"""
 <b>📖 {lesson_title}</b>
 
-این درس در حال آماده‌سازی محتوای تخصصی است.
+این درس در برنامه آموزشی فصل قرار دارد.
 
-نسخه نهایی درس شامل:
-
-━━━━━━━━━━━━━━
-
-🎯 <b>اهداف یادگیری</b>
-
-📖 <b>درسنامه جامع و مفصل</b>
-
-💡 <b>نکات تخصصی</b>
-
-📝 <b>نکات مهم آزمونی</b>
-
-📌 <b>مثال‌های کاربردی</b>
-
-❓ <b>آزمون و سوالات چهارگزینه‌ای</b>
-
-📊 <b>نتیجه و تحلیل آزمون</b>
-
-🔄 <b>مرور و جمع‌بندی</b>
-
-━━━━━━━━━━━━━━
-
-محتوای کامل این درس در مرحله تولید محتوای تخصصی اضافه خواهد شد.
+محتوای کامل آن در مرحله تولید محتوای تخصصی
+به سیستم اضافه خواهد شد.
 """
 
     keyboard = [
@@ -269,7 +381,8 @@ async def show_management_lesson(
             InlineKeyboardButton(
                 "🔙 بازگشت به درس‌ها",
                 callback_data=(
-                    f"management_chapter:{chapter_id}"
+                    f"management_chapter:"
+                    f"{chapter_id}"
                 ),
             )
         ],
@@ -283,6 +396,8 @@ async def show_management_lesson(
 
     await query.edit_message_text(
         text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        reply_markup=InlineKeyboardMarkup(
+            keyboard
+        ),
         parse_mode="HTML",
     )
