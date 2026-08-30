@@ -37,3 +37,6 @@ jobs:
 
       - name: Run utility tests
         run: python test_utils.py
+
+      - name: Run quiz tests
+        run: python test_quiz.py
