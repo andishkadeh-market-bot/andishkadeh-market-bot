@@ -7,6 +7,12 @@ from telegram.ext import ContextTypes
 
 from core.keyboards import main_menu_keyboard, back_button
 
+from modules.management.handlers import (
+    show_management_menu,
+    show_management_chapter,
+    show_management_lesson,
+)
+
 
 MENU_TEXT = """
 🏛️ <b>اندیشکده مدیریت و بازار</b>
@@ -64,11 +70,7 @@ async def show_section_placeholder(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    """
-    Temporary section handler.
-
-    Real educational modules will replace this handler later.
-    """
+    """Display a temporary placeholder for unfinished modules."""
 
     query = update.callback_query
 
@@ -104,4 +106,57 @@ async def show_section_placeholder(
         text,
         reply_markup=back_button(),
         parse_mode="HTML",
+    )
+
+
+async def route_menu_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """Route menu callbacks to their corresponding module."""
+
+    query = update.callback_query
+
+    if query is None:
+        return
+
+    data = query.data or ""
+
+    if data == "menu_management":
+        await show_management_menu(
+            update,
+            context,
+        )
+        return
+
+    if data.startswith("management_chapter:"):
+        await show_management_chapter(
+            update,
+            context,
+        )
+        return
+
+    if data.startswith("management_lesson:"):
+        await show_management_lesson(
+            update,
+            context,
+        )
+        return
+
+    if data == "menu_main":
+        await show_main_menu(
+            update,
+            context,
+        )
+        return
+
+    if data in SECTION_TITLES:
+        await show_section_placeholder(
+            update,
+            context,
+        )
+        return
+
+    await query.answer(
+        "این گزینه هنوز فعال نشده است."
     )
