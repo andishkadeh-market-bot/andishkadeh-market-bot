@@ -40,3 +40,6 @@ jobs:
 
       - name: Run quiz tests
         run: python test_quiz.py
+
+      - name: Run management quiz integration test
+        run: python test_management_quiz.py
