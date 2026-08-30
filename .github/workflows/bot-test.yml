@@ -52,3 +52,6 @@ jobs:
 
       - name: Run lesson 02 test
         run: python test_lesson_02.py
+
+      - name: Run lesson handler test
+        run: python test_lesson_handler.py
