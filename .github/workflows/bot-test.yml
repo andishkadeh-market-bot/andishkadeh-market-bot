@@ -58,3 +58,6 @@ jobs:
 
       - name: Run lesson 02 quiz test
         run: python test_management_lesson_02_quiz.py
+
+      - name: Run lesson 02 quiz flow test
+        run: python test_management_lesson_02_quiz_flow.py
