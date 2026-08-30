@@ -9,6 +9,8 @@ from telegram import (
 )
 from telegram.ext import ContextTypes
 
+from core.utils import send_long_text
+
 from modules.management.curriculum import MANAGEMENT_CURRICULUM
 from modules.management.lessons.lesson_01 import LESSON_01
 
@@ -197,7 +199,9 @@ async def show_management_chapter(
     )
 
 
-def format_lesson_text(lesson: dict) -> str:
+def format_lesson_text(
+    lesson: dict,
+) -> str:
     """Build a complete lesson message."""
 
     objectives = "\n".join(
@@ -277,7 +281,7 @@ async def show_management_lesson(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    """Show a management lesson."""
+    """Show a management lesson safely."""
 
     query = update.callback_query
 
@@ -319,7 +323,6 @@ async def show_management_lesson(
     ):
         return
 
-    # Only lesson 01 has real content at this stage.
     if (
         chapter_id == "management_chapter_01"
         and lesson_index == 0
@@ -355,8 +358,9 @@ async def show_management_lesson(
             ],
         ]
 
-        await query.edit_message_text(
-            text,
+        await send_long_text(
+            update=update,
+            text=text,
             reply_markup=InlineKeyboardMarkup(
                 keyboard
             ),
