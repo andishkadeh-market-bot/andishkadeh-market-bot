@@ -46,3 +46,6 @@ jobs:
 
       - name: Run management module test
         run: python test_management_module.py
+
+      - name: Run management router test
+        run: python test_management_router.py
