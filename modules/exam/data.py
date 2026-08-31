@@ -140,6 +140,8 @@ def validate_question_bank() -> bool:
 if not GENERAL_EXAM_QUESTIONS:
     return False
 for item in GENERAL_EXAM_QUESTIONS:
+    if not isinstance(item, dict):
+        return False
     if not item.get("question"):
         return False
     options = item.get("options")
@@ -166,3 +168,12 @@ try:
     return validate_question_bank()
 except Exception:
     return False
+
+all = [
+“ExamQuestion”,
+“GENERAL_EXAM_QUESTIONS”,
+“get_general_exam_questions”,
+“get_general_exam_question_count”,
+“validate_question_bank”,
+“data_health_check”,
+]
