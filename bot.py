@@ -62,6 +62,13 @@ from modules.management.curriculum import (
 
 from modules.management.handlers import (
     MANAGEMENT_CHAPTER_LESSONS,
+    show_management_menu,
+    show_management_chapter,
+    show_management_lesson,
+    start_management_quiz,
+    answer_management_quiz,
+    next_management_quiz_question,
+    stop_management_quiz,
 )
 
 # ==========================================================
@@ -1198,6 +1205,10 @@ async def callback_user_registry(
     with callback buttons.
 
     This handler is intentionally non-blocking.
+
+    IMPORTANT:
+    This handler is registered in group -1 so it does
+    not consume callback queries before the real handlers.
     """
 
     user = update.effective_user
@@ -1253,12 +1264,8 @@ def build_application() -> Application:
     Create and configure Telegram application.
 
     Callback order:
-    1. Auto User Registry
-    2. Admin callbacks
-    3. General Exam callbacks
-    4. International Trade callbacks
-    5. Psychology callbacks
-    6. Generic menu callbacks
+    - Group -1: Auto User Registry
+    - Group 0: Actual callback handlers
     """
 
     if not BOT_TOKEN:
@@ -1302,6 +1309,10 @@ def build_application() -> Application:
 
     # ======================================================
     # Callback Auto User Registry
+    #
+    # IMPORTANT:
+    # Group -1 prevents this catch-all handler from
+    # consuming every callback query.
     # ======================================================
 
     application.add_handler(
@@ -1309,7 +1320,8 @@ def build_application() -> Application:
             callback_user_registry,
             pattern=r".+",
             block=False,
-        )
+        ),
+        group=-1,
     )
 
     # ======================================================
@@ -1334,8 +1346,6 @@ def build_application() -> Application:
 
     # ======================================================
     # General Exam callbacks
-    #
-    # Must be registered before generic menu router.
     # ======================================================
 
     application.add_handler(
@@ -1352,9 +1362,62 @@ def build_application() -> Application:
     )
 
     # ======================================================
-    # International Trade callbacks
+    # Management callbacks
     #
-    # Must be registered before generic menu router.
+    # Connected directly to Management handlers.
+    # ======================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            show_management_menu,
+            pattern=r"^menu_management$",
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            show_management_chapter,
+            pattern=r"^management_chapter:.+$",
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            show_management_lesson,
+            pattern=r"^management_lesson:.+:.+$",
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            start_management_quiz,
+            pattern=r"^management_quiz_start$",
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            answer_management_quiz,
+            pattern=r"^management_quiz_answer:\d+$",
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            next_management_quiz_question,
+            pattern=r"^management_quiz_next$",
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            stop_management_quiz,
+            pattern=r"^management_quiz_stop$",
+        )
+    )
+
+    # ======================================================
+    # International Trade callbacks
     # ======================================================
 
     application.add_handler(
@@ -1377,18 +1440,6 @@ def build_application() -> Application:
 
     # ======================================================
     # Psychology & Social Work callbacks
-    #
-    # IMPORTANT:
-    # Must be registered before generic menu router.
-    #
-    # This connects:
-    # - Main Psychology menu
-    # - Chapters
-    # - Lessons
-    # - Lesson completion
-    # - Quizzes
-    # - Quiz answers
-    # - Quiz cancellation
     # ======================================================
 
     application.add_handler(
@@ -1442,6 +1493,8 @@ def build_application() -> Application:
 
     # ======================================================
     # Generic Menu callbacks
+    #
+    # Must remain after specific module callbacks.
     # ======================================================
 
     application.add_handler(
