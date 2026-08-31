@@ -5,6 +5,7 @@ Supported:
 - Chapter 2: Lessons 13-19
 - Chapter 3: Lessons 20-26
 - Chapter 4: Lessons 27-36
+- Chapter 5: Lessons 37-43
 - Lesson navigation
 - Lesson display
 - Lesson quizzes
@@ -74,6 +75,16 @@ from modules.management.lessons.lesson_34 import LESSON_34
 from modules.management.lessons.lesson_35 import LESSON_35
 from modules.management.lessons.lesson_36 import LESSON_36
 # ==========================================================
+# Chapter 5 imports
+# ==========================================================
+from modules.management.lessons.lesson_37 import LESSON_37
+from modules.management.lessons.lesson_38 import LESSON_38
+from modules.management.lessons.lesson_39 import LESSON_39
+from modules.management.lessons.lesson_40 import LESSON_40
+from modules.management.lessons.lesson_41 import LESSON_41
+from modules.management.lessons.lesson_42 import LESSON_42
+from modules.management.lessons.lesson_43 import LESSON_43
+# ==========================================================
 # Quiz session storage
 # ==========================================================
 QUIZ_SESSIONS: dict[int, QuizSession] = {}
@@ -82,6 +93,7 @@ QUIZ_LESSON_CONTEXT: dict[int, dict] = {}
 # Available lessons
 # ==========================================================
 MANAGEMENT_LESSONS = {
+    # Chapter 1
     LESSON_01["id"]: LESSON_01,
     LESSON_02["id"]: LESSON_02,
     LESSON_03["id"]: LESSON_03,
@@ -94,6 +106,7 @@ MANAGEMENT_LESSONS = {
     LESSON_10["id"]: LESSON_10,
     LESSON_11["id"]: LESSON_11,
     LESSON_12["id"]: LESSON_12,
+    # Chapter 2
     LESSON_13["id"]: LESSON_13,
     LESSON_14["id"]: LESSON_14,
     LESSON_15["id"]: LESSON_15,
@@ -101,6 +114,7 @@ MANAGEMENT_LESSONS = {
     LESSON_17["id"]: LESSON_17,
     LESSON_18["id"]: LESSON_18,
     LESSON_19["id"]: LESSON_19,
+    # Chapter 3
     LESSON_20["id"]: LESSON_20,
     LESSON_21["id"]: LESSON_21,
     LESSON_22["id"]: LESSON_22,
@@ -108,6 +122,7 @@ MANAGEMENT_LESSONS = {
     LESSON_24["id"]: LESSON_24,
     LESSON_25["id"]: LESSON_25,
     LESSON_26["id"]: LESSON_26,
+    # Chapter 4
     LESSON_27["id"]: LESSON_27,
     LESSON_28["id"]: LESSON_28,
     LESSON_29["id"]: LESSON_29,
@@ -118,6 +133,14 @@ MANAGEMENT_LESSONS = {
     LESSON_34["id"]: LESSON_34,
     LESSON_35["id"]: LESSON_35,
     LESSON_36["id"]: LESSON_36,
+    # Chapter 5
+    LESSON_37["id"]: LESSON_37,
+    LESSON_38["id"]: LESSON_38,
+    LESSON_39["id"]: LESSON_39,
+    LESSON_40["id"]: LESSON_40,
+    LESSON_41["id"]: LESSON_41,
+    LESSON_42["id"]: LESSON_42,
+    LESSON_43["id"]: LESSON_43,
 }
 # ==========================================================
 # Lesson order
@@ -166,11 +189,21 @@ MANAGEMENT_CHAPTER_04_LESSONS = [
     LESSON_35,
     LESSON_36,
 ]
+MANAGEMENT_CHAPTER_05_LESSONS = [
+    LESSON_37,
+    LESSON_38,
+    LESSON_39,
+    LESSON_40,
+    LESSON_41,
+    LESSON_42,
+    LESSON_43,
+]
 MANAGEMENT_CHAPTER_LESSONS = {
     "management_basics": MANAGEMENT_CHAPTER_01_LESSONS,
     "planning": MANAGEMENT_CHAPTER_02_LESSONS,
     "organizing": MANAGEMENT_CHAPTER_03_LESSONS,
     "leadership": MANAGEMENT_CHAPTER_04_LESSONS,
+    "controlling": MANAGEMENT_CHAPTER_05_LESSONS,
 }
 # ==========================================================
 # Helpers
@@ -218,7 +251,9 @@ def get_lesson_location(
     for chapter_id, lessons in (
         MANAGEMENT_CHAPTER_LESSONS.items()
     ):
-        for index, lesson in enumerate(lessons):
+        for index, lesson in enumerate(
+            lessons
+        ):
             if lesson["id"] == lesson_id:
                 return chapter_id, index
     return None
