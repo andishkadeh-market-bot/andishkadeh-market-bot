@@ -2,32 +2,14 @@
 Andishkadeh Management & Market
 Main Telegram bot entry point.
 
-Architecture:
-
-    Telegram
-        ↓
-    bot.py
-        ↓
-    Core initialization
-        ├── SQLite Database
-        ├── Auto Registry
-        ├── User Progress
-        └── Statistics
-        ↓
-    Menu Router
-        ↓
-    Modules
-
-Auto Registry:
-    - Management module
-    - Management chapters
-    - Management lessons
-
-Auto User Registry:
-    - Telegram user is registered/updated on /start
-
-Persistent storage:
-    - SQLite
+Core:
+- SQLite database
+- Auto Registry
+- Auto User Registry
+- Progress
+- Statistics
+- Admin Dashboard
+- Management module
 """
 
 from __future__ import annotations
@@ -42,28 +24,15 @@ from telegram.ext import (
     ContextTypes,
 )
 
-from config import (
-    APP_NAME,
-    APP_VERSION,
-    BOT_TOKEN,
-)
+from config import APP_NAME, APP_VERSION, BOT_TOKEN
 
-from core.database import (
-    init_database,
-)
-
-from core.registry import (
-    registry,
-)
-
+from core.database import init_database
+from core.registry import registry
 from core.progress import (
     initialize_progress_system,
     register_user,
 )
-
-from core.statistics import (
-    initialize_statistics_system,
-)
+from core.statistics import initialize_statistics_system
 
 from core.menu import (
     route_menu_callback,
@@ -78,6 +47,11 @@ from modules.management.handlers import (
     MANAGEMENT_CHAPTER_LESSONS,
 )
 
+from modules.admin.handlers import (
+    admin_command,
+    route_admin_callback,
+)
+
 
 # ==========================================================
 # Logging
@@ -85,10 +59,8 @@ from modules.management.handlers import (
 
 logging.basicConfig(
     format=(
-        "%(asctime)s | "
-        "%(levelname)s | "
-        "%(name)s | "
-        "%(message)s"
+        "%(asctime)s | %(levelname)s | "
+        "%(name)s | %(message)s"
     ),
     level=logging.INFO,
 )
@@ -101,6 +73,7 @@ logger = logging.getLogger(__name__)
 # ==========================================================
 
 MANAGEMENT_MODULE_ID = "management"
+
 MANAGEMENT_MODULE_TITLE = "آموزش مدیریت"
 
 
@@ -110,13 +83,13 @@ MANAGEMENT_MODULE_TITLE = "آموزش مدیریت"
 
 def register_management_content() -> dict[str, int]:
     """
-    Register all available Management content.
+    Register the complete Management module.
 
-    Both the in-memory Registry and SQLite database
-    are updated through core.registry.
-
-    Only lessons that exist in the detailed lesson
-    content layer are registered.
+    Registers:
+    - Module
+    - Chapters
+    - Lessons
+    - Lesson data
     """
 
     logger.info(
@@ -128,21 +101,11 @@ def register_management_content() -> dict[str, int]:
         title=MANAGEMENT_MODULE_TITLE,
     )
 
-    registered_chapters = 0
-    registered_lessons = 0
-
     for chapter in MANAGEMENT_CURRICULUM:
 
         chapter_id = chapter.get("id")
-        chapter_title = chapter.get(
-            "title",
-            chapter_id,
-        )
 
         if not chapter_id:
-            logger.warning(
-                "Skipping chapter without id."
-            )
             continue
 
         detailed_lessons = (
@@ -153,8 +116,8 @@ def register_management_content() -> dict[str, int]:
         )
 
         if not detailed_lessons:
-            logger.info(
-                "Skipping chapter without detailed lessons: %s",
+            logger.warning(
+                "Chapter '%s' has no registered lessons.",
                 chapter_id,
             )
             continue
@@ -162,53 +125,40 @@ def register_management_content() -> dict[str, int]:
         registry.register_chapter(
             module_id=MANAGEMENT_MODULE_ID,
             chapter_id=chapter_id,
-            title=chapter_title,
+            title=chapter.get(
+                "title",
+                chapter_id,
+            ),
         )
-
-        registered_chapters += 1
 
         for lesson in detailed_lessons:
 
             lesson_id = lesson.get("id")
 
             if not lesson_id:
-                logger.warning(
-                    "Skipping lesson without id "
-                    "in chapter %s.",
-                    chapter_id,
-                )
                 continue
-
-            lesson_title = lesson.get(
-                "title",
-                lesson_id,
-            )
 
             registry.register_lesson(
                 module_id=MANAGEMENT_MODULE_ID,
                 chapter_id=chapter_id,
                 lesson_id=lesson_id,
-                title=lesson_title,
+                title=lesson.get(
+                    "title",
+                    lesson_id,
+                ),
                 data=lesson,
             )
-
-            registered_lessons += 1
 
     statistics = registry.statistics()
 
     logger.info(
-        "Management Registry initialized: "
-        "modules=%s chapters=%s lessons=%s",
+        (
+            "Auto Registry complete: "
+            "modules=%s chapters=%s lessons=%s"
+        ),
         statistics["modules"],
         statistics["chapters"],
         statistics["lessons"],
-    )
-
-    logger.info(
-        "Management Auto Registry complete: "
-        "chapters=%s lessons=%s",
-        registered_chapters,
-        registered_lessons,
     )
 
     return {
@@ -224,27 +174,14 @@ def register_management_content() -> dict[str, int]:
 
 def initialize_core() -> None:
     """
-    Initialize all persistent core systems.
+    Initialize all core systems.
 
     Order:
-
-        1. SQLite
-        2. Auto Registry
-        3. Progress
-        4. Statistics
+    1. SQLite
+    2. Auto Registry
+    3. Progress
+    4. Statistics
     """
-
-    logger.info(
-        "========================================"
-    )
-
-    logger.info(
-        "Initializing core systems..."
-    )
-
-    # ------------------------------------------------------
-    # SQLite
-    # ------------------------------------------------------
 
     logger.info(
         "Initializing SQLite database..."
@@ -253,26 +190,22 @@ def initialize_core() -> None:
     init_database()
 
     logger.info(
-        "SQLite database initialized."
-    )
-
-    # ------------------------------------------------------
-    # Auto Registry
-    # ------------------------------------------------------
-
-    logger.info(
         "Initializing Auto Registry..."
     )
 
-    register_management_content()
-
-    logger.info(
-        "Auto Registry initialized."
+    registry_result = (
+        register_management_content()
     )
 
-    # ------------------------------------------------------
-    # Progress
-    # ------------------------------------------------------
+    logger.info(
+        (
+            "Registry initialized: "
+            "modules=%s chapters=%s lessons=%s"
+        ),
+        registry_result["modules"],
+        registry_result["chapters"],
+        registry_result["lessons"],
+    )
 
     logger.info(
         "Initializing Progress system..."
@@ -281,30 +214,71 @@ def initialize_core() -> None:
     initialize_progress_system()
 
     logger.info(
-        "Progress system initialized."
-    )
-
-    # ------------------------------------------------------
-    # Statistics
-    # ------------------------------------------------------
-
-    logger.info(
         "Initializing Statistics system..."
     )
 
     initialize_statistics_system()
 
     logger.info(
-        "Statistics system initialized."
-    )
-
-    logger.info(
         "All core systems initialized successfully."
     )
 
-    logger.info(
-        "========================================"
-    )
+
+# ==========================================================
+# Auto User Registry
+# ==========================================================
+
+async def register_telegram_user(
+    update: Update,
+) -> bool:
+    """
+    Register or update the current Telegram user.
+
+    Returns:
+        True if the user was successfully registered.
+        False otherwise.
+    """
+
+    user = update.effective_user
+
+    if user is None:
+        logger.warning(
+            "Unable to register user: "
+            "effective_user is None."
+        )
+        return False
+
+    try:
+
+        register_user(
+            telegram_id=user.id,
+            username=user.username,
+            first_name=user.first_name,
+            last_name=user.last_name,
+        )
+
+        logger.info(
+            (
+                "Auto User Registry: "
+                "telegram_id=%s username=%s"
+            ),
+            user.id,
+            user.username,
+        )
+
+        return True
+
+    except Exception:
+
+        logger.exception(
+            (
+                "Auto User Registry failed: "
+                "telegram_id=%s"
+            ),
+            user.id,
+        )
+
+        return False
 
 
 # ==========================================================
@@ -318,16 +292,90 @@ async def start(
     """
     Handle /start.
 
-    Every Telegram user is automatically
-    registered or updated in SQLite.
+    The user is automatically registered before
+    the main menu is displayed.
+    """
+
+    if update.message is None:
+        return
+
+    registered = (
+        await register_telegram_user(
+            update
+        )
+    )
+
+    if not registered:
+
+        await update.message.reply_text(
+            "❌ خطایی در ثبت اطلاعات شما رخ داد.\n\n"
+            "لطفاً چند لحظه بعد دوباره /start را ارسال کنید."
+        )
+
+        return
+
+    await show_main_menu(
+        update,
+        context,
+    )
+
+
+# ==========================================================
+# /menu
+# ==========================================================
+
+async def menu_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """
+    Handle /menu.
+
+    Re-registers the user and displays the main menu.
+    """
+
+    if update.message is None:
+        return
+
+    registered = (
+        await register_telegram_user(
+            update
+        )
+    )
+
+    if not registered:
+
+        await update.message.reply_text(
+            "❌ خطایی در ثبت اطلاعات شما رخ داد."
+        )
+
+        return
+
+    await show_main_menu(
+        update,
+        context,
+    )
+
+
+# ==========================================================
+# Callback User Auto Registry
+# ==========================================================
+
+async def callback_user_registry(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """
+    Automatically register users interacting with
+    callback buttons.
+
+    This handler is intentionally placed before
+    the menu routers.
     """
 
     user = update.effective_user
 
     if user is None:
-        return
-
-    if update.message is None:
         return
 
     try:
@@ -339,31 +387,15 @@ async def start(
             last_name=user.last_name,
         )
 
-        logger.info(
-            "User registered/updated: "
-            "telegram_id=%s username=%s",
-            user.id,
-            user.username,
-        )
-
     except Exception:
 
         logger.exception(
-            "Failed to register user: telegram_id=%s",
+            (
+                "Callback Auto User Registry failed: "
+                "telegram_id=%s"
+            ),
             user.id,
         )
-
-        await update.message.reply_text(
-            "خطایی در ثبت اطلاعات شما رخ داد.\n"
-            "لطفاً دوباره /start را ارسال کنید."
-        )
-
-        return
-
-    await show_main_menu(
-        update,
-        context,
-    )
 
 
 # ==========================================================
@@ -400,15 +432,7 @@ def build_application() -> Application:
             "BOT_TOKEN is not configured."
         )
 
-    # ------------------------------------------------------
-    # Core systems
-    # ------------------------------------------------------
-
     initialize_core()
-
-    # ------------------------------------------------------
-    # Telegram application
-    # ------------------------------------------------------
 
     application = (
         Application.builder()
@@ -416,9 +440,9 @@ def build_application() -> Application:
         .build()
     )
 
-    # ------------------------------------------------------
+    # ======================================================
     # Commands
-    # ------------------------------------------------------
+    # ======================================================
 
     application.add_handler(
         CommandHandler(
@@ -427,9 +451,59 @@ def build_application() -> Application:
         )
     )
 
-    # ------------------------------------------------------
-    # Callback router
-    # ------------------------------------------------------
+    application.add_handler(
+        CommandHandler(
+            "menu",
+            menu_command,
+        )
+    )
+
+    application.add_handler(
+        CommandHandler(
+            "admin",
+            admin_command,
+        )
+    )
+
+    # ======================================================
+    # Callback Auto User Registry
+    # ======================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            callback_user_registry,
+            pattern=r".+",
+            block=False,
+        )
+    )
+
+    # ======================================================
+    # Admin callbacks
+    #
+    # IMPORTANT:
+    # Admin callbacks must be registered BEFORE
+    # the generic menu callback router.
+    # ======================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            route_admin_callback,
+            pattern=(
+                r"^("
+                r"admin_dashboard"
+                r"|admin_users(?::\d+)?"
+                r"|admin_user(?:_index)?:-?\d+"
+                r"|admin_progress:-?\d+"
+                r"|admin_attempts:-?\d+"
+                r"|admin_module:.+"
+                r")$"
+            ),
+        )
+    )
+
+    # ======================================================
+    # Generic menu callbacks
+    # ======================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -437,12 +511,16 @@ def build_application() -> Application:
         )
     )
 
-    # ------------------------------------------------------
+    # ======================================================
     # Error handler
-    # ------------------------------------------------------
+    # ======================================================
 
     application.add_error_handler(
         error_handler
+    )
+
+    logger.info(
+        "Telegram application configured successfully."
     )
 
     return application
