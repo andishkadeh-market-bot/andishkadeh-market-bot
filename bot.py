@@ -1,7 +1,6 @@
 """
 Andishkadeh Management & Market
 Main Telegram bot entry point.
-
 Core:
 - SQLite database
 - Auto Registry
@@ -10,7 +9,6 @@ Core:
 - Statistics
 - Admin Dashboard
 - HTTP Health Server for Render/UptimeRobot
-
 Modules:
 - Management
 - General Exam
@@ -18,16 +16,12 @@ Modules:
 - Psychology & Social Work
 - Banking
 """
-
 from __future__ import annotations
-
 import asyncio
 import logging
 import os
 from contextlib import suppress
-
 from aiohttp import web
-
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -35,39 +29,30 @@ from telegram.ext import (
     CommandHandler,
     ContextTypes,
 )
-
 from config import (
     APP_NAME,
     APP_VERSION,
     BOT_TOKEN,
 )
-
 from core.database import init_database
 from core.registry import registry
-
 from core.progress import (
     initialize_progress_system,
     register_user,
 )
-
 from core.statistics import (
     initialize_statistics_system,
 )
-
 from core.menu import (
     route_menu_callback,
     show_main_menu,
 )
-
-
 # ==========================================================
 # Management
 # ==========================================================
-
 from modules.management.curriculum import (
     MANAGEMENT_CURRICULUM,
 )
-
 from modules.management.handlers import (
     MANAGEMENT_CHAPTER_LESSONS,
     show_management_menu,
@@ -77,56 +62,41 @@ from modules.management.handlers import (
     answer_management_quiz,
     cancel_management_quiz,
 )
-
-
 # ==========================================================
 # Admin
 # ==========================================================
-
 from modules.admin.handlers import (
     admin_command,
     route_admin_callback,
 )
-
-
 # ==========================================================
 # General Exam
 # ==========================================================
-
 from modules.exam.handlers import (
     route_exam_callback,
     exam_handlers_health_check,
 )
-
 from modules.exam.data import (
     data_health_check,
 )
-
 from modules.exam.service import (
     exam_service_health_check,
 )
-
-
 # ==========================================================
 # International Trade
 # ==========================================================
-
 from modules.international_trade.handlers import (
     route_international_trade_callback,
     international_trade_handlers_health_check,
 )
-
 from modules.international_trade.service import (
     get_module_info,
     get_chapters,
     get_lessons,
 )
-
-
 # ==========================================================
 # Psychology & Social Work
 # ==========================================================
-
 from modules.psychology.handlers import (
     show_psychology_menu,
     show_psychology_chapter,
@@ -136,25 +106,19 @@ from modules.psychology.handlers import (
     answer_psychology_quiz,
     cancel_psychology_quiz,
 )
-
 from modules.psychology.service import (
     register_psychology_module,
 )
-
 from modules.psychology.data import (
     MODULE_ID as PSYCHOLOGY_MODULE_ID,
     MODULE_TITLE as PSYCHOLOGY_MODULE_TITLE,
     get_chapters as get_psychology_chapters,
     get_curriculum_statistics as get_psychology_curriculum_statistics,
 )
-
-
 # ==========================================================
 # Banking
 # ==========================================================
-
 try:
-
     from modules.banking.data import (
         MODULE_ID as BANKING_MODULE_ID,
         MODULE_TITLE as BANKING_MODULE_TITLE,
@@ -162,32 +126,32 @@ try:
         get_chapters as get_banking_chapters,
         data_health_check as banking_data_health_check,
     )
-
+    from modules.banking.handlers import (
+        route_banking_callback,
+        banking_handlers_health_check,
+    )
     BANKING_AVAILABLE = True
-
 except ImportError:
-
     BANKING_MODULE_ID = "banking"
-
     BANKING_MODULE_TITLE = "🏦 بانکداری تخصصی"
-
     BANKING_MODULE_DESCRIPTION = (
         "ماژول بانکداری تخصصی"
     )
-
     BANKING_AVAILABLE = False
-
     def get_banking_chapters():
         return []
-
     def banking_data_health_check() -> bool:
         return False
-
-
+    async def route_banking_callback(
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+    ) -> None:
+        return
+    def banking_handlers_health_check() -> bool:
+        return False
 # ==========================================================
 # Logging
 # ==========================================================
-
 logging.basicConfig(
     format=(
         "%(asctime)s | %(levelname)s | "
@@ -195,41 +159,29 @@ logging.basicConfig(
     ),
     level=logging.INFO,
 )
-
 logger = logging.getLogger(__name__)
-
-
 # ==========================================================
 # Constants
 # ==========================================================
-
 MANAGEMENT_MODULE_ID = "management"
 MANAGEMENT_MODULE_TITLE = "آموزش مدیریت"
-
 GENERAL_EXAM_MODULE_ID = "general_exam"
 GENERAL_EXAM_MODULE_TITLE = "آزمون عمومی"
-
 GENERAL_EXAM_CHAPTER_ID = "general"
 GENERAL_EXAM_CHAPTER_TITLE = "آزمون عمومی"
-
 GENERAL_EXAM_LESSON_ID = "general_quiz"
 GENERAL_EXAM_LESSON_TITLE = "آزمون عمومی"
-
 INTERNATIONAL_TRADE_MODULE_ID = "international_trade"
 INTERNATIONAL_TRADE_MODULE_TITLE = "تجارت بین‌الملل"
-
-
 # ==========================================================
 # HTTP Health Server
 # ==========================================================
-
 async def health_handler(
     request: web.Request,
 ) -> web.Response:
     """
     Health endpoint for Render and UptimeRobot.
     """
-
     return web.json_response(
         {
             "status": "ok",
@@ -239,15 +191,12 @@ async def health_handler(
         },
         status=200,
     )
-
-
 async def root_handler(
     request: web.Request,
 ) -> web.Response:
     """
     Simple root endpoint.
     """
-
     return web.Response(
         text=(
             "Andishkadeh Market Bot is running.\n"
@@ -256,111 +205,80 @@ async def root_handler(
         status=200,
         content_type="text/plain",
     )
-
-
 async def start_health_server() -> web.AppRunner:
     """
     Start HTTP health server.
     """
-
     port_value = os.environ.get(
         "PORT",
         "10000",
     )
-
     try:
-
         port = int(port_value)
-
     except ValueError:
-
         logger.warning(
             "Invalid PORT value '%s'. Using 10000.",
             port_value,
         )
-
         port = 10000
-
     app = web.Application()
-
     app.router.add_get(
         "/",
         root_handler,
     )
-
     app.router.add_get(
         "/health",
         health_handler,
     )
-
     runner = web.AppRunner(
         app,
         access_log=logger,
     )
-
     await runner.setup()
-
     site = web.TCPSite(
         runner,
         host="0.0.0.0",
         port=port,
     )
-
     await site.start()
-
     logger.info(
         "HTTP Health Server started on 0.0.0.0:%s",
         port,
     )
-
     logger.info(
         "Health endpoint available at /health"
     )
-
     return runner
-
-
 # ==========================================================
 # Management Auto Registry
 # ==========================================================
-
 def register_management_content() -> dict[str, int]:
     """
     Register complete Management module.
     """
-
     logger.info(
         "Starting Management Auto Registry..."
     )
-
     registry.register_module(
         module_id=MANAGEMENT_MODULE_ID,
         title=MANAGEMENT_MODULE_TITLE,
     )
-
     for chapter in MANAGEMENT_CURRICULUM:
-
         chapter_id = chapter.get("id")
-
         if not chapter_id:
             continue
-
         detailed_lessons = (
             MANAGEMENT_CHAPTER_LESSONS.get(
                 chapter_id,
                 [],
             )
         )
-
         if not detailed_lessons:
-
             logger.warning(
                 "Chapter '%s' has no registered lessons.",
                 chapter_id,
             )
-
             continue
-
         registry.register_chapter(
             module_id=MANAGEMENT_MODULE_ID,
             chapter_id=chapter_id,
@@ -369,14 +287,10 @@ def register_management_content() -> dict[str, int]:
                 chapter_id,
             ),
         )
-
         for lesson in detailed_lessons:
-
             lesson_id = lesson.get("id")
-
             if not lesson_id:
                 continue
-
             registry.register_lesson(
                 module_id=MANAGEMENT_MODULE_ID,
                 chapter_id=chapter_id,
@@ -387,9 +301,7 @@ def register_management_content() -> dict[str, int]:
                 ),
                 data=lesson,
             )
-
     statistics = registry.statistics()
-
     logger.info(
         (
             "Management Auto Registry complete: "
@@ -399,38 +311,30 @@ def register_management_content() -> dict[str, int]:
         statistics["chapters"],
         statistics["lessons"],
     )
-
     return {
         "modules": statistics["modules"],
         "chapters": statistics["chapters"],
         "lessons": statistics["lessons"],
     }
-
-
 # ==========================================================
 # General Exam Auto Registry
 # ==========================================================
-
 def register_general_exam_content() -> dict[str, int]:
     """
     Register General Exam module.
     """
-
     logger.info(
         "Starting General Exam Auto Registry..."
     )
-
     registry.register_module(
         module_id=GENERAL_EXAM_MODULE_ID,
         title=GENERAL_EXAM_MODULE_TITLE,
     )
-
     registry.register_chapter(
         module_id=GENERAL_EXAM_MODULE_ID,
         chapter_id=GENERAL_EXAM_CHAPTER_ID,
         title=GENERAL_EXAM_CHAPTER_TITLE,
     )
-
     registry.register_lesson(
         module_id=GENERAL_EXAM_MODULE_ID,
         chapter_id=GENERAL_EXAM_CHAPTER_ID,
@@ -443,9 +347,7 @@ def register_general_exam_content() -> dict[str, int]:
             "lesson_id": GENERAL_EXAM_LESSON_ID,
         },
     )
-
     statistics = registry.statistics()
-
     logger.info(
         (
             "General Exam Auto Registry complete: "
@@ -455,40 +357,29 @@ def register_general_exam_content() -> dict[str, int]:
         statistics["chapters"],
         statistics["lessons"],
     )
-
     return {
         "modules": statistics["modules"],
         "chapters": statistics["chapters"],
         "lessons": statistics["lessons"],
     }
-
-
 # ==========================================================
 # International Trade Auto Registry
 # ==========================================================
-
 def register_international_trade_content() -> dict[str, int]:
     """
     Register complete International Trade module.
     """
-
     logger.info(
         "Starting International Trade Auto Registry..."
     )
-
     module_id = INTERNATIONAL_TRADE_MODULE_ID
-
     module_title = INTERNATIONAL_TRADE_MODULE_TITLE
-
     try:
-
         module_info = get_module_info()
-
         if isinstance(
             module_info,
             dict,
         ):
-
             module_id = str(
                 module_info.get(
                     "id",
@@ -498,82 +389,60 @@ def register_international_trade_content() -> dict[str, int]:
                     ),
                 )
             )
-
             module_title = str(
                 module_info.get(
                     "title",
                     module_title,
                 )
             )
-
     except Exception:
-
         logger.exception(
             "Failed to load International Trade module info."
         )
-
     registry.register_module(
         module_id=module_id,
         title=module_title,
     )
-
     try:
-
         chapters = get_chapters()
-
     except Exception:
-
         logger.exception(
             "Failed to load International Trade chapters."
         )
-
         chapters = []
-
     registered_chapters = 0
     registered_lessons = 0
-
     for chapter in chapters:
-
         if not isinstance(
             chapter,
             dict,
         ):
             continue
-
         chapter_id = (
             chapter.get("id")
             or chapter.get("chapter_id")
         )
-
         if not chapter_id:
             continue
-
         chapter_id = str(
             chapter_id
         )
-
         chapter_title = (
             chapter.get("title")
             or chapter.get("name")
             or chapter_id
         )
-
         registry.register_chapter(
             module_id=module_id,
             chapter_id=chapter_id,
             title=str(chapter_title),
         )
-
         registered_chapters += 1
-
         try:
-
             lessons = get_lessons(
                 chapter_id
             )
-
         except Exception:
-
             logger.exception(
                 (
                     "Failed to load lessons "
@@ -581,35 +450,27 @@ def register_international_trade_content() -> dict[str, int]:
                 ),
                 chapter_id,
             )
-
             lessons = []
-
         for lesson in lessons:
-
             if not isinstance(
                 lesson,
                 dict,
             ):
                 continue
-
             lesson_id = (
                 lesson.get("id")
                 or lesson.get("lesson_id")
             )
-
             if not lesson_id:
                 continue
-
             lesson_id = str(
                 lesson_id
             )
-
             lesson_title = (
                 lesson.get("title")
                 or lesson.get("name")
                 or lesson_id
             )
-
             registry.register_lesson(
                 module_id=module_id,
                 chapter_id=chapter_id,
@@ -617,11 +478,8 @@ def register_international_trade_content() -> dict[str, int]:
                 title=str(lesson_title),
                 data=lesson,
             )
-
             registered_lessons += 1
-
     statistics = registry.statistics()
-
     logger.info(
         (
             "International Trade Auto Registry complete: "
@@ -631,31 +489,23 @@ def register_international_trade_content() -> dict[str, int]:
         registered_chapters,
         registered_lessons,
     )
-
     return {
         "modules": statistics["modules"],
         "chapters": statistics["chapters"],
         "lessons": statistics["lessons"],
     }
-
-
 # ==========================================================
 # Psychology Auto Registry
 # ==========================================================
-
 def register_psychology_content() -> dict[str, int]:
     """
     Register Psychology & Social Work module.
     """
-
     logger.info(
         "Starting Psychology & Social Work Auto Registry..."
     )
-
     try:
-
         result = register_psychology_module()
-
         logger.info(
             (
                 "Psychology Auto Registry complete: "
@@ -665,7 +515,6 @@ def register_psychology_content() -> dict[str, int]:
             result.get("chapters", 0),
             result.get("lessons", 0),
         )
-
         return {
             "modules": int(
                 result.get("modules", 0)
@@ -677,153 +526,147 @@ def register_psychology_content() -> dict[str, int]:
                 result.get("lessons", 0)
             ),
         }
-
     except Exception:
-
         logger.exception(
             "Psychology Auto Registry failed."
         )
-
         raise
-
-
 # ==========================================================
 # Banking Auto Registry
 # ==========================================================
-
 def register_banking_content() -> dict[str, int]:
     """
-    Register Banking module.
-
-    Current stage:
-    - data.py
-    - module
-    - chapters
-
-    Future:
-    - curriculum
-    - lessons
-    - handlers
-    - quizzes
+    Register complete Banking module.
     """
-
     logger.info(
         "Starting Banking Auto Registry..."
     )
-
     if not BANKING_AVAILABLE:
-
         logger.warning(
-            "Banking module is not available yet."
+            "Banking module is not available."
         )
-
         return {
             "modules": 0,
             "chapters": 0,
             "lessons": 0,
         }
-
     registry.register_module(
         module_id=BANKING_MODULE_ID,
         title=BANKING_MODULE_TITLE,
     )
-
     registered_chapters = 0
-
+    registered_lessons = 0
     try:
-
         chapters = get_banking_chapters()
-
     except Exception:
-
         logger.exception(
             "Failed to load Banking chapters."
         )
-
         chapters = []
-
     for chapter in chapters:
-
         if not isinstance(
             chapter,
             dict,
         ):
             continue
-
         chapter_id = (
             chapter.get("id")
             or chapter.get("chapter_id")
         )
-
         if not chapter_id:
             continue
-
+        chapter_id = str(
+            chapter_id
+        )
         chapter_title = (
             chapter.get("title")
             or chapter.get("name")
             or chapter_id
         )
-
         registry.register_chapter(
             module_id=BANKING_MODULE_ID,
-            chapter_id=str(chapter_id),
+            chapter_id=chapter_id,
             title=str(chapter_title),
         )
-
         registered_chapters += 1
-
+        # --------------------------------------------------
+        # Register lessons from chapter data.
+        # --------------------------------------------------
+        lessons = (
+            chapter.get("lessons")
+            or []
+        )
+        if isinstance(
+            lessons,
+            list,
+        ):
+            for lesson in lessons:
+                if not isinstance(
+                    lesson,
+                    dict,
+                ):
+                    continue
+                lesson_id = (
+                    lesson.get("id")
+                    or lesson.get("lesson_id")
+                )
+                if not lesson_id:
+                    continue
+                lesson_id = str(
+                    lesson_id
+                )
+                lesson_title = (
+                    lesson.get("title")
+                    or lesson.get("name")
+                    or lesson_id
+                )
+                registry.register_lesson(
+                    module_id=BANKING_MODULE_ID,
+                    chapter_id=chapter_id,
+                    lesson_id=lesson_id,
+                    title=str(lesson_title),
+                    data=lesson,
+                )
+                registered_lessons += 1
     statistics = registry.statistics()
-
     logger.info(
         (
             "Banking Auto Registry complete: "
-            "chapters=%s"
+            "module=%s chapters=%s lessons=%s"
         ),
+        BANKING_MODULE_ID,
         registered_chapters,
+        registered_lessons,
     )
-
     return {
         "modules": statistics["modules"],
         "chapters": statistics["chapters"],
         "lessons": statistics["lessons"],
     }
-
-
 # ==========================================================
 # Complete Auto Registry
 # ==========================================================
-
 def register_all_content() -> dict[str, int]:
     """
     Register all available modules.
     """
-
     logger.info(
         "========================================"
     )
-
     logger.info(
         "Starting complete Auto Registry..."
     )
-
     register_management_content()
-
     register_general_exam_content()
-
     register_international_trade_content()
-
     register_psychology_content()
-
     register_banking_content()
-
     statistics = registry.statistics()
-
     result = {
         "modules": statistics["modules"],
         "chapters": statistics["chapters"],
         "lessons": statistics["lessons"],
     }
-
     logger.info(
         (
             "Complete Auto Registry finished: "
@@ -833,44 +676,32 @@ def register_all_content() -> dict[str, int]:
         result["chapters"],
         result["lessons"],
     )
-
     logger.info(
         "========================================"
     )
-
     return result
-
-
 # ==========================================================
 # Core Health Checks
 # ==========================================================
-
 def run_core_health_checks() -> bool:
     """
     Run core health checks.
     """
-
     logger.info(
         "Running core health checks..."
     )
-
     try:
-
         registry_stats = (
             registry.statistics()
         )
-
         if not isinstance(
             registry_stats,
             dict,
         ):
-
             logger.error(
                 "Registry health check failed."
             )
-
             return False
-
         if (
             registry_stats.get(
                 "modules",
@@ -878,215 +709,150 @@ def run_core_health_checks() -> bool:
             )
             < 1
         ):
-
             logger.error(
                 "Registry contains no modules."
             )
-
             return False
-
         logger.info(
             "Registry health check: OK"
         )
-
     except Exception:
-
         logger.exception(
             "Registry health check failed."
         )
-
         return False
-
     return True
-
-
 # ==========================================================
 # General Exam Health Checks
 # ==========================================================
-
 def run_exam_health_checks() -> bool:
     """
     Run General Exam health checks.
     """
-
     logger.info(
         "Running General Exam health checks..."
     )
-
     try:
-
         if not data_health_check():
-
             logger.error(
                 "General Exam data health check failed."
             )
-
             return False
-
         if not exam_service_health_check():
-
             logger.error(
                 "General Exam service health check failed."
             )
-
             return False
-
         if not exam_handlers_health_check():
-
             logger.error(
                 "General Exam handlers health check failed."
             )
-
             return False
-
         logger.info(
             "General Exam health checks: OK"
         )
-
         return True
-
     except Exception:
-
         logger.exception(
             "General Exam health checks failed."
         )
-
         return False
-
-
 # ==========================================================
 # International Trade Health Checks
 # ==========================================================
-
 def run_international_trade_health_checks() -> bool:
     """
     Run International Trade health checks.
     """
-
     logger.info(
         "Running International Trade health checks..."
     )
-
     try:
-
         if not international_trade_handlers_health_check():
-
             logger.error(
                 "International Trade handlers health check failed."
             )
-
             return False
-
         module_info = get_module_info()
-
         if not isinstance(
             module_info,
             dict,
         ):
-
             logger.error(
                 "International Trade module info is invalid."
             )
-
             return False
-
         chapters = get_chapters()
-
         if not isinstance(
             chapters,
             list,
         ):
-
             logger.error(
                 "International Trade chapters data is invalid."
             )
-
             return False
-
         logger.info(
             "International Trade health checks: OK"
         )
-
         return True
-
     except Exception:
-
         logger.exception(
             "International Trade health checks failed."
         )
-
         return False
-
-
 # ==========================================================
 # Psychology Health Checks
 # ==========================================================
-
 def run_psychology_health_checks() -> bool:
     """
     Run Psychology & Social Work health checks.
     """
-
     logger.info(
         "Running Psychology & Social Work health checks..."
     )
-
     try:
-
         if not PSYCHOLOGY_MODULE_ID:
             return False
-
         if not PSYCHOLOGY_MODULE_TITLE:
             return False
-
         chapters = get_psychology_chapters()
-
         if not isinstance(
             chapters,
             list,
         ):
             return False
-
         statistics = (
             get_psychology_curriculum_statistics()
         )
-
         if not isinstance(
             statistics,
             dict,
         ):
             return False
-
         chapters_count = int(
             statistics.get(
                 "chapters",
                 0,
             )
         )
-
         lessons_count = int(
             statistics.get(
                 "lessons",
                 0,
             )
         )
-
         questions_count = int(
             statistics.get(
                 "questions",
                 0,
             )
         )
-
         if chapters_count < 1:
             return False
-
         if lessons_count < 1:
             return False
-
         if questions_count < 1:
             return False
-
         logger.info(
             (
                 "Psychology health checks: OK "
@@ -1096,117 +862,96 @@ def run_psychology_health_checks() -> bool:
             lessons_count,
             questions_count,
         )
-
         return True
-
     except Exception:
-
         logger.exception(
             "Psychology health checks failed."
         )
-
         return False
-
-
 # ==========================================================
 # Banking Health Checks
 # ==========================================================
-
 def run_banking_health_checks() -> bool:
     """
     Run Banking health checks.
-
-    Banking is allowed to be in development stage.
+    Banking is now connected to:
+    - data.py
+    - service.py
+    - handlers.py
+    - registry
+    - Telegram callback routing
     """
-
     logger.info(
         "Running Banking health checks..."
     )
-
     if not BANKING_AVAILABLE:
-
-        logger.warning(
-            "Banking module is not available yet."
+        logger.error(
+            "Banking module is not available."
         )
-
-        return True
-
+        return False
     try:
-
         if not BANKING_MODULE_ID:
             return False
-
         if not BANKING_MODULE_TITLE:
             return False
-
         if not banking_data_health_check():
-
             logger.error(
                 "Banking data health check failed."
             )
-
             return False
-
+        if not banking_handlers_health_check():
+            logger.error(
+                "Banking handlers health check failed."
+            )
+            return False
         chapters = get_banking_chapters()
-
         if not isinstance(
             chapters,
             list,
         ):
-
+            logger.error(
+                "Banking chapters data is invalid."
+            )
             return False
-
         logger.info(
-            "Banking data: OK chapters=%s",
+            (
+                "Banking health checks: OK "
+                "chapters=%s"
+            ),
             len(chapters),
         )
-
         return True
-
     except Exception:
-
         logger.exception(
             "Banking health checks failed."
         )
-
         return False
-
-
 # ==========================================================
 # Core Initialization
 # ==========================================================
-
 def initialize_core() -> None:
     """
     Initialize all core systems.
     """
-
     logger.info(
         "========================================"
     )
-
     logger.info(
         "Initializing SQLite database..."
     )
-
     init_database()
-
     logger.info(
         "SQLite database initialized successfully."
     )
-
     # ------------------------------------------------------
     # Registry
     # ------------------------------------------------------
-
     logger.info(
         "Initializing complete Auto Registry..."
     )
-
     registry_result = (
         register_all_content()
     )
-
     logger.info(
         (
             "Registry initialized: "
@@ -1216,108 +961,77 @@ def initialize_core() -> None:
         registry_result["chapters"],
         registry_result["lessons"],
     )
-
     # ------------------------------------------------------
     # Progress
     # ------------------------------------------------------
-
     logger.info(
         "Initializing Progress system..."
     )
-
     initialize_progress_system()
-
     logger.info(
         "Progress system initialized successfully."
     )
-
     # ------------------------------------------------------
     # Statistics
     # ------------------------------------------------------
-
     logger.info(
         "Initializing Statistics system..."
     )
-
     initialize_statistics_system()
-
     logger.info(
         "Statistics system initialized successfully."
     )
-
     # ------------------------------------------------------
     # Health checks
     # ------------------------------------------------------
-
     if not run_core_health_checks():
-
         raise RuntimeError(
             "Core health checks failed."
         )
-
     if not run_exam_health_checks():
-
         raise RuntimeError(
             "General Exam health checks failed."
         )
-
     if not run_international_trade_health_checks():
-
         raise RuntimeError(
             "International Trade health checks failed."
         )
-
     if not run_psychology_health_checks():
-
         raise RuntimeError(
             "Psychology & Social Work health checks failed."
         )
-
     if not run_banking_health_checks():
-
         raise RuntimeError(
             "Banking health checks failed."
         )
-
     logger.info(
         "All core systems initialized successfully."
     )
-
     logger.info(
         "========================================"
     )
-
-
 # ==========================================================
 # Auto User Registry
 # ==========================================================
-
 async def register_telegram_user(
     update: Update,
 ) -> bool:
     """
     Register or update current Telegram user.
     """
-
     user = update.effective_user
-
     if user is None:
-
         logger.warning(
             "Unable to register user: effective_user is None."
         )
-
         return False
-
     try:
-
         register_user(
             telegram_id=user.id,
             username=user.username,
             first_name=user.first_name,
             last_name=user.last_name,
         )
-
         logger.info(
             (
                 "Auto User Registry: "
@@ -1326,11 +1040,8 @@ async def register_telegram_user(
             user.id,
             user.username,
         )
-
         return True
-
     except Exception:
-
         logger.exception(
             (
                 "Auto User Registry failed: "
@@ -1338,14 +1049,10 @@ async def register_telegram_user(
             ),
             user.id,
         )
-
         return False
-
-
 # ==========================================================
 # /start
 # ==========================================================
-
 async def start(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -1353,33 +1060,24 @@ async def start(
     """
     Handle /start.
     """
-
     if update.message is None:
         return
-
     registered = await register_telegram_user(
         update
     )
-
     if not registered:
-
         await update.message.reply_text(
             "❌ خطایی در ثبت اطلاعات شما رخ داد.\n\n"
             "لطفاً چند لحظه بعد دوباره /start را ارسال کنید."
         )
-
         return
-
     await show_main_menu(
         update,
         context,
     )
-
-
 # ==========================================================
 # /menu
 # ==========================================================
-
 async def menu_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -1387,59 +1085,43 @@ async def menu_command(
     """
     Handle /menu.
     """
-
     if update.message is None:
         return
-
     registered = await register_telegram_user(
         update
     )
-
     if not registered:
-
         await update.message.reply_text(
             "❌ خطایی در ثبت اطلاعات شما رخ داد."
         )
-
         return
-
     await show_main_menu(
         update,
         context,
     )
-
-
 # ==========================================================
 # Callback User Auto Registry
 # ==========================================================
-
 async def callback_user_registry(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
     Register users interacting with callback buttons.
-
     This handler runs in a separate handler group so it does
     not interfere with actual callback routing.
     """
-
     user = update.effective_user
-
     if user is None:
         return
-
     try:
-
         register_user(
             telegram_id=user.id,
             username=user.username,
             first_name=user.first_name,
             last_name=user.last_name,
         )
-
     except Exception:
-
         logger.exception(
             (
                 "Callback Auto User Registry failed: "
@@ -1447,12 +1129,9 @@ async def callback_user_registry(
             ),
             user.id,
         )
-
-
 # ==========================================================
 # Error Handler
 # ==========================================================
-
 async def error_handler(
     update: object,
     context: ContextTypes.DEFAULT_TYPE,
@@ -1460,52 +1139,36 @@ async def error_handler(
     """
     Global Telegram error handler.
     """
-
     logger.error(
         "Unhandled Telegram error: %s",
         context.error,
         exc_info=context.error,
     )
-
-
 # ==========================================================
 # Application Factory
 # ==========================================================
-
 def build_application() -> Application:
     """
     Create and configure Telegram application.
-
     Handler groups:
-
     Group 0:
         Real commands and module callback handlers.
-
     Group 1:
         Auto User Registry.
-
-    This prevents the registry handler from swallowing
-    module callbacks.
     """
-
     if not BOT_TOKEN:
-
         raise RuntimeError(
             "BOT_TOKEN is not configured."
         )
-
     initialize_core()
-
     application = (
         Application.builder()
         .token(BOT_TOKEN)
         .build()
     )
-
     # ======================================================
     # Commands
     # ======================================================
-
     application.add_handler(
         CommandHandler(
             "start",
@@ -1513,7 +1176,6 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     application.add_handler(
         CommandHandler(
             "menu",
@@ -1521,7 +1183,6 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     application.add_handler(
         CommandHandler(
             "admin",
@@ -1529,11 +1190,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ======================================================
     # Admin callbacks
     # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             route_admin_callback,
@@ -1550,11 +1209,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ======================================================
     # General Exam callbacks
     # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             route_exam_callback,
@@ -1568,11 +1225,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ======================================================
     # International Trade callbacks
     # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             route_international_trade_callback,
@@ -1592,11 +1247,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ======================================================
     # Psychology callbacks
     # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             show_psychology_menu,
@@ -1604,7 +1257,6 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     application.add_handler(
         CallbackQueryHandler(
             show_psychology_chapter,
@@ -1612,7 +1264,6 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     application.add_handler(
         CallbackQueryHandler(
             show_psychology_lesson,
@@ -1620,7 +1271,6 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     application.add_handler(
         CallbackQueryHandler(
             complete_psychology_lesson,
@@ -1628,7 +1278,6 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     application.add_handler(
         CallbackQueryHandler(
             start_psychology_quiz,
@@ -1636,7 +1285,6 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     application.add_handler(
         CallbackQueryHandler(
             answer_psychology_quiz,
@@ -1644,7 +1292,6 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     application.add_handler(
         CallbackQueryHandler(
             cancel_psychology_quiz,
@@ -1652,11 +1299,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ======================================================
     # Management callbacks
     # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             show_management_menu,
@@ -1664,7 +1309,6 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     application.add_handler(
         CallbackQueryHandler(
             show_management_chapter,
@@ -1672,7 +1316,6 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     application.add_handler(
         CallbackQueryHandler(
             show_management_lesson,
@@ -1680,15 +1323,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ------------------------------------------------------
     # Management quiz start
-    #
-    # Supports both possible callback formats:
-    # management_quiz_start
-    # management_quiz:chapter:lesson
     # ------------------------------------------------------
-
     application.add_handler(
         CallbackQueryHandler(
             start_management_quiz,
@@ -1701,11 +1338,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ------------------------------------------------------
     # Management quiz answers
     # ------------------------------------------------------
-
     application.add_handler(
         CallbackQueryHandler(
             answer_management_quiz,
@@ -1718,11 +1353,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ------------------------------------------------------
     # Management quiz cancellation
     # ------------------------------------------------------
-
     application.add_handler(
         CallbackQueryHandler(
             cancel_management_quiz,
@@ -1735,29 +1368,50 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
+    # ======================================================
+    # Banking callbacks
+    #
+    # The Banking module already contains its own central
+    # router. We register that router before the generic
+    # central menu router.
+    # ======================================================
+    application.add_handler(
+        CallbackQueryHandler(
+            route_banking_callback,
+            pattern=(
+                r"^("
+                r"menu_banking"
+                r"|banking_chapters"
+                r"|banking_chapter:.+"
+                r"|banking_lesson:.+:.+"
+                r"|banking_complete:.+:.+"
+                r"|banking_quiz:.+:.+"
+                r"|banking_quiz_answer:.+:.+:\d+:\d+"
+                r"|banking_quiz_cancel"
+                r")$"
+            ),
+        ),
+        group=0,
+    )
     # ======================================================
     # Generic Central Menu Router
     #
     # IMPORTANT:
     # This comes after all module-specific handlers.
     # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             route_menu_callback,
         ),
         group=0,
     )
-
     # ======================================================
     # Callback Auto User Registry
     #
     # IMPORTANT:
     # Separate group.
-    # It will run after actual callback routing.
+    # It runs after actual callback routing.
     # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             callback_user_registry,
@@ -1766,206 +1420,139 @@ def build_application() -> Application:
         ),
         group=1,
     )
-
     # ======================================================
     # Error Handler
     # ======================================================
-
     application.add_error_handler(
         error_handler
     )
-
     logger.info(
         "Telegram application configured successfully."
     )
-
     return application
-
-
 # ==========================================================
 # Integration Health Check
 # ==========================================================
-
 def integration_health_check() -> bool:
     """
     Run local integration health checks.
     """
-
     try:
-
         if not run_core_health_checks():
             return False
-
         if not run_exam_health_checks():
             return False
-
         if not run_international_trade_health_checks():
             return False
-
         if not run_psychology_health_checks():
             return False
-
         if not run_banking_health_checks():
             return False
-
         logger.info(
             "========================================"
         )
-
         logger.info(
             "Integration health check: ALL TESTS PASSED"
         )
-
         logger.info(
             "========================================"
         )
-
         return True
-
     except Exception:
-
         logger.exception(
             "Integration health check failed."
         )
-
         return False
-
-
 # ==========================================================
 # Main Async Runner
 # ==========================================================
-
 async def run_bot() -> None:
     """
     Run Telegram polling and HTTP health server together.
     """
-
     application = build_application()
-
     health_runner = await start_health_server()
-
     try:
-
         logger.info(
             "Initializing Telegram application..."
         )
-
         await application.initialize()
-
         logger.info(
             "Telegram application initialized successfully."
         )
-
         await application.start()
-
         logger.info(
             "Starting Telegram polling..."
         )
-
         if application.updater is None:
-
             raise RuntimeError(
                 "Telegram updater is not available."
             )
-
         await application.updater.start_polling(
             drop_pending_updates=True
         )
-
         logger.info(
             "Telegram polling started successfully."
         )
-
         logger.info(
             "Andishkadeh Management & Market is running."
         )
-
         # --------------------------------------------------
         # Keep both services alive.
         # --------------------------------------------------
-
         await asyncio.Event().wait()
-
     finally:
-
         logger.info(
             "Stopping Telegram application..."
         )
-
         if application.updater is not None:
-
             with suppress(Exception):
-
                 await application.updater.stop()
-
         with suppress(Exception):
-
             await application.stop()
-
         with suppress(Exception):
-
             await application.shutdown()
-
         logger.info(
             "Stopping HTTP Health Server..."
         )
-
         with suppress(Exception):
-
             await health_runner.cleanup()
-
         logger.info(
             "Application shutdown complete."
         )
-
-
 # ==========================================================
 # Main
 # ==========================================================
-
 def main() -> None:
     """
     Start application.
     """
-
     logger.info(
         "========================================"
     )
-
     logger.info(
         "%s v%s is starting...",
         APP_NAME,
         APP_VERSION,
     )
-
     logger.info(
         "Starting Telegram Bot + HTTP Health Server..."
     )
-
     try:
-
         asyncio.run(
             run_bot()
         )
-
     except KeyboardInterrupt:
-
         logger.info(
             "Application stopped by user."
         )
-
     except Exception:
-
         logger.exception(
             "Fatal application error."
         )
-
         raise
-
-
 # ==========================================================
 # Entry Point
 # ==========================================================
-
 if __name__ == "__main__":
     main()
