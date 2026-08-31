@@ -1,465 +1,506 @@
 """
-Educational content for the Psychology & Social Work module.
-
+Unified data layer for Psychology & Social Work.
 Andishkadeh Management & Market
+این فایل منبع محتوای آموزشی را از
+psychology_socialwork.py
+دریافت و برای handlers/service استاندارد می‌کند.
+نکته:
+محتوای تخصصی اصلی حذف یا کپی نمی‌شود.
+psychology_socialwork.py منبع اصلی Curriculum است.
 """
-
 from __future__ import annotations
-
 from typing import Any
-
-
-MODULE_ID = "psychology"
-MODULE_TITLE = "روانشناسی و مددکاری"
-
-
-PSYCHOLOGY_CURRICULUM: list[dict[str, Any]] = [
-    {
-        "id": "chapter_1",
-        "title": "مبانی روانشناسی",
-        "lessons": [
-            {
-                "id": "lesson_1",
-                "title": "تعریف و مفهوم روانشناسی",
-                "content": (
-                    "روانشناسی علم مطالعه علمی رفتار و فرایندهای ذهنی "
-                    "انسان است. این علم تلاش می‌کند رفتار، شناخت، "
-                    "هیجان و فرایندهای ذهنی را توصیف و تبیین کند."
-                ),
-                "special_points": [
-                    "روانشناسی بر مطالعه علمی رفتار و فرایندهای ذهنی تمرکز دارد.",
-                    "رفتار می‌تواند قابل مشاهده یا قابل اندازه‌گیری باشد.",
-                    "فرایندهای شناختی شامل توجه، حافظه، یادگیری و تفکر هستند.",
-                ],
-                "exam_points": [
-                    "تعریف روانشناسی را با مطالعه رفتار و فرایندهای ذهنی به خاطر بسپارید.",
-                    "بین رفتار قابل مشاهده و فرایند ذهنی تفاوت قائل شوید.",
-                ],
-                "example": (
-                    "بررسی علت کاهش تمرکز یک دانشجو هنگام مطالعه، "
-                    "نمونه‌ای از بررسی یک فرایند روانشناختی است."
-                ),
-                "questions": [
-                    {
-                        "id": "q1",
-                        "question": "روانشناسی به طور کلی چه چیزی را مطالعه می‌کند؟",
-                        "options": [
-                            "رفتار و فرایندهای ذهنی",
-                            "فقط ساختار بدن",
-                            "فقط بیماری‌های جسمی",
-                            "فقط روابط اقتصادی",
-                        ],
-                        "correct_answer": "رفتار و فرایندهای ذهنی",
-                        "explanation": (
-                            "روانشناسی به مطالعه علمی رفتار و فرایندهای ذهنی می‌پردازد."
-                        ),
-                    },
-                    {
-                        "id": "q2",
-                        "question": "کدام مورد نمونه‌ای از فرایند شناختی است؟",
-                        "options": [
-                            "حافظه",
-                            "رشد استخوان",
-                            "ضربان قلب",
-                            "فشار خون",
-                        ],
-                        "correct_answer": "حافظه",
-                        "explanation": (
-                            "حافظه یکی از فرایندهای شناختی انسان است."
-                        ),
-                    },
-                ],
-            },
-            {
-                "id": "lesson_2",
-                "title": "رفتار و فرایندهای ذهنی",
-                "content": (
-                    "رفتار شامل فعالیت‌ها و واکنش‌هایی است که می‌توان "
-                    "آن‌ها را به شکل مستقیم یا غیرمستقیم بررسی کرد. "
-                    "فرایندهای ذهنی مانند ادراک، حافظه، تفکر و تصمیم‌گیری "
-                    "نیز بخش مهمی از مطالعه روانشناسی هستند."
-                ),
-                "special_points": [
-                    "رفتار نتیجه تعامل عوامل زیستی، روانی و محیطی است.",
-                    "فرایندهای ذهنی همیشه به صورت مستقیم قابل مشاهده نیستند.",
-                    "برای مطالعه فرایندهای ذهنی از روش‌های علمی استفاده می‌شود.",
-                ],
-                "exam_points": [
-                    "رفتار با فرایند ذهنی یکسان نیست.",
-                    "عوامل محیطی می‌توانند بر رفتار اثر بگذارند.",
-                ],
-                "example": (
-                    "اضطراب قبل از یک آزمون ممکن است باعث تغییر در "
-                    "رفتار، تمرکز و تصمیم‌گیری فرد شود."
-                ),
-                "questions": [
-                    {
-                        "id": "q1",
-                        "question": "کدام مورد یک فرایند ذهنی محسوب می‌شود؟",
-                        "options": [
-                            "تفکر",
-                            "راه رفتن",
-                            "نوشتن",
-                            "دویدن",
-                        ],
-                        "correct_answer": "تفکر",
-                        "explanation": (
-                            "تفکر یک فرایند ذهنی و شناختی است."
-                        ),
-                    },
-                    {
-                        "id": "q2",
-                        "question": "رفتار انسان معمولاً تحت تأثیر چه عواملی قرار دارد؟",
-                        "options": [
-                            "عوامل زیستی، روانی و محیطی",
-                            "فقط عوامل اقتصادی",
-                            "فقط عوامل ژنتیکی",
-                            "فقط عوامل محیطی",
-                        ],
-                        "correct_answer": "عوامل زیستی، روانی و محیطی",
-                        "explanation": (
-                            "رفتار انسان حاصل تعامل عوامل مختلف زیستی، "
-                            "روانی و محیطی است."
-                        ),
-                    },
-                ],
-            },
-        ],
-    },
-    {
-        "id": "chapter_2",
-        "title": "روانشناسی رشد",
-        "lessons": [
-            {
-                "id": "lesson_1",
-                "title": "مفهوم رشد و تحول",
-                "content": (
-                    "روانشناسی رشد تغییرات جسمانی، شناختی، هیجانی و "
-                    "اجتماعی انسان را در طول زندگی بررسی می‌کند."
-                ),
-                "special_points": [
-                    "رشد فقط به تغییرات جسمانی محدود نمی‌شود.",
-                    "تحول شناختی و اجتماعی نیز بخشی از رشد انسان است.",
-                    "رشد در دوره‌های مختلف زندگی ویژگی‌های متفاوتی دارد.",
-                ],
-                "exam_points": [
-                    "رشد را یک فرایند چندبعدی در نظر بگیرید.",
-                    "ابعاد جسمانی، شناختی، هیجانی و اجتماعی را تفکیک کنید.",
-                ],
-                "example": (
-                    "افزایش توانایی حل مسئله در دوران کودکی نمونه‌ای "
-                    "از تحول شناختی است."
-                ),
-                "questions": [
-                    {
-                        "id": "q1",
-                        "question": "کدام مورد یکی از ابعاد رشد انسان است؟",
-                        "options": [
-                            "رشد شناختی",
-                            "فقط رشد مالی",
-                            "فقط رشد شغلی",
-                            "فقط رشد اقتصادی",
-                        ],
-                        "correct_answer": "رشد شناختی",
-                        "explanation": (
-                            "رشد شناختی یکی از ابعاد اصلی تحول انسان است."
-                        ),
-                    },
-                    {
-                        "id": "q2",
-                        "question": "روانشناسی رشد چه چیزی را بررسی می‌کند؟",
-                        "options": [
-                            "تغییرات انسان در طول زندگی",
-                            "فقط تغییرات مالی",
-                            "فقط بیماری‌های جسمی",
-                            "فقط عملکرد سازمان‌ها",
-                        ],
-                        "correct_answer": "تغییرات انسان در طول زندگی",
-                        "explanation": (
-                            "روانشناسی رشد تغییرات انسان را در ابعاد مختلف "
-                            "و در طول زندگی بررسی می‌کند."
-                        ),
-                    },
-                ],
-            },
-        ],
-    },
-    {
-        "id": "chapter_3",
-        "title": "مددکاری اجتماعی",
-        "lessons": [
-            {
-                "id": "lesson_1",
-                "title": "مفهوم مددکاری اجتماعی",
-                "content": (
-                    "مددکاری اجتماعی حرفه‌ای است که با هدف کمک به افراد، "
-                    "گروه‌ها و جوامع برای بهبود عملکرد اجتماعی، حل مسائل "
-                    "و افزایش دسترسی به منابع و حمایت‌های اجتماعی فعالیت می‌کند."
-                ),
-                "special_points": [
-                    "مددکاری اجتماعی بر فرد و محیط اجتماعی او توجه دارد.",
-                    "توانمندسازی یکی از مفاهیم مهم در مددکاری اجتماعی است.",
-                    "مددکار باید اصول حرفه‌ای و اخلاقی را رعایت کند.",
-                ],
-                "exam_points": [
-                    "مددکاری اجتماعی را صرفاً کمک مالی در نظر نگیرید.",
-                    "توانمندسازی و حل مسئله از مفاهیم مهم این حوزه هستند.",
-                ],
-                "example": (
-                    "کمک به یک خانواده برای شناسایی منابع حمایتی و "
-                    "دسترسی به خدمات اجتماعی نمونه‌ای از مداخله مددکاری است."
-                ),
-                "questions": [
-                    {
-                        "id": "q1",
-                        "question": "یکی از اهداف مهم مددکاری اجتماعی چیست؟",
-                        "options": [
-                            "توانمندسازی و بهبود عملکرد اجتماعی",
-                            "جایگزینی کامل خانواده",
-                            "تشخیص همه بیماری‌های جسمی",
-                            "حذف کامل مشکلات اقتصادی جامعه",
-                        ],
-                        "correct_answer": "توانمندسازی و بهبود عملکرد اجتماعی",
-                        "explanation": (
-                            "توانمندسازی و بهبود عملکرد اجتماعی از اهداف مهم "
-                            "مددکاری اجتماعی است."
-                        ),
-                    },
-                    {
-                        "id": "q2",
-                        "question": "مددکاری اجتماعی بیشتر بر چه رویکردی تأکید دارد؟",
-                        "options": [
-                            "فرد و محیط اجتماعی",
-                            "فقط درآمد فرد",
-                            "فقط درمان بیماری جسمی",
-                            "فقط مسائل سازمانی",
-                        ],
-                        "correct_answer": "فرد و محیط اجتماعی",
-                        "explanation": (
-                            "مددکاری اجتماعی رابطه فرد با محیط اجتماعی و "
-                            "شرایط زندگی او را مورد توجه قرار می‌دهد."
-                        ),
-                    },
-                ],
-            },
-        ],
-    },
-]
-
-
+from modules.psychology import psychology_socialwork as content
+# ==========================================================
+# Module Identity
+# ==========================================================
+MODULE_ID = getattr(
+    content,
+    "MODULE_ID",
+    "psychology_socialwork",
+)
+MODULE_TITLE = getattr(
+    content,
+    "MODULE_TITLE",
+    "🧠 روانشناسی و مددکاری",
+)
+MODULE_DESCRIPTION = getattr(
+    content,
+    "MODULE_DESCRIPTION",
+    "دوره جامع روانشناسی و مددکاری اجتماعی.",
+)
+MODULE_VERSION = getattr(
+    content,
+    "MODULE_VERSION",
+    "1.0.0",
+)
+CONTENT_NOTE = getattr(
+    content,
+    "CONTENT_NOTE",
+    (
+        "این محتوا آموزشی است و جایگزین تشخیص، درمان، "
+        "مشاوره تخصصی یا نظر متخصص واجد صلاحیت نیست."
+    ),
+)
+# ==========================================================
+# Internal Helpers
+# ==========================================================
+def _as_dict(value: Any) -> dict[str, Any] | None:
+    """Return value as dictionary when possible."""
+    if not isinstance(value, dict):
+        return None
+    return value
+def _text(value: Any, default: str = "") -> str:
+    """Normalize text."""
+    if value is None:
+        return default
+    result = str(value).strip()
+    return result if result else default
+def _normalize_points(
+    lesson: dict[str, Any],
+    primary_key: str,
+    fallback_key: str,
+) -> list[str]:
+    """
+    Normalize lesson point lists.
+    Supports both:
+    - special_points / exam_points
+    - specialized_notes / exam_notes
+    """
+    value = lesson.get(primary_key)
+    if not isinstance(value, list):
+        value = lesson.get(fallback_key, [])
+    if not isinstance(value, list):
+        return []
+    result: list[str] = []
+    for item in value:
+        if item is None:
+            continue
+        text = str(item).strip()
+        if text:
+            result.append(text)
+    return result
+def _normalize_options(
+    raw_options: Any,
+) -> list[str]:
+    """
+    Normalize quiz options.
+    Supported formats:
+    1. ["A", "B", "C", "D"]
+    2. [
+        {"id": "A", "text": "..."},
+        {"id": "B", "text": "..."},
+    ]
+    """
+    if not isinstance(raw_options, list):
+        return []
+    result: list[str] = []
+    for option in raw_options:
+        if isinstance(option, dict):
+            value = (
+                option.get("text")
+                or option.get("label")
+                or option.get("value")
+            )
+        else:
+            value = option
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            result.append(text)
+    return result
+def _normalize_answer(
+    raw_answer: Any,
+    raw_options: Any,
+) -> str:
+    """
+    Normalize correct answer.
+    The source module may store the answer as:
+    - option letter: A / B / C / D
+    - option text
+    """
+    answer = _text(raw_answer)
+    if not answer:
+        return ""
+    options = (
+        raw_options
+        if isinstance(raw_options, list)
+        else []
+    )
+    normalized_options = _normalize_options(
+        options
+    )
+    # If answer is an option index/letter,
+    # resolve it to the actual option text.
+    answer_upper = answer.upper()
+    letter_map = {
+        "A": 0,
+        "B": 1,
+        "C": 2,
+        "D": 3,
+    }
+    if answer_upper in letter_map:
+        index = letter_map[answer_upper]
+        if index < len(normalized_options):
+            return normalized_options[index]
+    # Persian option labels
+    persian_map = {
+        "الف": 0,
+        "ب": 1,
+        "ج": 2,
+        "د": 3,
+    }
+    if answer in persian_map:
+        index = persian_map[answer]
+        if index < len(normalized_options):
+            return normalized_options[index]
+    return answer
+def _normalize_question(
+    raw_question: Any,
+    fallback_id: str,
+) -> dict[str, Any] | None:
+    """Normalize one quiz question."""
+    if not isinstance(raw_question, dict):
+        return None
+    question_text = (
+        raw_question.get("question")
+        or raw_question.get("text")
+    )
+    question_text = _text(
+        question_text
+    )
+    if not question_text:
+        return None
+    question_id = _text(
+        raw_question.get("id"),
+        fallback_id,
+    )
+    raw_options = raw_question.get(
+        "options",
+        [],
+    )
+    normalized_options = _normalize_options(
+        raw_options
+    )
+    if not normalized_options:
+        return None
+    raw_answer = (
+        raw_question.get("correct_answer")
+        or raw_question.get("answer")
+        or raw_question.get("correct")
+    )
+    correct_answer = _normalize_answer(
+        raw_answer,
+        raw_options,
+    )
+    explanation = _text(
+        raw_question.get("explanation")
+        or raw_question.get("feedback"),
+        "پاسخ بر اساس محتوای آموزشی این درس تعیین شده است.",
+    )
+    return {
+        "id": question_id,
+        "question": question_text,
+        "options": normalized_options,
+        "correct_answer": correct_answer,
+        "answer": correct_answer,
+        "explanation": explanation,
+    }
+def _normalize_lesson(
+    raw_lesson: Any,
+    chapter_id: str,
+    index: int,
+) -> dict[str, Any] | None:
+    """Normalize one lesson."""
+    if not isinstance(raw_lesson, dict):
+        return None
+    lesson_id = _text(
+        raw_lesson.get("id"),
+        f"{chapter_id}_lesson_{index}",
+    )
+    title = _text(
+        raw_lesson.get("title"),
+        lesson_id,
+    )
+    content_text = _text(
+        raw_lesson.get("content"),
+        "محتوای این درس هنوز ثبت نشده است.",
+    )
+    example = _text(
+        raw_lesson.get("example")
+        or raw_lesson.get("practical_example"),
+        "-",
+    )
+    special_points = _normalize_points(
+        raw_lesson,
+        "special_points",
+        "specialized_notes",
+    )
+    exam_points = _normalize_points(
+        raw_lesson,
+        "exam_points",
+        "exam_notes",
+    )
+    raw_questions = raw_lesson.get(
+        "questions",
+        [],
+    )
+    questions: list[dict[str, Any]] = []
+    if isinstance(raw_questions, list):
+        for q_index, raw_question in enumerate(
+            raw_questions,
+            start=1,
+        ):
+            normalized = _normalize_question(
+                raw_question,
+                f"{lesson_id}_q{q_index}",
+            )
+            if normalized is not None:
+                questions.append(
+                    normalized
+                )
+    return {
+        "id": lesson_id,
+        "title": title,
+        "content": content_text,
+        "example": example,
+        "special_points": special_points,
+        "exam_points": exam_points,
+        "questions": questions,
+        # Preserve the original fields too.
+        "specialized_notes": special_points,
+        "exam_notes": exam_points,
+    }
+def _normalize_chapter(
+    raw_chapter: Any,
+    index: int,
+) -> dict[str, Any] | None:
+    """Normalize one chapter."""
+    if not isinstance(raw_chapter, dict):
+        return None
+    chapter_id = _text(
+        raw_chapter.get("id"),
+        f"chapter_{index}",
+    )
+    title = _text(
+        raw_chapter.get("title"),
+        chapter_id,
+    )
+    description = _text(
+        raw_chapter.get("description"),
+        "",
+    )
+    raw_lessons = raw_chapter.get(
+        "lessons",
+        [],
+    )
+    lessons: list[dict[str, Any]] = []
+    if isinstance(raw_lessons, list):
+        for lesson_index, raw_lesson in enumerate(
+            raw_lessons,
+            start=1,
+        ):
+            normalized = _normalize_lesson(
+                raw_lesson,
+                chapter_id,
+                lesson_index,
+            )
+            if normalized is not None:
+                lessons.append(
+                    normalized
+                )
+    return {
+        "id": chapter_id,
+        "title": title,
+        "description": description,
+        "lessons": lessons,
+    }
+# ==========================================================
+# Source Curriculum Discovery
+# ==========================================================
+def _load_source_chapters() -> list[dict[str, Any]]:
+    """
+    Load chapters from psychology_socialwork.py.
+    Preferred source:
+        CHAPTER_1 ... CHAPTER_12
+    If a future version exposes:
+        PSYCHOLOGY_CURRICULUM
+    that structure is also supported.
+    """
+    raw_chapters: list[Any] = []
+    # ------------------------------------------------------
+    # Preferred structure: CHAPTER_1 ... CHAPTER_12
+    # ------------------------------------------------------
+    for index in range(1, 13):
+        chapter = getattr(
+            content,
+            f"CHAPTER_{index}",
+            None,
+        )
+        if chapter is not None:
+            raw_chapters.append(
+                chapter
+            )
+    # ------------------------------------------------------
+    # Fallback structure
+    # ------------------------------------------------------
+    if not raw_chapters:
+        curriculum = getattr(
+            content,
+            "PSYCHOLOGY_CURRICULUM",
+            None,
+        )
+        if isinstance(
+            curriculum,
+            list,
+        ):
+            raw_chapters = list(
+                curriculum
+            )
+    normalized: list[dict[str, Any]] = []
+    for index, raw_chapter in enumerate(
+        raw_chapters,
+        start=1,
+    ):
+        chapter = _normalize_chapter(
+            raw_chapter,
+            index,
+        )
+        if chapter is not None:
+            normalized.append(
+                chapter
+            )
+    return normalized
+# Load once.
+PSYCHOLOGY_CURRICULUM: list[
+    dict[str, Any]
+] = _load_source_chapters()
+# ==========================================================
+# Public API
+# ==========================================================
 def get_chapters() -> list[dict[str, Any]]:
     """Return all Psychology chapters."""
-    return list(PSYCHOLOGY_CURRICULUM)
-
-
+    return list(
+        PSYCHOLOGY_CURRICULUM
+    )
 def get_chapter(
     chapter_id: str,
 ) -> dict[str, Any] | None:
     """Return one chapter by ID."""
-
+    chapter_id = str(
+        chapter_id
+    ).strip()
     for chapter in PSYCHOLOGY_CURRICULUM:
-        if str(chapter.get("id")) == str(chapter_id):
+        if str(
+            chapter.get("id", "")
+        ) == chapter_id:
             return chapter
-
     return None
-
-
 def get_lessons(
     chapter_id: str,
 ) -> list[dict[str, Any]]:
-    """Return lessons for one chapter."""
-
-    chapter = get_chapter(chapter_id)
-
+    """Return all lessons of a chapter."""
+    chapter = get_chapter(
+        chapter_id
+    )
     if chapter is None:
         return []
-
-    lessons = chapter.get("lessons", [])
-
-    if not isinstance(lessons, list):
+    lessons = chapter.get(
+        "lessons",
+        [],
+    )
+    if not isinstance(
+        lessons,
+        list,
+    ):
         return []
-
-    return lessons
-
-
+    return list(lessons)
 def get_lesson(
     chapter_id: str,
     lesson_id: str,
 ) -> dict[str, Any] | None:
     """Return one lesson."""
-
-    for lesson in get_lessons(chapter_id):
-        if str(lesson.get("id")) == str(lesson_id):
+    lesson_id = str(
+        lesson_id
+    ).strip()
+    for lesson in get_lessons(
+        chapter_id
+    ):
+        if str(
+            lesson.get("id", "")
+        ) == lesson_id:
             return lesson
-
     return None
-
-
-def get_all_lessons() -> list[dict[str, Any]]:
-    """Return all lessons with chapter metadata."""
-
-    result: list[dict[str, Any]] = []
-
-    for chapter in PSYCHOLOGY_CURRICULUM:
-        chapter_id = chapter.get("id")
-        chapter_title = chapter.get("title", "")
-
-        lessons = chapter.get("lessons", [])
-
-        if not isinstance(lessons, list):
-            continue
-
-        for lesson in lessons:
-            if not isinstance(lesson, dict):
-                continue
-
-            item = dict(lesson)
-            item["chapter_id"] = chapter_id
-            item["chapter_title"] = chapter_title
-
-            result.append(item)
-
-    return result
-
-
 def get_quiz_questions(
     chapter_id: str,
     lesson_id: str,
 ) -> list[dict[str, Any]]:
-    """Return quiz questions for one lesson."""
-
+    """Return normalized quiz questions."""
     lesson = get_lesson(
         chapter_id,
         lesson_id,
     )
-
     if lesson is None:
         return []
-
-    questions = lesson.get("questions", [])
-
-    if not isinstance(questions, list):
+    questions = lesson.get(
+        "questions",
+        [],
+    )
+    if not isinstance(
+        questions,
+        list,
+    ):
         return []
-
-    return [
-        question
-        for question in questions
-        if isinstance(question, dict)
-    ]
-
-
+    return list(questions)
 def get_curriculum_statistics() -> dict[str, int]:
-    """Return basic curriculum statistics."""
-
-    chapters = len(PSYCHOLOGY_CURRICULUM)
-    lessons = 0
-    questions = 0
-
-    for chapter in PSYCHOLOGY_CURRICULUM:
-        chapter_lessons = chapter.get("lessons", [])
-
-        if not isinstance(chapter_lessons, list):
+    """Return curriculum statistics."""
+    chapters = get_chapters()
+    lessons_count = 0
+    questions_count = 0
+    for chapter in chapters:
+        lessons = chapter.get(
+            "lessons",
+            [],
+        )
+        if not isinstance(
+            lessons,
+            list,
+        ):
             continue
-
-        lessons += len(chapter_lessons)
-
-        for lesson in chapter_lessons:
-            if not isinstance(lesson, dict):
-                continue
-
-            lesson_questions = lesson.get(
+        lessons_count += len(
+            lessons
+        )
+        for lesson in lessons:
+            questions = lesson.get(
                 "questions",
                 [],
             )
-
-            if isinstance(lesson_questions, list):
-                questions += len(lesson_questions)
-
-    return {
-        "chapters": chapters,
-        "lessons": lessons,
-        "questions": questions,
-    }
-
-
-def data_health_check() -> bool:
-    """Validate the Psychology curriculum structure."""
-
-    try:
-        if not MODULE_ID:
-            return False
-
-        if not MODULE_TITLE:
-            return False
-
-        if not isinstance(
-            PSYCHOLOGY_CURRICULUM,
-            list,
-        ):
-            return False
-
-        for chapter in PSYCHOLOGY_CURRICULUM:
-            if not isinstance(chapter, dict):
-                return False
-
-            if not chapter.get("id"):
-                return False
-
-            if not chapter.get("title"):
-                return False
-
-            lessons = chapter.get("lessons", [])
-
-            if not isinstance(lessons, list):
-                return False
-
-            for lesson in lessons:
-                if not isinstance(lesson, dict):
-                    return False
-
-                if not lesson.get("id"):
-                    return False
-
-                if not lesson.get("title"):
-                    return False
-
-                questions = lesson.get(
-                    "questions",
-                    [],
+            if isinstance(
+                questions,
+                list,
+            ):
+                questions_count += len(
+                    questions
                 )
-
-                if not isinstance(questions, list):
-                    return False
-
-                for question in questions:
-                    if not isinstance(question, dict):
-                        return False
-
-                    if not question.get("id"):
-                        return False
-
-                    if not question.get("question"):
-                        return False
-
-                    options = question.get(
-                        "options",
-                        [],
-                    )
-
-                    if not isinstance(options, list):
-                        return False
-
-                    if len(options) < 2:
-                        return False
-
-                    correct_answer = question.get(
-                        "correct_answer"
-                    )
-
-                    if correct_answer not in options:
-                        return False
-
-        return True
-
+    return {
+        "chapters": len(chapters),
+        "lessons": lessons_count,
+        "questions": questions_count,
+    }
+def psychology_data_health_check() -> bool:
+    """
+    Validate that the unified content layer
+    contains the expected 12 chapters.
+    """
+    try:
+        statistics = (
+            get_curriculum_statistics()
+        )
+        return (
+            statistics["chapters"] == 12
+            and statistics["lessons"] > 0
+            and statistics["questions"] > 0
+        )
     except Exception:
         return False
