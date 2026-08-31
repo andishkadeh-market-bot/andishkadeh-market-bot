@@ -1,7 +1,6 @@
 """
 Telegram handlers for the Management educational module.
 Andishkadeh Management & Market
---------------------------------
 Responsibilities:
 - Show Management menu
 - Show Management chapters
@@ -9,19 +8,25 @@ Responsibilities:
 - Show lesson content
 - Start Management quiz
 - Answer Management quiz
-- Provide navigation back to previous menus
-This file is intentionally compatible with the central menu
-and the Management data module.
+- Move to next quiz question
+- Cancel/stop Management quiz
+- Provide navigation between menus
+This file is compatible with:
+    core.menu
+    modules.management.data
 """
 from __future__ import annotations
 import logging
 from typing import Any
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
 from telegram.ext import ContextTypes
 from modules.management.data import (
     MODULE_TITLE,
     MODULE_DESCRIPTION,
-    MANAGEMENT_CHAPTERS,
     get_management_chapters,
     get_management_chapter,
     get_management_lessons,
@@ -29,14 +34,14 @@ from modules.management.data import (
 )
 logger = logging.getLogger(__name__)
 # ==========================================================
-# Constants
+# Quiz State Keys
 # ==========================================================
 QUIZ_QUESTION_KEY = "management_quiz_question"
 QUIZ_SCORE_KEY = "management_quiz_score"
 QUIZ_TOTAL_KEY = "management_quiz_total"
 QUIZ_ACTIVE_KEY = "management_quiz_active"
 # ==========================================================
-# Safe callback helpers
+# Safe Message Helper
 # ==========================================================
 async def _edit_or_reply(
     update: Update,
@@ -44,11 +49,15 @@ async def _edit_or_reply(
     reply_markup: InlineKeyboardMarkup | None = None,
 ) -> None:
     """
-    Edit an existing callback message when possible.
+    Edit callback message when possible.
     Otherwise send a normal reply.
     """
     query = update.callback_query
     if query is not None:
+        try:
+            await query.answer()
+        except Exception:
+            pass
         try:
             await query.edit_message_text(
                 text=text,
@@ -66,7 +75,7 @@ async def _edit_or_reply(
             reply_markup=reply_markup,
         )
 # ==========================================================
-# Main Management menu
+# Management Main Menu
 # ==========================================================
 async def show_management_menu(
     update: Update,
@@ -78,11 +87,20 @@ async def show_management_menu(
     keyboard: list[list[InlineKeyboardButton]] = []
     chapters = get_management_chapters()
     for chapter in chapters:
+        chapter_id = chapter.get("id")
+        chapter_title = chapter.get(
+            "title",
+            str(chapter_id),
+        )
+        if not chapter_id:
+            continue
         keyboard.append(
             [
                 InlineKeyboardButton(
-                    chapter["title"],
-                    callback_data=f"management_chapter:{chapter['id']}",
+                    chapter_title,
+                    callback_data=(
+                        f"management_chapter:{chapter_id}"
+                    ),
                 )
             ]
         )
@@ -90,37 +108,39 @@ async def show_management_menu(
         [
             InlineKeyboardButton(
                 "📝 آزمون مدیریت",
-                callback_data="management_quiz_start",
+                callback_data="management_quiz:start",
             )
         ]
     )
     keyboard.append(
         [
             InlineKeyboardButton(
-                "🔙 بازگشت",
-                callback_data="main_menu",
+                "🔙 بازگشت به منوی اصلی",
+                callback_data="menu_main",
             )
         ]
     )
     await _edit_or_reply(
         update,
         (
-            f"📚 {MODULE_TITLE}\n\n"
+            f"📚 <b>{MODULE_TITLE}</b>\n\n"
             f"{MODULE_DESCRIPTION}\n\n"
-            "یکی از فصل‌ها را انتخاب کنید:"
+            "لطفاً فصل موردنظر را انتخاب کنید:"
         ),
         InlineKeyboardMarkup(keyboard),
     )
 # ==========================================================
-# Chapter menu
+# Management Chapter
 # ==========================================================
-async def show_management_chapter_menu(
+async def show_management_chapter(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
     chapter_id: str | None = None,
 ) -> None:
     """
-    Display lessons belonging to one Management chapter.
+    Display a Management chapter and its lessons.
+    Compatible with:
+        management_chapter:<chapter_id>
     """
     query = update.callback_query
     if chapter_id is None and query is not None:
@@ -147,8 +167,8 @@ async def show_management_chapter_menu(
                 [
                     [
                         InlineKeyboardButton(
-                            "🔙 بازگشت",
-                            callback_data="management_menu",
+                            "🔙 بازگشت به فصل‌ها",
+                            callback_data="menu_management",
                         )
                     ]
                 ]
@@ -160,14 +180,21 @@ async def show_management_chapter_menu(
     )
     keyboard: list[list[InlineKeyboardButton]] = []
     for lesson in lessons:
+        lesson_id = lesson.get("id")
+        lesson_title = lesson.get(
+            "title",
+            str(lesson_id),
+        )
+        if not lesson_id:
+            continue
         keyboard.append(
             [
                 InlineKeyboardButton(
-                    lesson["title"],
+                    lesson_title,
                     callback_data=(
                         f"management_lesson:"
                         f"{chapter_id}:"
-                        f"{lesson['id']}"
+                        f"{lesson_id}"
                     ),
                 )
             ]
@@ -176,7 +203,7 @@ async def show_management_chapter_menu(
         [
             InlineKeyboardButton(
                 "📝 آزمون مدیریت",
-                callback_data="management_quiz_start",
+                callback_data="management_quiz:start",
             )
         ]
     )
@@ -184,21 +211,43 @@ async def show_management_chapter_menu(
         [
             InlineKeyboardButton(
                 "🔙 بازگشت به فصل‌ها",
-                callback_data="management_menu",
+                callback_data="menu_management",
             )
         ]
     )
+    description = chapter.get(
+        "description",
+        "",
+    )
+    text = (
+        f"📖 <b>{chapter['title']}</b>\n\n"
+    )
+    if description:
+        text += f"{description}\n\n"
+    text += "📚 درس‌های این فصل را انتخاب کنید:"
     await _edit_or_reply(
         update,
-        (
-            f"📖 {chapter['title']}\n\n"
-            f"{chapter.get('description', '')}\n\n"
-            "درس موردنظر را انتخاب کنید:"
-        ),
+        text,
         InlineKeyboardMarkup(keyboard),
     )
 # ==========================================================
-# Lesson display
+# Backward-Compatible Chapter Menu
+# ==========================================================
+async def show_management_chapter_menu(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    chapter_id: str | None = None,
+) -> None:
+    """
+    Backward-compatible alias for chapter display.
+    """
+    await show_management_chapter(
+        update,
+        context,
+        chapter_id,
+    )
+# ==========================================================
+# Management Lesson
 # ==========================================================
 async def show_management_lesson(
     update: Update,
@@ -208,6 +257,8 @@ async def show_management_lesson(
 ) -> None:
     """
     Display one Management lesson.
+    Compatible with:
+        management_lesson:<chapter_id>:<lesson_id>
     """
     query = update.callback_query
     if query is not None:
@@ -231,11 +282,24 @@ async def show_management_lesson(
         await _edit_or_reply(
             update,
             "❌ درس موردنظر پیدا نشد.",
+            InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "🔙 بازگشت",
+                            callback_data=(
+                                f"management_chapter:"
+                                f"{chapter_id}"
+                            ),
+                        )
+                    ]
+                ]
+            ),
         )
         return
     text_parts: list[str] = []
     text_parts.append(
-        f"📘 {lesson['title']}"
+        f"📘 <b>{lesson['title']}</b>"
     )
     summary = lesson.get(
         "summary",
@@ -243,7 +307,7 @@ async def show_management_lesson(
     )
     if summary:
         text_parts.append(
-            f"\n📝 خلاصه:\n{summary}"
+            f"\n📝 <b>خلاصه:</b>\n{summary}"
         )
     content = lesson.get(
         "content",
@@ -251,7 +315,7 @@ async def show_management_lesson(
     )
     if content:
         text_parts.append(
-            f"\n📚 درسنامه:\n{content}"
+            f"\n📚 <b>درسنامه:</b>\n{content}"
         )
     specialized_tips = lesson.get(
         "specialized_tips",
@@ -259,7 +323,7 @@ async def show_management_lesson(
     )
     if specialized_tips:
         text_parts.append(
-            "\n🎯 نکات تخصصی:"
+            "\n🎯 <b>نکات تخصصی:</b>"
         )
         for item in specialized_tips:
             text_parts.append(
@@ -271,7 +335,7 @@ async def show_management_lesson(
     )
     if exam_tips:
         text_parts.append(
-            "\n📝 نکات آزمونی:"
+            "\n📝 <b>نکات آزمونی:</b>"
         )
         for item in exam_tips:
             text_parts.append(
@@ -283,7 +347,7 @@ async def show_management_lesson(
     )
     if examples:
         text_parts.append(
-            "\n💡 مثال کاربردی:"
+            "\n💡 <b>مثال کاربردی:</b>"
         )
         for item in examples:
             text_parts.append(
@@ -295,7 +359,7 @@ async def show_management_lesson(
     )
     if review:
         text_parts.append(
-            "\n🔄 مرور:"
+            "\n🔄 <b>مرور:</b>"
         )
         for item in review:
             text_parts.append(
@@ -306,7 +370,7 @@ async def show_management_lesson(
             [
                 InlineKeyboardButton(
                     "📝 آزمون مدیریت",
-                    callback_data="management_quiz_start",
+                    callback_data="management_quiz:start",
                 )
             ],
             [
@@ -320,7 +384,7 @@ async def show_management_lesson(
             [
                 InlineKeyboardButton(
                     "📚 منوی مدیریت",
-                    callback_data="management_menu",
+                    callback_data="menu_management",
                 )
             ],
         ]
@@ -331,13 +395,18 @@ async def show_management_lesson(
         keyboard,
     )
 # ==========================================================
-# Quiz data
+# Management Quiz Questions
 # ==========================================================
 MANAGEMENT_QUIZ_QUESTIONS: list[dict[str, Any]] = [
     {
-        "question": "کدام گزینه تعریف مناسب‌تری از مدیریت ارائه می‌دهد؟",
+        "question": (
+            "کدام گزینه تعریف مناسب‌تری از مدیریت ارائه می‌دهد؟"
+        ),
         "options": [
-            "فرایند برنامه‌ریزی، سازماندهی، رهبری و کنترل منابع برای دستیابی به اهداف",
+            (
+                "فرایند برنامه‌ریزی، سازماندهی، "
+                "رهبری و کنترل منابع برای دستیابی به اهداف"
+            ),
             "فرایند ثبت اطلاعات مالی سازمان",
             "فرایند تبلیغات و فروش محصولات",
             "فرایند تولید کالا بدون توجه به منابع",
@@ -345,7 +414,9 @@ MANAGEMENT_QUIZ_QUESTIONS: list[dict[str, Any]] = [
         "correct_index": 0,
     },
     {
-        "question": "کدام گزینه از وظایف اصلی مدیریت است؟",
+        "question": (
+            "کدام گزینه از وظایف اصلی مدیریت است؟"
+        ),
         "options": [
             "برنامه‌ریزی",
             "حذف کامل ریسک",
@@ -355,7 +426,9 @@ MANAGEMENT_QUIZ_QUESTIONS: list[dict[str, Any]] = [
         "correct_index": 0,
     },
     {
-        "question": "اثربخشی در مدیریت بیشتر به چه مفهومی اشاره دارد؟",
+        "question": (
+            "اثربخشی در مدیریت بیشتر به چه مفهومی اشاره دارد؟"
+        ),
         "options": [
             "دستیابی به اهداف",
             "کاهش تعداد کارکنان",
@@ -365,7 +438,9 @@ MANAGEMENT_QUIZ_QUESTIONS: list[dict[str, Any]] = [
         "correct_index": 0,
     },
     {
-        "question": "کدام مورد بیشتر با مدیریت علمی مرتبط است؟",
+        "question": (
+            "کدام مورد بیشتر با مدیریت علمی مرتبط است؟"
+        ),
         "options": [
             "فردریک تیلور",
             "آبراهام مازلو",
@@ -375,7 +450,9 @@ MANAGEMENT_QUIZ_QUESTIONS: list[dict[str, Any]] = [
         "correct_index": 0,
     },
     {
-        "question": "کدام مفهوم با هنری فایول ارتباط بیشتری دارد؟",
+        "question": (
+            "کدام مفهوم با هنری فایول ارتباط بیشتری دارد؟"
+        ),
         "options": [
             "اصول عمومی مدیریت",
             "نظریه انتظار",
@@ -385,7 +462,9 @@ MANAGEMENT_QUIZ_QUESTIONS: list[dict[str, Any]] = [
         "correct_index": 0,
     },
     {
-        "question": "در تحلیل SWOT، کدام مورد معمولاً عامل داخلی محسوب می‌شود؟",
+        "question": (
+            "در تحلیل SWOT، کدام مورد معمولاً عامل داخلی محسوب می‌شود؟"
+        ),
         "options": [
             "نقطه قوت",
             "فرصت بازار",
@@ -395,7 +474,9 @@ MANAGEMENT_QUIZ_QUESTIONS: list[dict[str, Any]] = [
         "correct_index": 0,
     },
     {
-        "question": "هدف اصلی برنامه‌ریزی چیست؟",
+        "question": (
+            "هدف اصلی برنامه‌ریزی چیست؟"
+        ),
         "options": [
             "تعیین اهداف و مسیر دستیابی به آنها",
             "افزایش هزینه‌های سازمان",
@@ -405,7 +486,9 @@ MANAGEMENT_QUIZ_QUESTIONS: list[dict[str, Any]] = [
         "correct_index": 0,
     },
     {
-        "question": "حیطه نظارت به چه چیزی اشاره دارد؟",
+        "question": (
+            "حیطه نظارت به چه چیزی اشاره دارد؟"
+        ),
         "options": [
             "تعداد افرادی که مستقیماً تحت نظارت یک مدیر هستند",
             "تعداد کل کارکنان سازمان",
@@ -415,7 +498,9 @@ MANAGEMENT_QUIZ_QUESTIONS: list[dict[str, Any]] = [
         "correct_index": 0,
     },
     {
-        "question": "در مدیریت منابع انسانی، انتخاب کارکنان به چه معناست؟",
+        "question": (
+            "در مدیریت منابع انسانی، انتخاب کارکنان به چه معناست؟"
+        ),
         "options": [
             "گزینش فرد مناسب برای شغل موردنظر",
             "انتشار آگهی استخدام",
@@ -425,7 +510,9 @@ MANAGEMENT_QUIZ_QUESTIONS: list[dict[str, Any]] = [
         "correct_index": 0,
     },
     {
-        "question": "کدام مفهوم بیشتر با رهبری ارتباط دارد؟",
+        "question": (
+            "کدام مفهوم بیشتر با رهبری ارتباط دارد؟"
+        ),
         "options": [
             "نفوذ و اثرگذاری بر افراد",
             "ثبت اسناد حسابداری",
@@ -436,11 +523,11 @@ MANAGEMENT_QUIZ_QUESTIONS: list[dict[str, Any]] = [
     },
 ]
 # ==========================================================
-# Quiz helpers
+# Quiz Helpers
 # ==========================================================
 def _get_quiz_questions() -> list[dict[str, Any]]:
     """
-    Return a safe copy of the quiz questions.
+    Return a safe copy of quiz questions.
     """
     return [
         {
@@ -456,7 +543,7 @@ def _get_current_quiz_question(
     context: ContextTypes.DEFAULT_TYPE,
 ) -> dict[str, Any] | None:
     """
-    Return the current quiz question.
+    Return the current Management quiz question.
     """
     index = context.user_data.get(
         QUIZ_QUESTION_KEY,
@@ -469,16 +556,17 @@ def _get_current_quiz_question(
         return None
     return questions[index]
 # ==========================================================
-# Start Management quiz
+# Start Management Quiz
 # ==========================================================
 async def start_management_quiz(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Start the Management quiz.
-    This function exists explicitly because core/menu.py
-    imports it.
+    Start Management quiz.
+    Supports:
+        management_quiz:start
+        management_quiz_start
     """
     questions = _get_quiz_questions()
     if not questions:
@@ -490,32 +578,38 @@ async def start_management_quiz(
                     [
                         InlineKeyboardButton(
                             "🔙 بازگشت",
-                            callback_data="management_menu",
+                            callback_data="menu_management",
                         )
                     ]
                 ]
             ),
         )
         return
-    context.user_data[QUIZ_QUESTION_KEY] = 0
-    context.user_data[QUIZ_SCORE_KEY] = 0
-    context.user_data[QUIZ_TOTAL_KEY] = len(
-        questions
-    )
-    context.user_data[QUIZ_ACTIVE_KEY] = True
+    context.user_data[
+        QUIZ_QUESTION_KEY
+    ] = 0
+    context.user_data[
+        QUIZ_SCORE_KEY
+    ] = 0
+    context.user_data[
+        QUIZ_TOTAL_KEY
+    ] = len(questions)
+    context.user_data[
+        QUIZ_ACTIVE_KEY
+    ] = True
     await _send_management_quiz_question(
         update,
         context,
     )
 # ==========================================================
-# Send quiz question
+# Send Current Quiz Question
 # ==========================================================
 async def _send_management_quiz_question(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Send current Management quiz question.
+    Display the current Management quiz question.
     """
     question = _get_current_quiz_question(
         context
@@ -543,7 +637,7 @@ async def _send_management_quiz_question(
                 InlineKeyboardButton(
                     option,
                     callback_data=(
-                        f"management_quiz_answer:"
+                        f"quiz_answer:"
                         f"{option_index}"
                     ),
                 )
@@ -553,21 +647,21 @@ async def _send_management_quiz_question(
         [
             InlineKeyboardButton(
                 "❌ پایان آزمون",
-                callback_data="management_quiz_stop",
+                callback_data="quiz_cancel",
             )
         ]
     )
     await _edit_or_reply(
         update,
         (
-            f"📝 آزمون مدیریت\n\n"
+            "📝 <b>آزمون مدیریت</b>\n\n"
             f"سؤال {index + 1} از {total}\n\n"
             f"{question['question']}"
         ),
         InlineKeyboardMarkup(keyboard),
     )
 # ==========================================================
-# Answer Management quiz
+# Answer Management Quiz
 # ==========================================================
 async def answer_management_quiz(
     update: Update,
@@ -575,15 +669,19 @@ async def answer_management_quiz(
 ) -> None:
     """
     Process a Management quiz answer.
-    This function exists explicitly because core/menu.py
-    imports it.
+    Compatible with:
+        quiz_answer:<index>
+        management_quiz_answer:<index>
     """
     query = update.callback_query
     if query is None:
         return
     data = query.data or ""
-    if not data.startswith(
-        "management_quiz_answer:"
+    if not (
+        data.startswith("quiz_answer:")
+        or data.startswith(
+            "management_quiz_answer:"
+        )
     ):
         return
     if not context.user_data.get(
@@ -598,13 +696,13 @@ async def answer_management_quiz(
                     [
                         InlineKeyboardButton(
                             "📝 شروع آزمون",
-                            callback_data="management_quiz_start",
+                            callback_data="management_quiz:start",
                         )
                     ],
                     [
                         InlineKeyboardButton(
                             "🔙 بازگشت",
-                            callback_data="management_menu",
+                            callback_data="menu_management",
                         )
                     ],
                 ]
@@ -700,7 +798,7 @@ async def answer_management_quiz(
             update,
             (
                 f"{result_text}\n\n"
-                "🏁 آزمون به پایان رسید.\n\n"
+                "🏁 <b>آزمون به پایان رسید.</b>\n\n"
                 f"📊 نتیجه: {score} از {total}"
             ),
             InlineKeyboardMarkup(
@@ -708,13 +806,13 @@ async def answer_management_quiz(
                     [
                         InlineKeyboardButton(
                             "🔄 آزمون مجدد",
-                            callback_data="management_quiz_start",
+                            callback_data="management_quiz:start",
                         )
                     ],
                     [
                         InlineKeyboardButton(
                             "📚 منوی مدیریت",
-                            callback_data="management_menu",
+                            callback_data="menu_management",
                         )
                     ],
                 ]
@@ -726,13 +824,13 @@ async def answer_management_quiz(
             [
                 InlineKeyboardButton(
                     "➡️ سؤال بعدی",
-                    callback_data="management_quiz_next",
+                    callback_data="management_quiz:next",
                 )
             ],
             [
                 InlineKeyboardButton(
                     "❌ پایان آزمون",
-                    callback_data="management_quiz_stop",
+                    callback_data="quiz_cancel",
                 )
             ],
         ]
@@ -743,7 +841,7 @@ async def answer_management_quiz(
         keyboard,
     )
 # ==========================================================
-# Next quiz question
+# Next Quiz Question
 # ==========================================================
 async def next_management_quiz_question(
     update: Update,
@@ -766,14 +864,14 @@ async def next_management_quiz_question(
         context,
     )
 # ==========================================================
-# Finish quiz
+# Finish Quiz
 # ==========================================================
 async def _finish_management_quiz(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Finish Management quiz and show score.
+    Finish Management quiz.
     """
     score = context.user_data.get(
         QUIZ_SCORE_KEY,
@@ -789,7 +887,7 @@ async def _finish_management_quiz(
     await _edit_or_reply(
         update,
         (
-            "🏁 آزمون مدیریت به پایان رسید.\n\n"
+            "🏁 <b>آزمون مدیریت به پایان رسید.</b>\n\n"
             f"📊 امتیاز شما: {score} از {total}"
         ),
         InlineKeyboardMarkup(
@@ -797,27 +895,29 @@ async def _finish_management_quiz(
                 [
                     InlineKeyboardButton(
                         "🔄 آزمون مجدد",
-                        callback_data="management_quiz_start",
+                        callback_data="management_quiz:start",
                     )
                 ],
                 [
                     InlineKeyboardButton(
                         "📚 منوی مدیریت",
-                        callback_data="management_menu",
+                        callback_data="menu_management",
                     )
                 ],
             ]
         ),
     )
 # ==========================================================
-# Stop quiz
+# Cancel Management Quiz
 # ==========================================================
-async def stop_management_quiz(
+async def cancel_management_quiz(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Stop the current Management quiz.
+    Cancel/stop the current Management quiz.
+    This function exists explicitly because core/menu.py
+    imports it.
     """
     score = context.user_data.get(
         QUIZ_SCORE_KEY,
@@ -833,7 +933,7 @@ async def stop_management_quiz(
     await _edit_or_reply(
         update,
         (
-            "⏹ آزمون متوقف شد.\n\n"
+            "⏹ <b>آزمون مدیریت متوقف شد.</b>\n\n"
             f"📊 نتیجه فعلی: {score} از {total}"
         ),
         InlineKeyboardMarkup(
@@ -841,33 +941,49 @@ async def stop_management_quiz(
                 [
                     InlineKeyboardButton(
                         "🔄 شروع دوباره",
-                        callback_data="management_quiz_start",
+                        callback_data="management_quiz:start",
                     )
                 ],
                 [
                     InlineKeyboardButton(
                         "📚 منوی مدیریت",
-                        callback_data="management_menu",
+                        callback_data="menu_management",
                     )
                 ],
             ]
         ),
     )
 # ==========================================================
-# Health check
+# Backward-Compatible Stop Function
+# ==========================================================
+async def stop_management_quiz(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """
+    Backward-compatible alias for cancel_management_quiz.
+    """
+    await cancel_management_quiz(
+        update,
+        context,
+    )
+# ==========================================================
+# Health Check
 # ==========================================================
 def management_handlers_health_check() -> bool:
     """
-    Basic health check for the Management handlers.
+    Basic Management handlers health check.
     """
     try:
         required_functions = (
             show_management_menu,
+            show_management_chapter,
             show_management_chapter_menu,
             show_management_lesson,
             start_management_quiz,
             answer_management_quiz,
             next_management_quiz_question,
+            cancel_management_quiz,
             stop_management_quiz,
         )
         return all(
@@ -875,17 +991,22 @@ def management_handlers_health_check() -> bool:
             for function in required_functions
         )
     except Exception:
+        logger.exception(
+            "Management handlers health check failed."
+        )
         return False
 # ==========================================================
-# Public exports
+# Public Exports
 # ==========================================================
 __all__ = [
     "show_management_menu",
+    "show_management_chapter",
     "show_management_chapter_menu",
     "show_management_lesson",
     "start_management_quiz",
     "answer_management_quiz",
     "next_management_quiz_question",
+    "cancel_management_quiz",
     "stop_management_quiz",
     "management_handlers_health_check",
 ]
