@@ -1,18 +1,23 @@
 """
 Central menu router for Andishkadeh Management & Market.
+
 Connected modules:
 - Main Menu
 - Management
 - Management Quiz
 - International Trade
+- Psychology & Social Work
 """
+
 from __future__ import annotations
+
 import logging
+
 from telegram import Update
 from telegram.ext import ContextTypes
-from core.keyboards import (
-    main_menu_keyboard,
-)
+
+from core.keyboards import main_menu_keyboard
+
 from modules.management.handlers import (
     show_management_menu,
     show_management_chapter,
@@ -21,6 +26,7 @@ from modules.management.handlers import (
     answer_management_quiz,
     cancel_management_quiz,
 )
+
 from modules.international_trade.handlers import (
     show_international_trade_menu,
     show_international_trade_chapters,
@@ -31,33 +37,33 @@ from modules.international_trade.handlers import (
     answer_international_trade_quiz,
     cancel_international_trade_quiz,
 )
-# ==========================================================
-# Logging
-# ==========================================================
+
+from modules.psychology.handlers import (
+    show_psychology_menu,
+    show_psychology_chapter,
+    show_psychology_lesson,
+    complete_psychology_lesson,
+    start_psychology_quiz,
+    answer_psychology_quiz,
+    cancel_psychology_quiz,
+)
+
+
 logger = logging.getLogger(__name__)
-# ==========================================================
-# Main Menu Text
-# ==========================================================
+
+
 MAIN_MENU_TEXT = (
     "🏛️ <b>اندیشکده مدیریت و بازار</b>\n\n"
     "لطفاً بخش موردنظر خود را انتخاب کنید:"
 )
-# ==========================================================
-# Main Menu
-# ==========================================================
+
+
 async def show_main_menu(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    """
-    Show the main bot menu.
-    Supports:
-    - Telegram messages
-    - Callback queries
-    """
-    # ------------------------------------------------------
-    # Message
-    # ------------------------------------------------------
+    """Show the main bot menu."""
+
     if update.message:
         await update.message.reply_text(
             MAIN_MENU_TEXT,
@@ -65,17 +71,17 @@ async def show_main_menu(
             parse_mode="HTML",
         )
         return
-    # ------------------------------------------------------
-    # Callback Query
-    # ------------------------------------------------------
+
     if update.callback_query:
         query = update.callback_query
+
         try:
             await query.answer()
         except Exception:
             logger.exception(
                 "Failed to answer main menu callback."
             )
+
         try:
             await query.edit_message_text(
                 MAIN_MENU_TEXT,
@@ -84,50 +90,52 @@ async def show_main_menu(
             )
         except Exception:
             logger.exception(
-                "Failed to edit message for main menu."
+                "Failed to edit main menu message."
             )
-# ==========================================================
-# Central Menu Router
-# ==========================================================
+
+
 async def route_menu_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
     Route callback queries to the correct module.
-    Callback priority:
-    1. Main Menu
-    2. Management
-    3. Management Quiz
-    4. International Trade
-    5. Fallback
     """
+
     query = update.callback_query
+
     if query is None:
         return
+
     data = query.data or ""
+
     logger.debug(
         "Central menu callback received: %s",
         data,
     )
+
     # ======================================================
     # Main Menu
     # ======================================================
+
     if data == "menu_main":
         await show_main_menu(
             update,
             context,
         )
         return
+
     # ======================================================
     # Management
     # ======================================================
+
     if data == "menu_management":
         await show_management_menu(
             update,
             context,
         )
         return
+
     if data.startswith(
         "management_chapter:"
     ):
@@ -136,6 +144,7 @@ async def route_menu_callback(
             context,
         )
         return
+
     if data.startswith(
         "management_lesson:"
     ):
@@ -144,9 +153,7 @@ async def route_menu_callback(
             context,
         )
         return
-    # ======================================================
-    # Management Quiz
-    # ======================================================
+
     if data.startswith(
         "management_quiz:"
     ):
@@ -155,6 +162,7 @@ async def route_menu_callback(
             context,
         )
         return
+
     if data.startswith(
         "quiz_answer:"
     ):
@@ -163,27 +171,35 @@ async def route_menu_callback(
             context,
         )
         return
+
     if data == "quiz_cancel":
         await cancel_management_quiz(
             update,
             context,
         )
         return
+
     # ======================================================
     # International Trade
     # ======================================================
-    if data == "menu_international_trade":
+
+    if data in {
+        "menu_international_trade",
+        "menu_trade",
+    }:
         await show_international_trade_menu(
             update,
             context,
         )
         return
+
     if data == "trade_chapters":
         await show_international_trade_chapters(
             update,
             context,
         )
         return
+
     if data.startswith(
         "trade_chapter:"
     ):
@@ -192,6 +208,7 @@ async def route_menu_callback(
             context,
         )
         return
+
     if data.startswith(
         "trade_lesson:"
     ):
@@ -200,6 +217,7 @@ async def route_menu_callback(
             context,
         )
         return
+
     if data.startswith(
         "trade_complete:"
     ):
@@ -208,9 +226,7 @@ async def route_menu_callback(
             context,
         )
         return
-    # ======================================================
-    # International Trade Quiz
-    # ======================================================
+
     if data.startswith(
         "trade_quiz:"
     ):
@@ -219,6 +235,7 @@ async def route_menu_callback(
             context,
         )
         return
+
     if data.startswith(
         "trade_quiz_answer:"
     ):
@@ -227,6 +244,7 @@ async def route_menu_callback(
             context,
         )
         return
+
     if data.startswith(
         "trade_quiz_cancel:"
     ):
@@ -235,9 +253,74 @@ async def route_menu_callback(
             context,
         )
         return
+
     # ======================================================
-    # Unknown Callback
+    # Psychology & Social Work
     # ======================================================
+
+    if data == "menu_psychology":
+        await show_psychology_menu(
+            update,
+            context,
+        )
+        return
+
+    if data.startswith(
+        "psychology_chapter:"
+    ):
+        await show_psychology_chapter(
+            update,
+            context,
+        )
+        return
+
+    if data.startswith(
+        "psychology_lesson:"
+    ):
+        await show_psychology_lesson(
+            update,
+            context,
+        )
+        return
+
+    if data.startswith(
+        "psychology_complete:"
+    ):
+        await complete_psychology_lesson(
+            update,
+            context,
+        )
+        return
+
+    if data.startswith(
+        "psychology_quiz:"
+    ):
+        await start_psychology_quiz(
+            update,
+            context,
+        )
+        return
+
+    if data.startswith(
+        "psychology_quiz_answer:"
+    ):
+        await answer_psychology_quiz(
+            update,
+            context,
+        )
+        return
+
+    if data == "psychology_quiz_cancel":
+        await cancel_psychology_quiz(
+            update,
+            context,
+        )
+        return
+
+    # ======================================================
+    # Fallback
+    # ======================================================
+
     try:
         await query.answer(
             "این بخش هنوز فعال نشده است.",
@@ -248,27 +331,21 @@ async def route_menu_callback(
             "Failed to answer unknown callback: %s",
             data,
         )
-# ==========================================================
-# Health Check
-# ==========================================================
+
+
 def menu_health_check() -> bool:
-    """
-    Basic health check for the central menu system.
-    Returns:
-        True when the menu system is correctly configured.
-    """
+    """Basic central menu health check."""
+
     try:
-        if not MAIN_MENU_TEXT:
-            return False
-        if main_menu_keyboard is None:
-            return False
-        if show_management_menu is None:
-            return False
-        if show_international_trade_menu is None:
-            return False
-        if route_menu_callback is None:
-            return False
-        return True
+        return bool(
+            MAIN_MENU_TEXT
+            and main_menu_keyboard
+            and show_management_menu
+            and show_international_trade_menu
+            and show_psychology_menu
+            and route_menu_callback
+        )
+
     except Exception:
         logger.exception(
             "Central menu health check failed."
