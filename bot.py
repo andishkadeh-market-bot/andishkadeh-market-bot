@@ -10,6 +10,7 @@ Core:
 - Admin Dashboard
 - Management module
 - General Exam module
+- International Trade module
 """
 from __future__ import annotations
 import logging
@@ -54,6 +55,16 @@ from modules.exam.data import (
 from modules.exam.service import (
     exam_service_health_check,
 )
+from modules.international_trade.handlers import (
+    route_international_trade_callback,
+    international_trade_handlers_health_check,
+)
+from modules.international_trade.service import (
+    get_module_info,
+    get_chapters,
+    get_lessons,
+    get_lesson,
+)
 # ==========================================================
 # Logging
 # ==========================================================
@@ -76,6 +87,8 @@ GENERAL_EXAM_CHAPTER_ID = "general"
 GENERAL_EXAM_CHAPTER_TITLE = "آزمون عمومی"
 GENERAL_EXAM_LESSON_ID = "general_quiz"
 GENERAL_EXAM_LESSON_TITLE = "آزمون عمومی"
+INTERNATIONAL_TRADE_MODULE_ID = "international_trade"
+INTERNATIONAL_TRADE_MODULE_TITLE = "تجارت بین‌الملل"
 # ==========================================================
 # Management Auto Registry
 # ==========================================================
@@ -153,11 +166,11 @@ def register_management_content() -> dict[str, int]:
 # ==========================================================
 def register_general_exam_content() -> dict[str, int]:
     """
-    Register the General Exam module in the central Registry.
-    The General Exam is represented as:
-        Module
-            └── Chapter: general
-                    └── Lesson: general_quiz
+    Register the General Exam module.
+    Structure:
+        general_exam
+            └── general
+                    └── general_quiz
     """
     logger.info(
         "Starting General Exam Auto Registry..."
@@ -199,14 +212,161 @@ def register_general_exam_content() -> dict[str, int]:
         "lessons": statistics["lessons"],
     }
 # ==========================================================
+# International Trade Auto Registry
+# ==========================================================
+def register_international_trade_content() -> dict[str, int]:
+    """
+    Register the complete International Trade module.
+    Content is loaded from:
+        modules.international_trade.service
+    Structure:
+        international_trade
+            ├── chapters
+            │     └── lessons
+            │
+            └── lesson data
+    """
+    logger.info(
+        "Starting International Trade Auto Registry..."
+    )
+    module_id = INTERNATIONAL_TRADE_MODULE_ID
+    module_title = INTERNATIONAL_TRADE_MODULE_TITLE
+    try:
+        module_info = get_module_info()
+        if isinstance(module_info, dict):
+            module_id = str(
+                module_info.get(
+                    "id",
+                    module_info.get(
+                        "module_id",
+                        module_id,
+                    ),
+                )
+            )
+            module_title = str(
+                module_info.get(
+                    "title",
+                    module_title,
+                )
+            )
+    except Exception:
+        logger.exception(
+            "Failed to load International Trade module info."
+        )
+    registry.register_module(
+        module_id=module_id,
+        title=module_title,
+    )
+    try:
+        chapters = get_chapters()
+    except Exception:
+        logger.exception(
+            "Failed to load International Trade chapters."
+        )
+        chapters = []
+    registered_chapters = 0
+    registered_lessons = 0
+    for chapter in chapters:
+        if not isinstance(
+            chapter,
+            dict,
+        ):
+            continue
+        chapter_id = (
+            chapter.get("id")
+            or chapter.get("chapter_id")
+        )
+        if not chapter_id:
+            continue
+        chapter_id = str(
+            chapter_id
+        )
+        chapter_title = (
+            chapter.get("title")
+            or chapter.get("name")
+            or chapter_id
+        )
+        registry.register_chapter(
+            module_id=module_id,
+            chapter_id=chapter_id,
+            title=str(chapter_title),
+        )
+        registered_chapters += 1
+        try:
+            lessons = get_lessons(
+                chapter_id
+            )
+        except Exception:
+            logger.exception(
+                (
+                    "Failed to load lessons "
+                    "for International Trade chapter %s."
+                ),
+                chapter_id,
+            )
+            lessons = []
+        for lesson in lessons:
+            if not isinstance(
+                lesson,
+                dict,
+            ):
+                continue
+            lesson_id = (
+                lesson.get("id")
+                or lesson.get("lesson_id")
+            )
+            if not lesson_id:
+                continue
+            lesson_id = str(
+                lesson_id
+            )
+            lesson_title = (
+                lesson.get("title")
+                or lesson.get("name")
+                or lesson_id
+            )
+            registry.register_lesson(
+                module_id=module_id,
+                chapter_id=chapter_id,
+                lesson_id=lesson_id,
+                title=str(lesson_title),
+                data=lesson,
+            )
+            registered_lessons += 1
+    statistics = registry.statistics()
+    logger.info(
+        (
+            "International Trade Auto Registry complete: "
+            "module=%s chapters=%s lessons=%s"
+        ),
+        module_id,
+        registered_chapters,
+        registered_lessons,
+    )
+    logger.info(
+        (
+            "Global Registry after International Trade: "
+            "modules=%s chapters=%s lessons=%s"
+        ),
+        statistics["modules"],
+        statistics["chapters"],
+        statistics["lessons"],
+    )
+    return {
+        "modules": statistics["modules"],
+        "chapters": statistics["chapters"],
+        "lessons": statistics["lessons"],
+    }
+# ==========================================================
 # Complete Auto Registry
 # ==========================================================
 def register_all_content() -> dict[str, int]:
     """
-    Register all available modules.
-    Currently:
+    Register all currently available modules.
+    Modules:
     - Management
     - General Exam
+    - International Trade
     """
     logger.info(
         "========================================"
@@ -216,6 +376,7 @@ def register_all_content() -> dict[str, int]:
     )
     register_management_content()
     register_general_exam_content()
+    register_international_trade_content()
     statistics = registry.statistics()
     result = {
         "modules": statistics["modules"],
@@ -236,18 +397,20 @@ def register_all_content() -> dict[str, int]:
     )
     return result
 # ==========================================================
-# Core health checks
+# Core Health Checks
 # ==========================================================
 def run_core_health_checks() -> bool:
     """
-    Run local health checks for the core systems.
+    Run local health checks for core systems.
     No Telegram API request is performed.
     """
     logger.info(
         "Running core health checks..."
     )
     try:
-        registry_stats = registry.statistics()
+        registry_stats = (
+            registry.statistics()
+        )
         if not isinstance(
             registry_stats,
             dict,
@@ -257,7 +420,10 @@ def run_core_health_checks() -> bool:
             )
             return False
         if (
-            registry_stats.get("modules", 0)
+            registry_stats.get(
+                "modules",
+                0,
+            )
             < 1
         ):
             logger.error(
@@ -274,11 +440,11 @@ def run_core_health_checks() -> bool:
         return False
     return True
 # ==========================================================
-# Exam health checks
+# General Exam Health Checks
 # ==========================================================
 def run_exam_health_checks() -> bool:
     """
-    Run all local health checks for the General Exam.
+    Run all local health checks for General Exam.
     Checks:
     - Question bank
     - Exam service
@@ -319,7 +485,65 @@ def run_exam_health_checks() -> bool:
         )
         return False
 # ==========================================================
-# Core initialization
+# International Trade Health Checks
+# ==========================================================
+def run_international_trade_health_checks() -> bool:
+    """
+    Run local health checks for International Trade.
+    """
+    logger.info(
+        "Running International Trade health checks..."
+    )
+    try:
+        if not international_trade_handlers_health_check():
+            logger.error(
+                "International Trade handlers health check failed."
+            )
+            return False
+        logger.info(
+            "International Trade handlers: OK"
+        )
+        try:
+            module_info = get_module_info()
+            if not isinstance(
+                module_info,
+                dict,
+            ):
+                logger.error(
+                    "International Trade module info is invalid."
+                )
+                return False
+        except Exception:
+            logger.exception(
+                "International Trade module info health check failed."
+            )
+            return False
+        try:
+            chapters = get_chapters()
+            if not isinstance(
+                chapters,
+                list,
+            ):
+                logger.error(
+                    "International Trade chapters data is invalid."
+                )
+                return False
+        except Exception:
+            logger.exception(
+                "International Trade chapters health check failed."
+            )
+            return False
+        logger.info(
+            "International Trade data: OK"
+        )
+        return True
+    except Exception:
+        logger.exception(
+            "International Trade health checks failed."
+        )
+        return False
+# ==========================================================
+# Core Initialization
 # ==========================================================
 def initialize_core() -> None:
     """
@@ -330,7 +554,8 @@ def initialize_core() -> None:
     3. Progress
     4. Statistics
     5. Core health checks
-    6. Exam health checks
+    6. General Exam health checks
+    7. International Trade health checks
     """
     logger.info(
         "========================================"
@@ -348,7 +573,9 @@ def initialize_core() -> None:
     logger.info(
         "Initializing complete Auto Registry..."
     )
-    registry_result = register_all_content()
+    registry_result = (
+        register_all_content()
+    )
     logger.info(
         (
             "Registry initialized: "
@@ -379,7 +606,7 @@ def initialize_core() -> None:
         "Statistics system initialized successfully."
     )
     # ------------------------------------------------------
-    # Health checks
+    # Health Checks
     # ------------------------------------------------------
     if not run_core_health_checks():
         raise RuntimeError(
@@ -388,6 +615,10 @@ def initialize_core() -> None:
     if not run_exam_health_checks():
         raise RuntimeError(
             "General Exam health checks failed."
+        )
+    if not run_international_trade_health_checks():
+        raise RuntimeError(
+            "International Trade health checks failed."
         )
     logger.info(
         "All core systems initialized successfully."
@@ -402,10 +633,7 @@ async def register_telegram_user(
     update: Update,
 ) -> bool:
     """
-    Register or update the current Telegram user.
-    Returns:
-        True if the user was successfully registered.
-        False otherwise.
+    Register or update current Telegram user.
     """
     user = update.effective_user
     if user is None:
@@ -448,8 +676,6 @@ async def start(
 ) -> None:
     """
     Handle /start.
-    The user is automatically registered before
-    the main menu is displayed.
     """
     if update.message is None:
         return
@@ -477,7 +703,6 @@ async def menu_command(
 ) -> None:
     """
     Handle /menu.
-    Re-registers the user and displays the main menu.
     """
     if update.message is None:
         return
@@ -503,10 +728,9 @@ async def callback_user_registry(
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Automatically register users interacting with
-    callback buttons.
-    This handler intentionally runs in non-blocking mode
-    so the actual callback routers can process the event.
+    Automatically register users interacting
+    with callback buttons.
+    This handler is intentionally non-blocking.
     """
     user = update.effective_user
     if user is None:
@@ -527,7 +751,7 @@ async def callback_user_registry(
             user.id,
         )
 # ==========================================================
-# Error handler
+# Error Handler
 # ==========================================================
 async def error_handler(
     update: object,
@@ -542,16 +766,17 @@ async def error_handler(
         exc_info=context.error,
     )
 # ==========================================================
-# Application factory
+# Application Factory
 # ==========================================================
 def build_application() -> Application:
     """
-    Create and configure the Telegram application.
-    Callback order is important:
+    Create and configure Telegram application.
+    Callback order:
     1. Auto User Registry
     2. Admin callbacks
     3. General Exam callbacks
-    4. Generic menu callbacks
+    4. International Trade callbacks
+    5. Generic menu callbacks
     """
     if not BOT_TOKEN:
         raise RuntimeError(
@@ -596,10 +821,6 @@ def build_application() -> Application:
     )
     # ======================================================
     # Admin callbacks
-    #
-    # IMPORTANT:
-    # Admin callbacks must be registered before
-    # the generic menu callback router.
     # ======================================================
     application.add_handler(
         CallbackQueryHandler(
@@ -619,7 +840,7 @@ def build_application() -> Application:
     # ======================================================
     # General Exam callbacks
     #
-    # Must be registered before the generic menu router.
+    # Must be registered before generic menu router.
     # ======================================================
     application.add_handler(
         CallbackQueryHandler(
@@ -634,7 +855,30 @@ def build_application() -> Application:
         )
     )
     # ======================================================
-    # Generic menu callbacks
+    # International Trade callbacks
+    #
+    # IMPORTANT:
+    # Must be registered before generic menu router.
+    # ======================================================
+    application.add_handler(
+        CallbackQueryHandler(
+            route_international_trade_callback,
+            pattern=(
+                r"^("
+                r"menu_international_trade"
+                r"|trade_chapters"
+                r"|trade_chapter:.+"
+                r"|trade_lesson:.+:.+"
+                r"|trade_complete:.+:.+"
+                r"|trade_quiz:.+:.+"
+                r"|trade_quiz_answer:.+:.+:\d+:\d+"
+                r"|trade_quiz_cancel:.+:.+"
+                r")$"
+            ),
+        )
+    )
+    # ======================================================
+    # Generic Menu callbacks
     # ======================================================
     application.add_handler(
         CallbackQueryHandler(
@@ -642,7 +886,7 @@ def build_application() -> Application:
         )
     )
     # ======================================================
-    # Error handler
+    # Error Handler
     # ======================================================
     application.add_error_handler(
         error_handler
@@ -652,24 +896,31 @@ def build_application() -> Application:
     )
     return application
 # ==========================================================
-# Integration health check
+# Integration Health Check
 # ==========================================================
 def integration_health_check() -> bool:
     """
-    Run a local integration health check.
+    Run local integration health checks.
     Verifies:
     - Registry
-    - General Exam data
-    - General Exam service
-    - General Exam handlers
+    - General Exam
+    - International Trade
     """
     try:
         if not run_core_health_checks():
             return False
         if not run_exam_health_checks():
             return False
+        if not run_international_trade_health_checks():
+            return False
+        logger.info(
+            "========================================"
+        )
         logger.info(
             "Integration health check: ALL TESTS PASSED"
+        )
+        logger.info(
+            "========================================"
         )
         return True
     except Exception:
@@ -706,7 +957,7 @@ def main() -> None:
         drop_pending_updates=True
     )
 # ==========================================================
-# Entry point
+# Entry Point
 # ==========================================================
 if __name__ == "__main__":
     main()
