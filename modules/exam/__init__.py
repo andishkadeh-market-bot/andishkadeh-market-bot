@@ -1,9 +1,9 @@
-“”“General Exam module for Andishkadeh Management & Market.”””
+"""
+General Exam module for Andishkadeh Management & Market.
 
-MODULE_ID = “general_exam”
-MODULE_TITLE = “📝 آزمون عمومی”
+This package contains the General Exam module.
+"""
 
-all = [
-“MODULE_ID”,
-“MODULE_TITLE”,
-]
+from __future__ import annotations
+
+__all__ = []
