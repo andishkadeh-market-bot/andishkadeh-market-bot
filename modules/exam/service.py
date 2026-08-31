@@ -1,404 +1,486 @@
-“”“Service layer for the General Exam module.
+"""
+Service layer for the General Exam module.
 
 Andishkadeh Management & Market
 
 Responsibilities:
+- Access the general exam question bank
+- Provide exam questions
+- Provide question counts
+- Validate exam data
+- Provide a simple health check
+- Keep business logic independent from Telegram handlers
+"""
 
-* Create exam sessions
-* Manage answers
-* Calculate scores
-* Save statistics
-* Update lesson progress
-    “””
-
-from future import annotations
+from __future__ import annotations
 
 from typing import Any
 
 from modules.exam.data import (
-GENERAL_EXAM_QUESTIONS,
-get_general_exam_questions,
-)
-from modules.statistics.service import record_quiz_result
-from modules.progress.service import (
-complete_lesson,
-start_lesson,
+    GENERAL_EXAM_QUESTIONS,
+    data_health_check,
+    get_general_exam_question_count,
+    get_general_exam_questions,
+    validate_question_bank,
 )
 
-==========================================================
 
-Constants
+# ==========================================================
+# Constants
+# ==========================================================
 
-==========================================================
+MODULE_ID = "exam"
+MODULE_TITLE = "آزمون استخدامی"
 
-MODULE_ID = “general_exam”
-CHAPTER_ID = “general”
-LESSON_ID = “general_quiz”
 
-PASSING_SCORE = 60.0
+# ==========================================================
+# Module Information
+# ==========================================================
 
-==========================================================
+def get_module_id() -> str:
+    """Return the General Exam module ID."""
+    return MODULE_ID
 
-Question helpers
 
-==========================================================
+def get_module_title() -> str:
+    """Return the General Exam module title."""
+    return MODULE_TITLE
+
+
+def get_module_info() -> dict[str, str]:
+    """Return basic information about the General Exam module."""
+    return {
+        "id": MODULE_ID,
+        "module_id": MODULE_ID,
+        "title": MODULE_TITLE,
+        "description": "بانک سوالات آزمون استخدامی و ارزیابی دانش عمومی",
+    }
+
+
+# ==========================================================
+# Questions
+# ==========================================================
 
 def get_questions() -> list[dict[str, Any]]:
-“”“Return the general exam questions.”””
+    """
+    Return a safe copy of all general exam questions.
+    """
+    try:
+        questions = get_general_exam_questions()
 
-return get_general_exam_questions()
+        if not isinstance(questions, list):
+            return []
 
-def get_question_count() -> int:
-“”“Return the number of questions in the exam.”””
+        return [
+            dict(question)
+            for question in questions
+            if isinstance(question, dict)
+        ]
 
-return len(GENERAL_EXAM_QUESTIONS)
+    except Exception:
+        return []
+
+
+def get_exam_questions() -> list[dict[str, Any]]:
+    """
+    Compatibility alias for handlers.
+    """
+    return get_questions()
+
+
+def get_general_exam_questions_service() -> list[dict[str, Any]]:
+    """
+    Compatibility wrapper for the general exam question bank.
+    """
+    return get_questions()
+
+
+# ==========================================================
+# Question Access
+# ==========================================================
 
 def get_question(
-question_index: int,
-) -> dict[str, Any]:
-“”“Return one question by zero-based index.”””
-
-questions = get_general_exam_questions()
-if question_index < 0:
-    raise IndexError(
-        "question_index cannot be negative."
-    )
-if question_index >= len(questions):
-    raise IndexError(
-        "question_index is out of range."
-    )
-return questions[question_index]
-
-==========================================================
-
-Session creation
-
-==========================================================
-
-def create_exam_session(
-telegram_id: int,
-) -> dict[str, Any]:
-“””
-Create a fresh general-exam session.
-
-The session is represented as a plain dictionary so
-Telegram handlers can store it in context.user_data.
-"""
-if telegram_id <= 0:
-    raise ValueError(
-        "telegram_id must be greater than zero."
-    )
-questions = get_general_exam_questions()
-if not questions:
-    raise ValueError(
-        "The general exam contains no questions."
-    )
-start_lesson(
-    telegram_id=telegram_id,
-    module_id=MODULE_ID,
-    chapter_id=CHAPTER_ID,
-    lesson_id=LESSON_ID,
-)
-return {
-    "telegram_id": telegram_id,
-    "module_id": MODULE_ID,
-    "chapter_id": CHAPTER_ID,
-    "lesson_id": LESSON_ID,
-    "questions": questions,
-    "current_index": 0,
-    "answers": [],
-    "correct_answers": 0,
-    "completed": False,
-    "score": 0.0,
-}
-
-==========================================================
-
-Answer handling
-
-==========================================================
-
-def submit_answer(
-session: dict[str, Any],
-answer_index: int,
-) -> dict[str, Any]:
-“””
-Register one answer in an exam session.
-
-Returns information about the submitted answer and
-whether the exam has finished.
-"""
-if not isinstance(session, dict):
-    raise TypeError(
-        "session must be a dictionary."
-    )
-if session.get("completed"):
-    raise ValueError(
-        "The exam session is already completed."
-    )
-questions = session.get("questions")
-if not isinstance(questions, list) or not questions:
-    raise ValueError(
-        "The exam session contains no questions."
-    )
-current_index = int(
-    session.get("current_index", 0)
-)
-if current_index < 0 or current_index >= len(questions):
-    raise IndexError(
-        "Current question index is out of range."
-    )
-if not isinstance(answer_index, int):
-    raise TypeError(
-        "answer_index must be an integer."
-    )
-question = questions[current_index]
-options = question["options"]
-if answer_index < 0 or answer_index >= len(options):
-    raise ValueError(
-        "answer_index is out of range."
-    )
-correct_index = int(
-    question["correct_index"]
-)
-is_correct = (
-    answer_index == correct_index
-)
-if is_correct:
-    session["correct_answers"] = (
-        int(session.get("correct_answers", 0))
-        + 1
-    )
-session["answers"].append(
-    {
-        "question_index": current_index,
-        "answer_index": answer_index,
-        "correct_index": correct_index,
-        "correct": is_correct,
-    }
-)
-session["current_index"] = (
-    current_index + 1
-)
-finished = (
-    session["current_index"]
-    >= len(questions)
-)
-if finished:
-    result = finish_exam(session)
-    return {
-        "finished": True,
-        "correct": is_correct,
-        "question_index": current_index,
-        "correct_index": correct_index,
-        "result": result,
-    }
-return {
-    "finished": False,
-    "correct": is_correct,
-    "question_index": current_index,
-    "correct_index": correct_index,
-    "next_question_index": session["current_index"],
-}
-
-==========================================================
-
-Exam completion
-
-==========================================================
-
-def calculate_exam_score(
-correct_answers: int,
-total_questions: int,
-) -> float:
-“”“Calculate the exam score as a percentage.”””
-
-if total_questions <= 0:
-    raise ValueError(
-        "total_questions must be greater than zero."
-    )
-if correct_answers < 0:
-    raise ValueError(
-        "correct_answers cannot be negative."
-    )
-if correct_answers > total_questions:
-    raise ValueError(
-        "correct_answers cannot exceed total_questions."
-    )
-return round(
-    correct_answers
-    / total_questions
-    * 100,
-    2,
-)
-
-def finish_exam(
-session: dict[str, Any],
-) -> dict[str, Any]:
-“””
-Finish an exam session.
-
-Saves the result through Statistics and marks the
-exam lesson as completed through Progress.
-"""
-if not isinstance(session, dict):
-    raise TypeError(
-        "session must be a dictionary."
-    )
-if session.get("completed"):
-    return {
-        "score": float(
-            session.get("score", 0.0)
-        ),
-        "correct_answers": int(
-            session.get("correct_answers", 0)
-        ),
-        "total_questions": len(
-            session.get("questions", [])
-        ),
-        "passed": (
-            float(
-                session.get("score", 0.0)
-            )
-            >= PASSING_SCORE
-        ),
-    }
-questions = session.get("questions")
-if not isinstance(questions, list) or not questions:
-    raise ValueError(
-        "The exam session contains no questions."
-    )
-telegram_id = int(
-    session["telegram_id"]
-)
-correct_answers = int(
-    session.get("correct_answers", 0)
-)
-total_questions = len(questions)
-score = calculate_exam_score(
-    correct_answers=correct_answers,
-    total_questions=total_questions,
-)
-record_quiz_result(
-    telegram_id=telegram_id,
-    module_id=MODULE_ID,
-    chapter_id=CHAPTER_ID,
-    lesson_id=LESSON_ID,
-    total_questions=total_questions,
-    correct_answers=correct_answers,
-    score=score,
-)
-complete_lesson(
-    telegram_id=telegram_id,
-    module_id=MODULE_ID,
-    chapter_id=CHAPTER_ID,
-    lesson_id=LESSON_ID,
-)
-session["completed"] = True
-session["score"] = score
-return {
-    "score": score,
-    "correct_answers": correct_answers,
-    "wrong_answers": (
-        total_questions
-        - correct_answers
-    ),
-    "total_questions": total_questions,
-    "passed": score >= PASSING_SCORE,
-}
-
-==========================================================
-
-Session helpers
-
-==========================================================
-
-def get_current_question(
-session: dict[str, Any],
+    question_index: int,
 ) -> dict[str, Any] | None:
-“”“Return the current question in a session.”””
+    """
+    Return one question by zero-based index.
+    """
+    try:
+        index = int(question_index)
+    except (TypeError, ValueError):
+        return None
 
-if not isinstance(session, dict):
-    return None
-if session.get("completed"):
-    return None
-questions = session.get("questions")
-if not isinstance(questions, list):
-    return None
-current_index = int(
-    session.get("current_index", 0)
-)
-if current_index < 0 or current_index >= len(questions):
-    return None
-return questions[current_index]
+    questions = get_questions()
 
-def cancel_exam(
-session: dict[str, Any],
-) -> None:
-“”“Cancel an unfinished exam session.”””
+    if index < 0 or index >= len(questions):
+        return None
 
-if not isinstance(session, dict):
-    return
-session["cancelled"] = True
-session["completed"] = False
+    return dict(questions[index])
 
-def is_exam_finished(
-session: dict[str, Any],
-) -> bool:
-“”“Return whether an exam session is finished.”””
 
-if not isinstance(session, dict):
-    return False
-return bool(
-    session.get("completed", False)
-)
+def get_question_by_index(
+    question_index: int,
+) -> dict[str, Any] | None:
+    """
+    Compatibility alias for question lookup.
+    """
+    return get_question(question_index)
 
-def is_exam_cancelled(
-session: dict[str, Any],
-) -> bool:
-“”“Return whether an exam session was cancelled.”””
 
-if not isinstance(session, dict):
-    return False
-return bool(
-    session.get("cancelled", False)
-)
+def get_question_count() -> int:
+    """
+    Return the number of available exam questions.
+    """
+    try:
+        return int(
+            get_general_exam_question_count()
+        )
+    except Exception:
+        return len(
+            GENERAL_EXAM_QUESTIONS
+        )
 
-==========================================================
 
-Health check
+def get_exam_question_count() -> int:
+    """
+    Compatibility alias for question count.
+    """
+    return get_question_count()
 
-==========================================================
 
-def exam_service_health_check() -> bool:
-“”“Validate the general exam service.”””
+# ==========================================================
+# Question Options
+# ==========================================================
 
-try:
-    questions = get_general_exam_questions()
+def get_question_options(
+    question_index: int,
+) -> list[str]:
+    """
+    Return the answer options for one question.
+    """
+    question = get_question(
+        question_index
+    )
+
+    if question is None:
+        return []
+
+    options = question.get(
+        "options",
+        [],
+    )
+
+    if not isinstance(options, list):
+        return []
+
+    return [
+        str(option)
+        for option in options
+    ]
+
+
+def get_correct_index(
+    question_index: int,
+) -> int | None:
+    """
+    Return the correct option index for one question.
+    """
+    question = get_question(
+        question_index
+    )
+
+    if question is None:
+        return None
+
+    value = question.get(
+        "correct_index"
+    )
+
+    if isinstance(value, int):
+        return value
+
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+# ==========================================================
+# Search
+# ==========================================================
+
+def search_questions(
+    keyword: str,
+) -> list[dict[str, Any]]:
+    """
+    Search questions by question text or option text.
+    """
+    if keyword is None:
+        return []
+
+    normalized = str(
+        keyword
+    ).strip().casefold()
+
+    if not normalized:
+        return []
+
+    results: list[dict[str, Any]] = []
+
+    for index, question in enumerate(
+        get_questions()
+    ):
+        question_text = str(
+            question.get(
+                "question",
+                "",
+            )
+        )
+
+        options = question.get(
+            "options",
+            [],
+        )
+
+        option_text = ""
+
+        if isinstance(options, list):
+            option_text = "\n".join(
+                str(option)
+                for option in options
+            )
+
+        searchable = (
+            f"{question_text}\n"
+            f"{option_text}"
+        ).casefold()
+
+        if normalized in searchable:
+            result = dict(question)
+            result["index"] = index
+            results.append(result)
+
+    return results
+
+
+# ==========================================================
+# Exam Statistics
+# ==========================================================
+
+def get_exam_statistics() -> dict[str, int]:
+    """
+    Return basic statistics about the exam question bank.
+    """
+    questions = get_questions()
+
+    return {
+        "modules": 1,
+        "questions": len(questions),
+        "question_count": len(questions),
+    }
+
+
+def get_module_statistics() -> dict[str, Any]:
+    """
+    Return complete module statistics.
+    """
+    return {
+        "module_id": get_module_id(),
+        "title": get_module_title(),
+        **get_exam_statistics(),
+    }
+
+
+# ==========================================================
+# Validation
+# ==========================================================
+
+def validate_exam_data() -> dict[str, Any]:
+    """
+    Validate the General Exam question bank.
+
+    Returns a report instead of raising exceptions.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    try:
+        valid = bool(
+            validate_question_bank()
+        )
+    except Exception as exc:
+        valid = False
+        errors.append(
+            f"Question bank validation failed: {exc}"
+        )
+
+    questions = get_questions()
+
     if not questions:
-        return False
-    for question in questions:
+        errors.append(
+            "No General Exam questions found."
+        )
+
+    for index, question in enumerate(
+        questions,
+        start=1,
+    ):
+        if not isinstance(
+            question,
+            dict,
+        ):
+            errors.append(
+                f"Question #{index} is not a dictionary."
+            )
+            continue
+
+        question_text = question.get(
+            "question"
+        )
+
+        if not question_text:
+            errors.append(
+                f"Question #{index} has no question text."
+            )
+
         options = question.get(
             "options"
         )
+
+        if not isinstance(
+            options,
+            list,
+        ):
+            errors.append(
+                f"Question #{index} has invalid options."
+            )
+        elif len(options) != 4:
+            errors.append(
+                (
+                    f"Question #{index} must have "
+                    f"exactly 4 options."
+                )
+            )
+
         correct_index = question.get(
             "correct_index"
         )
-        if not isinstance(options, list):
-            return False
-        if len(options) != 4:
-            return False
+
         if not isinstance(
             correct_index,
             int,
         ):
-            return False
-        if not (
-            0
-            <= correct_index
-            < len(options)
+            errors.append(
+                (
+                    f"Question #{index} has "
+                    f"an invalid correct_index."
+                )
+            )
+        elif not isinstance(
+            options,
+            list,
+        ) or not (
+            0 <= correct_index < len(options)
         ):
+            errors.append(
+                (
+                    f"Question #{index} has a "
+                    f"correct_index outside its options."
+                )
+            )
+
+    if len(questions) < 10:
+        warnings.append(
+            "The General Exam question bank contains fewer than 10 questions."
+        )
+
+    return {
+        "valid": valid and not errors,
+        "errors": errors,
+        "warnings": warnings,
+        "statistics": get_exam_statistics(),
+    }
+
+
+# ==========================================================
+# Health Check
+# ==========================================================
+
+def exam_service_health_check() -> bool:
+    """
+    Check whether the General Exam service is usable.
+    """
+    try:
+        module_info = get_module_info()
+
+        if not module_info.get("id"):
             return False
-    return True
-except Exception:
-    return False
+
+        if not module_info.get("title"):
+            return False
+
+        if not data_health_check():
+            return False
+
+        report = validate_exam_data()
+
+        return bool(
+            report.get("valid")
+        )
+
+    except Exception:
+        return False
+
+
+def service_health_check() -> bool:
+    """
+    Generic service health-check alias.
+    """
+    return exam_service_health_check()
+
+
+# ==========================================================
+# Public Exports
+# ==========================================================
+
+__all__ = [
+    "get_module_id",
+    "get_module_title",
+    "get_module_info",
+    "get_questions",
+    "get_exam_questions",
+    "get_general_exam_questions_service",
+    "get_question",
+    "get_question_by_index",
+    "get_question_count",
+    "get_exam_question_count",
+    "get_question_options",
+    "get_correct_index",
+    "search_questions",
+    "get_exam_statistics",
+    "get_module_statistics",
+    "validate_exam_data",
+    "exam_service_health_check",
+    "service_health_check",
+]
+
+
+# ==========================================================
+# Local Test
+# ==========================================================
+
+if __name__ == "__main__":
+    print(
+        "General Exam Service Health:",
+        exam_service_health_check(),
+    )
+
+    print(
+        "Module:",
+        get_module_info(),
+    )
+
+    print(
+        "Statistics:",
+        get_exam_statistics(),
+    )
