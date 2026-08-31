@@ -3,6 +3,7 @@ Management Module Data
 Andishkadeh Management & Market
 
 ماژول آموزش تخصصی مدیریت
+
 ساختار:
 - 12 فصل
 - درس‌های تخصصی
@@ -141,12 +142,11 @@ MANAGEMENT_CURRICULUM: list[dict[str, Any]] = [
 
 
 # ==========================================================
-# Compatibility Alias
+# Compatibility: Old Chapter Names
 # ==========================================================
-# بعضی بخش‌های پروژه ممکن است از نام قدیمی
-# MANAGEMENT_CHAPTERS استفاده کنند.
-# بنابراین برای جلوگیری از ImportError این نام
-# به Curriculum اصلی متصل می‌شود.
+
+# بعضی نسخه‌های قدیمی handlers.py ممکن است از MANAGEMENT_CHAPTERS
+# استفاده کنند. این alias برای جلوگیری از ImportError است.
 
 MANAGEMENT_CHAPTERS = MANAGEMENT_CURRICULUM
 
@@ -156,10 +156,6 @@ MANAGEMENT_CHAPTERS = MANAGEMENT_CURRICULUM
 # ==========================================================
 
 MANAGEMENT_LESSONS: dict[str, list[dict[str, Any]]] = {
-
-    # ======================================================
-    # Chapter 01
-    # ======================================================
 
     "chapter_01": [
         {
@@ -197,7 +193,7 @@ MANAGEMENT_LESSONS: dict[str, list[dict[str, Any]]] = {
             "id": "lesson_01_02",
             "title": "وظایف اصلی مدیریت",
             "content": """
-وظایف کلاسیک مدیریت معمولاً شامل چهار حوزه اصلی است:
+وظایف اصلی مدیریت معمولاً شامل چهار حوزه اصلی است:
 
 ۱. برنامه‌ریزی
 ۲. سازماندهی
@@ -220,7 +216,7 @@ MANAGEMENT_LESSONS: dict[str, list[dict[str, Any]]] = {
                 "کنترل به مقایسه عملکرد واقعی و استاندارد مربوط است.",
             ],
             "exam_points": [
-                "چهار وظیفه اصلی مدیریت را به ترتیب بشناسید.",
+                "چهار وظیفه اصلی مدیریت را بشناسید.",
                 "کنترل آخرین مرحله منطقی فرآیند مدیریت است.",
             ],
             "example": (
@@ -246,7 +242,7 @@ MANAGEMENT_LESSONS: dict[str, list[dict[str, Any]]] = {
             "special_points": [
                 "کارایی بیشتر با منابع و هزینه ارتباط دارد.",
                 "اثربخشی بیشتر با اهداف ارتباط دارد.",
-                "هدف نهایی مدیریت مطلوب، هم کارایی و هم اثربخشی است.",
+                "مدیریت مطلوب هم کارایی و هم اثربخشی را دنبال می‌کند.",
             ],
             "exam_points": [
                 "کارایی = انجام درست کارها.",
@@ -259,10 +255,6 @@ MANAGEMENT_LESSONS: dict[str, list[dict[str, Any]]] = {
             ),
         },
     ],
-
-    # ======================================================
-    # Chapter 02
-    # ======================================================
 
     "chapter_02": [
         {
@@ -345,10 +337,6 @@ MANAGEMENT_LESSONS: dict[str, list[dict[str, Any]]] = {
         },
     ],
 
-    # ======================================================
-    # Chapter 03
-    # ======================================================
-
     "chapter_03": [
         {
             "id": "lesson_03_01",
@@ -425,10 +413,6 @@ MANAGEMENT_LESSONS: dict[str, list[dict[str, Any]]] = {
         },
     ],
 
-    # ======================================================
-    # Chapter 04
-    # ======================================================
-
     "chapter_04": [
         {
             "id": "lesson_04_01",
@@ -479,10 +463,6 @@ MANAGEMENT_LESSONS: dict[str, list[dict[str, Any]]] = {
             ),
         },
     ],
-
-    # ======================================================
-    # Chapter 05
-    # ======================================================
 
     "chapter_05": [
         {
@@ -556,10 +536,6 @@ MANAGEMENT_LESSONS: dict[str, list[dict[str, Any]]] = {
         },
     ],
 
-    # ======================================================
-    # Chapter 06
-    # ======================================================
-
     "chapter_06": [
         {
             "id": "lesson_06_01",
@@ -608,10 +584,6 @@ MANAGEMENT_LESSONS: dict[str, list[dict[str, Any]]] = {
             ),
         },
     ],
-
-    # ======================================================
-    # Chapter 07
-    # ======================================================
 
     "chapter_07": [
         {
@@ -663,10 +635,6 @@ MANAGEMENT_LESSONS: dict[str, list[dict[str, Any]]] = {
         },
     ],
 
-    # ======================================================
-    # Chapter 08
-    # ======================================================
-
     "chapter_08": [
         {
             "id": "lesson_08_01",
@@ -712,10 +680,6 @@ KPI یا شاخص کلیدی عملکرد، معیاری است که برای ا
             ),
         },
     ],
-
-    # ======================================================
-    # Chapter 09
-    # ======================================================
 
     "chapter_09": [
         {
@@ -771,10 +735,6 @@ Threats: تهدیدها
         },
     ],
 
-    # ======================================================
-    # Chapter 10
-    # ======================================================
-
     "chapter_10": [
         {
             "id": "lesson_10_01",
@@ -822,10 +782,6 @@ Threats: تهدیدها
             ),
         },
     ],
-
-    # ======================================================
-    # Chapter 11
-    # ======================================================
 
     "chapter_11": [
         {
@@ -900,10 +856,6 @@ CRM می‌تواند شامل فروش، خدمات پس از فروش، تحل
             ),
         },
     ],
-
-    # ======================================================
-    # Chapter 12
-    # ======================================================
 
     "chapter_12": [
         {
@@ -1126,9 +1078,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
                 "افزایش بی‌هدف کارکنان",
                 "کاهش ارتباطات",
             ],
-            "correct_answer": (
-                "هماهنگ کردن نیروی انسانی با نیاز سازمان"
-            ),
+            "correct_answer": "هماهنگ کردن نیروی انسانی با نیاز سازمان",
         },
     ],
 
@@ -1212,9 +1162,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
                 "جایگاه‌یابی، هدف‌گیری، تقسیم‌بندی",
                 "هدف‌گیری، جایگاه‌یابی، تقسیم‌بندی",
             ],
-            "correct_answer": (
-                "تقسیم‌بندی، هدف‌گیری، جایگاه‌یابی"
-            ),
+            "correct_answer": "تقسیم‌بندی، هدف‌گیری، جایگاه‌یابی",
         },
     ],
 
@@ -1235,7 +1183,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
 
 
 # ==========================================================
-# Public API
+# Core API
 # ==========================================================
 
 def get_chapters() -> list[dict[str, Any]]:
@@ -1243,9 +1191,7 @@ def get_chapters() -> list[dict[str, Any]]:
     return list(MANAGEMENT_CURRICULUM)
 
 
-def get_chapter(
-    chapter_id: str,
-) -> dict[str, Any] | None:
+def get_chapter(chapter_id: str) -> dict[str, Any] | None:
     """Return one chapter by ID."""
 
     for chapter in MANAGEMENT_CURRICULUM:
@@ -1255,17 +1201,9 @@ def get_chapter(
     return None
 
 
-def get_lessons(
-    chapter_id: str,
-) -> list[dict[str, Any]]:
+def get_lessons(chapter_id: str) -> list[dict[str, Any]]:
     """Return lessons for a chapter."""
-
-    lessons = MANAGEMENT_LESSONS.get(
-        chapter_id,
-        [],
-    )
-
-    return list(lessons)
+    return list(MANAGEMENT_LESSONS.get(chapter_id, []))
 
 
 def get_lesson(
@@ -1274,10 +1212,7 @@ def get_lesson(
 ) -> dict[str, Any] | None:
     """Return one lesson."""
 
-    for lesson in MANAGEMENT_LESSONS.get(
-        chapter_id,
-        [],
-    ):
+    for lesson in MANAGEMENT_LESSONS.get(chapter_id, []):
         if lesson.get("id") == lesson_id:
             return lesson
 
@@ -1290,23 +1225,82 @@ def get_quiz_questions(
 ) -> list[dict[str, Any]]:
     """Return quiz questions for a lesson."""
 
-    questions = MANAGEMENT_QUIZ_QUESTIONS.get(
-        (
-            chapter_id,
-            lesson_id,
-        ),
-        [],
+    return list(
+        MANAGEMENT_QUIZ_QUESTIONS.get(
+            (chapter_id, lesson_id),
+            [],
+        )
     )
 
-    return list(questions)
 
+# ==========================================================
+# Compatibility API
+# ==========================================================
+
+def get_management_chapters() -> list[dict[str, Any]]:
+    """
+    Compatibility helper.
+
+    نسخه‌های مختلف handlers.py ممکن است از این نام استفاده کنند.
+    """
+    return get_chapters()
+
+
+def get_management_chapter(
+    chapter_id: str,
+) -> dict[str, Any] | None:
+    """Compatibility helper for old handlers."""
+    return get_chapter(chapter_id)
+
+
+def get_management_lessons(
+    chapter_id: str,
+) -> list[dict[str, Any]]:
+    """Compatibility helper for old handlers."""
+    return get_lessons(chapter_id)
+
+
+def get_management_lesson(
+    chapter_id: str,
+    lesson_id: str,
+) -> dict[str, Any] | None:
+    """Compatibility helper for old handlers."""
+    return get_lesson(
+        chapter_id,
+        lesson_id,
+    )
+
+
+def get_management_quiz_questions(
+    chapter_id: str,
+    lesson_id: str,
+) -> list[dict[str, Any]]:
+    """Compatibility helper for old handlers."""
+    return get_quiz_questions(
+        chapter_id,
+        lesson_id,
+    )
+
+
+def get_management_questions(
+    chapter_id: str,
+    lesson_id: str,
+) -> list[dict[str, Any]]:
+    """Additional compatibility helper."""
+    return get_quiz_questions(
+        chapter_id,
+        lesson_id,
+    )
+
+
+# ==========================================================
+# Statistics
+# ==========================================================
 
 def get_curriculum_statistics() -> dict[str, int]:
     """Return curriculum statistics."""
 
-    chapters = len(
-        MANAGEMENT_CURRICULUM
-    )
+    chapters = len(MANAGEMENT_CURRICULUM)
 
     lessons = 0
     questions = 0
@@ -1319,9 +1313,7 @@ def get_curriculum_statistics() -> dict[str, int]:
         ):
             continue
 
-        lessons += len(
-            chapter_lessons
-        )
+        lessons += len(chapter_lessons)
 
         for lesson in chapter_lessons:
 
@@ -1347,6 +1339,10 @@ def get_curriculum_statistics() -> dict[str, int]:
     }
 
 
+# ==========================================================
+# Health Check
+# ==========================================================
+
 def data_health_check() -> bool:
     """Validate Management module data."""
 
@@ -1364,9 +1360,7 @@ def data_health_check() -> bool:
         ):
             return False
 
-        if len(
-            MANAGEMENT_CURRICULUM
-        ) != 12:
+        if len(MANAGEMENT_CURRICULUM) != 12:
             return False
 
         chapter_ids: set[str] = set()
@@ -1379,29 +1373,28 @@ def data_health_check() -> bool:
             ):
                 return False
 
-            chapter_id = chapter.get(
-                "id"
-            )
+            chapter_id = chapter.get("id")
+            title = chapter.get("title")
 
-            title = chapter.get(
-                "title"
-            )
-
-            if not chapter_id or not title:
+            if not chapter_id:
                 return False
+
+            if not title:
+                return False
+
+            chapter_id = str(chapter_id)
 
             if chapter_id in chapter_ids:
                 return False
 
-            chapter_ids.add(
-                str(chapter_id)
-            )
+            chapter_ids.add(chapter_id)
 
             if chapter_id not in MANAGEMENT_LESSONS:
                 return False
 
             lessons = MANAGEMENT_LESSONS.get(
-                chapter_id
+                chapter_id,
+                [],
             )
 
             if not isinstance(
@@ -1418,13 +1411,8 @@ def data_health_check() -> bool:
                 ):
                     return False
 
-                lesson_id = lesson.get(
-                    "id"
-                )
-
-                lesson_title = lesson.get(
-                    "title"
-                )
+                lesson_id = lesson.get("id")
+                lesson_title = lesson.get("title")
 
                 if not lesson_id:
                     return False
@@ -1435,14 +1423,24 @@ def data_health_check() -> bool:
                 if "content" not in lesson:
                     return False
 
-        statistics = (
-            get_curriculum_statistics()
-        )
+                if "special_points" not in lesson:
+                    return False
+
+                if "exam_points" not in lesson:
+                    return False
+
+                if "example" not in lesson:
+                    return False
+
+        statistics = get_curriculum_statistics()
 
         if statistics["chapters"] != 12:
             return False
 
         if statistics["lessons"] < 1:
+            return False
+
+        if statistics["questions"] < 1:
             return False
 
         return True
@@ -1452,15 +1450,13 @@ def data_health_check() -> bool:
 
 
 # ==========================================================
-# Compatibility Helpers
+# Module Info
 # ==========================================================
 
 def get_module_info() -> dict[str, Any]:
     """Return Management module information."""
 
-    statistics = (
-        get_curriculum_statistics()
-    )
+    statistics = get_curriculum_statistics()
 
     return {
         "id": MODULE_ID,
@@ -1472,6 +1468,10 @@ def get_module_info() -> dict[str, Any]:
         "questions": statistics["questions"],
     }
 
+
+# ==========================================================
+# All Lessons
+# ==========================================================
 
 def get_all_lessons() -> list[dict[str, Any]]:
     """Return all lessons across all chapters."""
@@ -1494,6 +1494,10 @@ def get_all_lessons() -> list[dict[str, Any]]:
 
     return result
 
+
+# ==========================================================
+# All Questions
+# ==========================================================
 
 def get_all_questions() -> list[dict[str, Any]]:
     """Return all quiz questions."""
@@ -1518,37 +1522,59 @@ def get_all_questions() -> list[dict[str, Any]]:
                 lesson_id,
             )
 
-            result.append(
-                item
-            )
+            result.append(item)
 
     return result
 
 
 # ==========================================================
-# Module Initialization Validation
+# Additional Compatibility Helpers
+# ==========================================================
+
+def get_chapter_lessons(
+    chapter_id: str,
+) -> list[dict[str, Any]]:
+    """Compatibility alias."""
+    return get_lessons(chapter_id)
+
+
+def get_lesson_questions(
+    chapter_id: str,
+    lesson_id: str,
+) -> list[dict[str, Any]]:
+    """Compatibility alias."""
+    return get_quiz_questions(
+        chapter_id,
+        lesson_id,
+    )
+
+
+def get_statistics() -> dict[str, int]:
+    """Compatibility alias."""
+    return get_curriculum_statistics()
+
+
+# ==========================================================
+# Initialization Test
 # ==========================================================
 
 if __name__ == "__main__":
 
     stats = get_curriculum_statistics()
 
-    print(
-        "Management Module"
-    )
-
+    print("Management Module")
     print(
         f"Chapters: {stats['chapters']}"
     )
-
     print(
         f"Lessons: {stats['lessons']}"
     )
-
     print(
         f"Questions: {stats['questions']}"
     )
-
     print(
         f"Health: {data_health_check()}"
+    )
+    print(
+        f"Old API: {len(get_management_chapters())}"
     )
