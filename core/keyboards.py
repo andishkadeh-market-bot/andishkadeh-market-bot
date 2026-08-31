@@ -1,14 +1,39 @@
 """
 Telegram keyboards for Andishkadeh Management & Market.
+Connected modules:
+- Management
+- General Exam
+- Banking
+- Accounting
+- Finance
+- International Trade
+- Marketing & Sales
+- Economics & Market
+- Psychology & Social Work
+- Random Quiz
+- Resources
+- Social Networks
+- Profile
+- About
 """
-
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
-
+from __future__ import annotations
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
+# ==========================================================
+# Main Menu
+# ==========================================================
 def main_menu_keyboard() -> InlineKeyboardMarkup:
-    """Return the main bot menu."""
-
+    """
+    Return the main bot menu.
+    Every callback_data value must match the central
+    menu router or the dedicated module router.
+    """
     keyboard = [
+        # --------------------------------------------------
+        # Management / Exam
+        # --------------------------------------------------
         [
             InlineKeyboardButton(
                 "📚 آموزش مدیریت",
@@ -19,6 +44,9 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
                 callback_data="menu_exam",
             ),
         ],
+        # --------------------------------------------------
+        # Banking / Accounting
+        # --------------------------------------------------
         [
             InlineKeyboardButton(
                 "🏦 بانکداری تخصصی",
@@ -29,6 +57,9 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
                 callback_data="menu_accounting",
             ),
         ],
+        # --------------------------------------------------
+        # Finance / International Trade
+        # --------------------------------------------------
         [
             InlineKeyboardButton(
                 "💳 مدیریت مالی",
@@ -36,9 +67,12 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
             ),
             InlineKeyboardButton(
                 "🌍 تجارت بین‌الملل",
-                callback_data="menu_trade",
+                callback_data="menu_international_trade",
             ),
         ],
+        # --------------------------------------------------
+        # Marketing / Economics
+        # --------------------------------------------------
         [
             InlineKeyboardButton(
                 "📈 بازاریابی و فروش",
@@ -49,6 +83,9 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
                 callback_data="menu_economics",
             ),
         ],
+        # --------------------------------------------------
+        # Psychology / Random Quiz
+        # --------------------------------------------------
         [
             InlineKeyboardButton(
                 "🧠 روانشناسی و مددکاری",
@@ -59,6 +96,9 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
                 callback_data="menu_random",
             ),
         ],
+        # --------------------------------------------------
+        # Resources / Social
+        # --------------------------------------------------
         [
             InlineKeyboardButton(
                 "📂 فایل و منابع آموزشی",
@@ -69,6 +109,9 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
                 callback_data="menu_social",
             ),
         ],
+        # --------------------------------------------------
+        # Profile / About
+        # --------------------------------------------------
         [
             InlineKeyboardButton(
                 "👤 پروفایل من",
@@ -80,13 +123,14 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
             ),
         ],
     ]
-
     return InlineKeyboardMarkup(keyboard)
-
-
+# ==========================================================
+# Back Button
+# ==========================================================
 def back_button() -> InlineKeyboardMarkup:
-    """Return a simple back button."""
-
+    """
+    Return a simple back button to the main menu.
+    """
     return InlineKeyboardMarkup(
         [
             [
@@ -97,3 +141,34 @@ def back_button() -> InlineKeyboardMarkup:
             ]
         ]
     )
+# ==========================================================
+# Health Check
+# ==========================================================
+def keyboards_health_check() -> bool:
+    """
+    Basic health check for keyboard configuration.
+    """
+    try:
+        keyboard = main_menu_keyboard()
+        if keyboard is None:
+            return False
+        if not keyboard.inline_keyboard:
+            return False
+        # Verify that International Trade is exposed
+        # through the expected callback.
+        trade_found = False
+        for row in keyboard.inline_keyboard:
+            for button in row:
+                if (
+                    button.callback_data
+                    == "menu_international_trade"
+                ):
+                    trade_found = True
+                    break
+            if trade_found:
+                break
+        if not trade_found:
+            return False
+        return True
+    except Exception:
+        return False
