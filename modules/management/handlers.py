@@ -1,5 +1,8 @@
 """
 Telegram handlers for the Management education module.
+
+This handler supports Management lessons 01 to 07,
+lesson navigation, quizzes, quiz results, and routing.
 """
 
 from telegram import (
@@ -72,7 +75,7 @@ MANAGEMENT_LESSONS = {
 
 
 # ==========================================================
-# Lesson order in Chapter 01
+# Lesson order inside Chapter 1
 # ==========================================================
 
 MANAGEMENT_BASIC_LESSON_IDS = [
@@ -84,6 +87,88 @@ MANAGEMENT_BASIC_LESSON_IDS = [
     LESSON_06["id"],
     LESSON_07["id"],
 ]
+
+
+# ==========================================================
+# Helper: find chapter
+# ==========================================================
+
+def get_management_chapter(
+    chapter_id: str,
+) -> dict | None:
+    """Return a management chapter by ID."""
+
+    return next(
+        (
+            chapter
+            for chapter in MANAGEMENT_CURRICULUM
+            if chapter["id"] == chapter_id
+        ),
+        None,
+    )
+
+
+# ==========================================================
+# Helper: get lesson
+# ==========================================================
+
+def get_management_lesson(
+    chapter_id: str,
+    lesson_index: int,
+) -> dict | None:
+    """
+    Return detailed lesson content when available.
+
+    Currently Chapter 1 contains lessons 01 to 07.
+    """
+
+    if chapter_id != "management_basics":
+        return None
+
+    chapter = get_management_chapter(
+        chapter_id
+    )
+
+    if chapter is None:
+        return None
+
+    if lesson_index < 0:
+        return None
+
+    if lesson_index >= len(
+        chapter["lessons"]
+    ):
+        return None
+
+    if lesson_index >= len(
+        MANAGEMENT_BASIC_LESSON_IDS
+    ):
+        return None
+
+    lesson_id = MANAGEMENT_BASIC_LESSON_IDS[
+        lesson_index
+    ]
+
+    return MANAGEMENT_LESSONS.get(
+        lesson_id
+    )
+
+
+# ==========================================================
+# Helper: find lesson index by ID
+# ==========================================================
+
+def get_management_lesson_index(
+    lesson_id: str,
+) -> int | None:
+    """Return lesson index by lesson ID."""
+
+    try:
+        return MANAGEMENT_BASIC_LESSON_IDS.index(
+            lesson_id
+        )
+    except ValueError:
+        return None
 
 
 # ==========================================================
@@ -117,7 +202,9 @@ def management_menu_keyboard() -> InlineKeyboardMarkup:
         ]
     )
 
-    return InlineKeyboardMarkup(keyboard)
+    return InlineKeyboardMarkup(
+        keyboard
+    )
 
 
 # ==========================================================
@@ -129,13 +216,8 @@ def management_chapter_keyboard(
 ) -> InlineKeyboardMarkup:
     """Create lesson menu for a chapter."""
 
-    chapter = next(
-        (
-            item
-            for item in MANAGEMENT_CURRICULUM
-            if item["id"] == chapter_id
-        ),
-        None,
+    chapter = get_management_chapter(
+        chapter_id
     )
 
     if chapter is None:
@@ -180,7 +262,9 @@ def management_chapter_keyboard(
         ]
     )
 
-    return InlineKeyboardMarkup(keyboard)
+    return InlineKeyboardMarkup(
+        keyboard
+    )
 
 
 # ==========================================================
@@ -251,13 +335,8 @@ async def show_management_chapter(
         1,
     )
 
-    chapter = next(
-        (
-            item
-            for item in MANAGEMENT_CURRICULUM
-            if item["id"] == chapter_id
-        ),
-        None,
+    chapter = get_management_chapter(
+        chapter_id
     )
 
     if chapter is None:
@@ -272,8 +351,16 @@ async def show_management_chapter(
 
 📚 تعداد درس‌ها: {len(chapter["lessons"])}
 
-هر درس شامل درسنامه، نکات تخصصی،
-مثال کاربردی، سوالات آزمونی و مرور است.
+هر درس شامل:
+
+📖 درسنامه جامع
+🔍 مفاهیم کلیدی
+💡 نکات تخصصی
+📝 نکات آزمونی
+📌 مثال کاربردی
+❓ آزمون
+📊 تحلیل نتیجه
+🔄 مرور
 
 <b>درس موردنظر را انتخاب کنید:</b>
 """
@@ -298,28 +385,43 @@ def format_lesson_text(
 
     objectives = "\n".join(
         f"• {item}"
-        for item in lesson["objectives"]
+        for item in lesson.get(
+            "objectives",
+            [],
+        )
     )
 
     concepts = "\n\n".join(
         f"<b>{item['title']}</b>\n"
         f"{item['description']}"
-        for item in lesson["key_concepts"]
+        for item in lesson.get(
+            "key_concepts",
+            [],
+        )
     )
 
     specialized = "\n".join(
         f"• {item}"
-        for item in lesson["specialized_points"]
+        for item in lesson.get(
+            "specialized_points",
+            [],
+        )
     )
 
     exam_points = "\n".join(
         f"• {item}"
-        for item in lesson["exam_points"]
+        for item in lesson.get(
+            "exam_points",
+            [],
+        )
     )
 
     review = "\n".join(
         f"• {item}"
-        for item in lesson["review"]
+        for item in lesson.get(
+            "review",
+            [],
+        )
     )
 
     return f"""
@@ -370,49 +472,94 @@ def format_lesson_text(
 
 
 # ==========================================================
-# Find lesson content
+# Lesson navigation keyboard
 # ==========================================================
 
-def get_management_lesson(
+def management_lesson_keyboard(
     chapter_id: str,
     lesson_index: int,
-) -> dict | None:
-    """Return detailed lesson content when available."""
+    lesson_id: str,
+) -> InlineKeyboardMarkup:
+    """Create navigation keyboard for a lesson."""
 
-    if chapter_id != "management_basics":
-        return None
+    keyboard = []
 
-    chapter = next(
-        (
-            item
-            for item in MANAGEMENT_CURRICULUM
-            if item["id"] == chapter_id
-        ),
-        None,
+    # Quiz
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                "📝 شروع آزمون درس",
+                callback_data=(
+                    f"management_quiz:"
+                    f"{lesson_id}"
+                ),
+            )
+        ]
     )
 
-    if chapter is None:
-        return None
+    # Previous / next
+    navigation_row = []
 
-    if lesson_index < 0:
-        return None
+    if lesson_index > 0:
+        navigation_row.append(
+            InlineKeyboardButton(
+                "⬅️ درس قبل",
+                callback_data=(
+                    f"management_lesson:"
+                    f"{chapter_id}:"
+                    f"{lesson_index - 1}"
+                ),
+            )
+        )
 
-    if lesson_index >= len(
-        chapter["lessons"]
+    chapter = get_management_chapter(
+        chapter_id
+    )
+
+    if (
+        chapter is not None
+        and lesson_index
+        < len(chapter["lessons"]) - 1
     ):
-        return None
+        navigation_row.append(
+            InlineKeyboardButton(
+                "درس بعد ➡️",
+                callback_data=(
+                    f"management_lesson:"
+                    f"{chapter_id}:"
+                    f"{lesson_index + 1}"
+                ),
+            )
+        )
 
-    if lesson_index >= len(
-        MANAGEMENT_BASIC_LESSON_IDS
-    ):
-        return None
+    if navigation_row:
+        keyboard.append(
+            navigation_row
+        )
 
-    lesson_id = MANAGEMENT_BASIC_LESSON_IDS[
-        lesson_index
-    ]
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                "🔙 بازگشت به درس‌ها",
+                callback_data=(
+                    f"management_chapter:"
+                    f"{chapter_id}"
+                ),
+            )
+        ]
+    )
 
-    return MANAGEMENT_LESSONS.get(
-        lesson_id
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data="menu_main",
+            )
+        ]
+    )
+
+    return InlineKeyboardMarkup(
+        keyboard
     )
 
 
@@ -439,22 +586,17 @@ async def show_management_lesson(
     if len(parts) != 3:
         return
 
-    _, chapter_id, lesson_index = parts
+    _, chapter_id, lesson_index_raw = parts
 
     try:
         lesson_index = int(
-            lesson_index
+            lesson_index_raw
         )
     except ValueError:
         return
 
-    chapter = next(
-        (
-            item
-            for item in MANAGEMENT_CURRICULUM
-            if item["id"] == chapter_id
-        ),
-        None,
+    chapter = get_management_chapter(
+        chapter_id
     )
 
     if chapter is None:
@@ -478,7 +620,7 @@ async def show_management_lesson(
     )
 
     # ------------------------------------------------------
-    # Detailed lesson is available
+    # Detailed lesson
     # ------------------------------------------------------
 
     if lesson is not None:
@@ -486,57 +628,35 @@ async def show_management_lesson(
             lesson
         )
 
-        keyboard = [
-            [
-                InlineKeyboardButton(
-                    "📝 شروع آزمون درس",
-                    callback_data=(
-                        f"management_quiz:"
-                        f"{lesson['id']}"
-                    ),
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "🔙 بازگشت به درس‌ها",
-                    callback_data=(
-                        f"management_chapter:"
-                        f"{chapter_id}"
-                    ),
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "🏠 منوی اصلی",
-                    callback_data="menu_main",
-                )
-            ],
-        ]
+        keyboard = management_lesson_keyboard(
+            chapter_id=chapter_id,
+            lesson_index=lesson_index,
+            lesson_id=lesson["id"],
+        )
 
         await send_long_text(
             update=update,
             text=text,
-            reply_markup=InlineKeyboardMarkup(
-                keyboard
-            ),
+            reply_markup=keyboard,
             parse_mode="HTML",
         )
 
         return
 
     # ------------------------------------------------------
-    # Lesson content is not available yet
+    # Lesson content not available
     # ------------------------------------------------------
 
-    lesson_title = chapter["lessons"][lesson_index]
+    lesson_title = chapter[
+        "lessons"
+    ][lesson_index]
 
     text = f"""
 <b>📖 {lesson_title}</b>
 
 این درس در برنامه آموزشی فصل قرار دارد.
 
-محتوای کامل آن در مرحله تولید محتوای تخصصی
-به سیستم اضافه خواهد شد.
+محتوای کامل آن هنوز به سیستم اضافه نشده است.
 """
 
     keyboard = [
@@ -578,7 +698,9 @@ def quiz_keyboard(
     question = session.current_question
 
     if question is None:
-        return InlineKeyboardMarkup([])
+        return InlineKeyboardMarkup(
+            []
+        )
 
     keyboard = []
 
@@ -605,7 +727,9 @@ def quiz_keyboard(
         ]
     )
 
-    return InlineKeyboardMarkup(keyboard)
+    return InlineKeyboardMarkup(
+        keyboard
+    )
 
 
 # ==========================================================
@@ -693,11 +817,25 @@ async def start_management_quiz(
     if user is None:
         return
 
+    quiz_data = lesson.get(
+        "quiz",
+        [],
+    )
+
     questions = build_questions(
-        lesson["quiz"]
+        quiz_data
     )
 
     if not questions:
+        lesson_index = (
+            get_management_lesson_index(
+                lesson_id
+            )
+        )
+
+        if lesson_index is None:
+            lesson_index = 0
+
         await query.edit_message_text(
             "برای این درس هنوز سوال آزمون ثبت نشده است.",
             reply_markup=InlineKeyboardMarkup(
@@ -708,7 +846,7 @@ async def start_management_quiz(
                             callback_data=(
                                 f"management_lesson:"
                                 f"management_basics:"
-                                f"{MANAGEMENT_BASIC_LESSON_IDS.index(lesson_id)}"
+                                f"{lesson_index}"
                             ),
                         )
                     ]
@@ -794,14 +932,32 @@ async def answer_management_quiz(
     if question is None:
         return
 
+    # ------------------------------------------------------
+    # Validate selected option
+    # ------------------------------------------------------
+
+    if selected_option < 0:
+        return
+
+    if selected_option >= len(
+        question.options
+    ):
+        return
+
     correct_option = question.answer
+
+    # ------------------------------------------------------
+    # Process answer
+    # ------------------------------------------------------
 
     is_correct = session.answer(
         selected_option
     )
 
     if is_correct:
-        feedback = "✅ پاسخ شما درست است."
+        feedback = (
+            "✅ پاسخ شما درست است."
+        )
     else:
         feedback = (
             "❌ پاسخ شما نادرست است.\n\n"
@@ -811,6 +967,10 @@ async def answer_management_quiz(
         )
 
     explanation = question.explanation
+
+    # ------------------------------------------------------
+    # Quiz finished
+    # ------------------------------------------------------
 
     if session.is_finished:
         result = session.result()
@@ -827,25 +987,20 @@ async def answer_management_quiz(
 ━━━━━━━━━━━━━━
 
 {result_text}
+
+━━━━━━━━━━━━━━
+
+🎓 آزمون این درس به پایان رسید.
 """
 
         keyboard = [
             [
                 InlineKeyboardButton(
-                    "🔄 مرور دوباره درس",
+                    "🔄 مرور درس",
                     callback_data=(
-                        f"management_lesson:"
-                        f"management_basics:"
-                        f"{MANAGEMENT_BASIC_LESSON_IDS.index(
-                            next(
-                                (
-                                    lesson_id
-                                    for lesson_id, lesson in MANAGEMENT_LESSONS.items()
-                                    if lesson.get("quiz") == []
-                                ),
-                                LESSON_01["id"],
-                            )
-                        )}"
+                        "management_lesson:"
+                        "management_basics:"
+                        "0"
                     ),
                 )
             ],
@@ -866,16 +1021,6 @@ async def answer_management_quiz(
             ],
         ]
 
-        # The quiz session does not currently store lesson_id.
-        # Therefore the safest review destination is Lesson 01.
-        keyboard[0][0] = InlineKeyboardButton(
-            "🔄 مرور درس‌های فصل",
-            callback_data=(
-                "management_chapter:"
-                "management_basics"
-            ),
-        )
-
         await query.edit_message_text(
             final_text,
             reply_markup=InlineKeyboardMarkup(
@@ -890,6 +1035,10 @@ async def answer_management_quiz(
         )
 
         return
+
+    # ------------------------------------------------------
+    # Next question
+    # ------------------------------------------------------
 
     next_question_text = format_quiz_question(
         session
@@ -907,7 +1056,9 @@ async def answer_management_quiz(
 
     await query.edit_message_text(
         text,
-        reply_markup=quiz_keyboard(session),
+        reply_markup=quiz_keyboard(
+            session
+        ),
         parse_mode="HTML",
     )
 
@@ -943,7 +1094,7 @@ async def cancel_management_quiz(
             [
                 [
                     InlineKeyboardButton(
-                        "🔙 بازگشت به درس‌ها",
+                        "🔙 بازگشت به فصل",
                         callback_data=(
                             "management_chapter:"
                             "management_basics"
