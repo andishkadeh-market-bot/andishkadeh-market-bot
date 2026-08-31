@@ -1,9 +1,9 @@
-“”“Psychology & Social Work module for Andishkadeh Management & Market.”””
+"""
+Psychology & Social Work module for Andishkadeh Management & Market.
 
-MODULE_ID = “psychology”
-MODULE_TITLE = “روانشناسی و مددکاری”
+This package contains the Psychology & Social Work module.
+"""
 
-all = [
-“MODULE_ID”,
-“MODULE_TITLE”,
-]
+from __future__ import annotations
+
+__all__ = []
