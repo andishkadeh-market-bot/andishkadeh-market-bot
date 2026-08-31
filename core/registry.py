@@ -1,20 +1,30 @@
 """
-Automatic registry for Andishkadeh Management & Market.
+Automatic content registry for Andishkadeh Management & Market.
 
-This module provides a lightweight registry for:
-- Modules
-- Chapters
-- Lessons
-- Quizzes
+Responsibilities:
+- Register modules
+- Register chapters
+- Register lessons
+- Keep an in-memory registry
+- Persist registered content into SQLite
+- Export registered content
+- Provide lookup and count helpers
 
-The registry is intentionally independent from Telegram handlers
-and database storage.
+The Registry keeps the existing public API simple so existing
+handlers and curriculum code can continue using it.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+
+from core.database import (
+    init_database,
+    upsert_module,
+    upsert_chapter,
+    upsert_lesson,
+)
 
 
 # ==========================================================
@@ -30,6 +40,7 @@ class LessonRecord:
     title: str
     module_id: str
     chapter_id: str
+
     data: dict[str, Any] = field(
         default_factory=dict
     )
@@ -42,7 +53,11 @@ class ChapterRecord:
     chapter_id: str
     title: str
     module_id: str
-    lessons: dict[str, LessonRecord] = field(
+
+    lessons: dict[
+        str,
+        LessonRecord,
+    ] = field(
         default_factory=dict
     )
 
@@ -53,7 +68,11 @@ class ModuleRecord:
 
     module_id: str
     title: str
-    chapters: dict[str, ChapterRecord] = field(
+
+    chapters: dict[
+        str,
+        ChapterRecord,
+    ] = field(
         default_factory=dict
     )
 
@@ -67,15 +86,38 @@ class Registry:
     """
     Central registry for educational content.
 
-    The registry keeps content metadata in memory.
-    Persistent storage will be handled later by SQLite.
+    Content is maintained in memory and persisted to SQLite.
+
+    SQLite is used only as the persistent storage layer.
+    Telegram handlers do not need to know how the data is stored.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        auto_initialize_database: bool = True,
+    ) -> None:
+
         self.modules: dict[
             str,
             ModuleRecord,
         ] = {}
+
+        self.auto_initialize_database = (
+            auto_initialize_database
+        )
+
+        if self.auto_initialize_database:
+            init_database()
+
+    # ======================================================
+    # Internal database helpers
+    # ======================================================
+
+    def _ensure_database(self) -> None:
+        """Ensure the SQLite database exists."""
+
+        if self.auto_initialize_database:
+            init_database()
 
     # ======================================================
     # Module
@@ -86,7 +128,11 @@ class Registry:
         module_id: str,
         title: str,
     ) -> ModuleRecord:
-        """Register or update a module."""
+        """
+        Register or update a module.
+
+        The module is stored both in memory and SQLite.
+        """
 
         if not module_id:
             raise ValueError(
@@ -103,15 +149,26 @@ class Registry:
         )
 
         if module is None:
+
             module = ModuleRecord(
                 module_id=module_id,
                 title=title,
             )
 
-            self.modules[module_id] = module
+            self.modules[
+                module_id
+            ] = module
 
         else:
+
             module.title = title
+
+        self._ensure_database()
+
+        upsert_module(
+            module_id=module_id,
+            title=title,
+        )
 
         return module
 
@@ -125,12 +182,16 @@ class Registry:
         chapter_id: str,
         title: str,
     ) -> ChapterRecord:
-        """Register or update a chapter."""
+        """
+        Register or update a chapter.
 
-        if module_id not in self.modules:
-            self.register_module(
-                module_id,
-                module_id,
+        If the module does not exist yet, it is created
+        automatically.
+        """
+
+        if not module_id:
+            raise ValueError(
+                "module_id cannot be empty."
             )
 
         if not chapter_id:
@@ -143,6 +204,13 @@ class Registry:
                 "chapter title cannot be empty."
             )
 
+        if module_id not in self.modules:
+
+            self.register_module(
+                module_id=module_id,
+                title=module_id,
+            )
+
         module = self.modules[
             module_id
         ]
@@ -152,6 +220,7 @@ class Registry:
         )
 
         if chapter is None:
+
             chapter = ChapterRecord(
                 chapter_id=chapter_id,
                 title=title,
@@ -163,7 +232,16 @@ class Registry:
             ] = chapter
 
         else:
+
             chapter.title = title
+
+        self._ensure_database()
+
+        upsert_chapter(
+            module_id=module_id,
+            chapter_id=chapter_id,
+            title=title,
+        )
 
         return chapter
 
@@ -179,7 +257,21 @@ class Registry:
         title: str,
         data: dict[str, Any] | None = None,
     ) -> LessonRecord:
-        """Register or update a lesson."""
+        """
+        Register or update a lesson.
+
+        The lesson is automatically persisted to SQLite.
+        """
+
+        if not module_id:
+            raise ValueError(
+                "module_id cannot be empty."
+            )
+
+        if not chapter_id:
+            raise ValueError(
+                "chapter_id cannot be empty."
+            )
 
         if not lesson_id:
             raise ValueError(
@@ -202,6 +294,7 @@ class Registry:
         )
 
         if lesson is None:
+
             lesson = LessonRecord(
                 lesson_id=lesson_id,
                 title=title,
@@ -215,12 +308,89 @@ class Registry:
             ] = lesson
 
         else:
+
             lesson.title = title
 
             if data is not None:
                 lesson.data = data
 
+        self._ensure_database()
+
+        upsert_lesson(
+            module_id=module_id,
+            chapter_id=chapter_id,
+            lesson_id=lesson_id,
+            title=title,
+        )
+
         return lesson
+
+    # ======================================================
+    # Bulk registration
+    # ======================================================
+
+    def register_many_lessons(
+        self,
+        module_id: str,
+        chapter_id: str,
+        lessons: list[
+            dict[str, Any]
+        ],
+    ) -> list[LessonRecord]:
+        """
+        Register multiple lessons.
+
+        Each lesson dictionary must contain:
+            lesson_id
+            title
+
+        Optional:
+            data
+        """
+
+        registered: list[
+            LessonRecord
+        ] = []
+
+        for lesson_data in lessons:
+
+            lesson_id = lesson_data.get(
+                "lesson_id"
+            )
+
+            title = lesson_data.get(
+                "title"
+            )
+
+            data = lesson_data.get(
+                "data"
+            )
+
+            if lesson_id is None:
+                raise ValueError(
+                    "Each lesson must contain "
+                    "'lesson_id'."
+                )
+
+            if title is None:
+                raise ValueError(
+                    "Each lesson must contain "
+                    "'title'."
+                )
+
+            lesson = self.register_lesson(
+                module_id=module_id,
+                chapter_id=chapter_id,
+                lesson_id=lesson_id,
+                title=title,
+                data=data,
+            )
+
+            registered.append(
+                lesson
+            )
+
+        return registered
 
     # ======================================================
     # Lookup
@@ -263,8 +433,8 @@ class Registry:
         """Return a registered lesson."""
 
         chapter = self.get_chapter(
-            module_id,
-            chapter_id,
+            module_id=module_id,
+            chapter_id=chapter_id,
         )
 
         if chapter is None:
@@ -272,6 +442,52 @@ class Registry:
 
         return chapter.lessons.get(
             lesson_id
+        )
+
+    # ======================================================
+    # Existence helpers
+    # ======================================================
+
+    def has_module(
+        self,
+        module_id: str,
+    ) -> bool:
+        """Check whether a module exists."""
+
+        return (
+            module_id in self.modules
+        )
+
+    def has_chapter(
+        self,
+        module_id: str,
+        chapter_id: str,
+    ) -> bool:
+        """Check whether a chapter exists."""
+
+        return (
+            self.get_chapter(
+                module_id,
+                chapter_id,
+            )
+            is not None
+        )
+
+    def has_lesson(
+        self,
+        module_id: str,
+        chapter_id: str,
+        lesson_id: str,
+    ) -> bool:
+        """Check whether a lesson exists."""
+
+        return (
+            self.get_lesson(
+                module_id,
+                chapter_id,
+                lesson_id,
+            )
+            is not None
         )
 
     # ======================================================
@@ -289,7 +505,7 @@ class Registry:
         self,
         module_id: str,
     ) -> int:
-        """Return number of chapters."""
+        """Return number of chapters in a module."""
 
         module = self.get_module(
             module_id
@@ -307,7 +523,11 @@ class Registry:
         module_id: str,
         chapter_id: str | None = None,
     ) -> int:
-        """Return number of registered lessons."""
+        """
+        Return number of registered lessons.
+
+        If chapter_id is supplied, only that chapter is counted.
+        """
 
         module = self.get_module(
             module_id
@@ -317,6 +537,7 @@ class Registry:
             return 0
 
         if chapter_id is not None:
+
             chapter = module.chapters.get(
                 chapter_id
             )
@@ -330,21 +551,112 @@ class Registry:
 
         return sum(
             len(chapter.lessons)
-            for chapter in module.chapters.values()
+            for chapter
+            in module.chapters.values()
         )
+
+    # ======================================================
+    # Listing
+    # ======================================================
+
+    def list_modules(
+        self,
+    ) -> list[ModuleRecord]:
+        """Return all registered modules."""
+
+        return list(
+            self.modules.values()
+        )
+
+    def list_chapters(
+        self,
+        module_id: str,
+    ) -> list[ChapterRecord]:
+        """Return all chapters of a module."""
+
+        module = self.get_module(
+            module_id
+        )
+
+        if module is None:
+            return []
+
+        return list(
+            module.chapters.values()
+        )
+
+    def list_lessons(
+        self,
+        module_id: str,
+        chapter_id: str,
+    ) -> list[LessonRecord]:
+        """Return all lessons of a chapter."""
+
+        chapter = self.get_chapter(
+            module_id,
+            chapter_id,
+        )
+
+        if chapter is None:
+            return []
+
+        return list(
+            chapter.lessons.values()
+        )
+
+    # ======================================================
+    # Statistics
+    # ======================================================
+
+    def statistics(
+        self,
+    ) -> dict[str, int]:
+        """
+        Return basic registry statistics.
+        """
+
+        modules = self.module_count()
+
+        chapters = sum(
+            len(module.chapters)
+            for module
+            in self.modules.values()
+        )
+
+        lessons = sum(
+            len(chapter.lessons)
+            for module
+            in self.modules.values()
+            for chapter
+            in module.chapters.values()
+        )
+
+        return {
+            "modules": modules,
+            "chapters": chapters,
+            "lessons": lessons,
+        }
 
     # ======================================================
     # Export
     # ======================================================
 
-    def export(self) -> dict[str, Any]:
-        """Export registry contents as dictionaries."""
+    def export(
+        self,
+    ) -> dict[str, Any]:
+        """
+        Export the complete registry as dictionaries.
+        """
 
-        result: dict[str, Any] = {}
+        result: dict[
+            str,
+            Any,
+        ] = {}
 
         for module_id, module in (
             self.modules.items()
         ):
+
             result[module_id] = {
                 "id": module.module_id,
                 "title": module.title,
@@ -354,7 +666,10 @@ class Registry:
             for chapter_id, chapter in (
                 module.chapters.items()
             ):
-                result[module_id][
+
+                result[
+                    module_id
+                ][
                     "chapters"
                 ][chapter_id] = {
                     "id": chapter.chapter_id,
@@ -365,7 +680,10 @@ class Registry:
                 for lesson_id, lesson in (
                     chapter.lessons.items()
                 ):
-                    result[module_id][
+
+                    result[
+                        module_id
+                    ][
                         "chapters"
                     ][chapter_id][
                         "lessons"
@@ -377,10 +695,24 @@ class Registry:
 
         return result
 
+    # ======================================================
+    # Clear
+    # ======================================================
+
+    def clear_memory(
+        self,
+    ) -> None:
+        """
+        Clear only the in-memory registry.
+
+        SQLite data is intentionally preserved.
+        """
+
+        self.modules.clear()
+
 
 # ==========================================================
 # Global Registry
 # ==========================================================
-
 
 registry = Registry()
