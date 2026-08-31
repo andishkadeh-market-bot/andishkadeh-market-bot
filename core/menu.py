@@ -24,6 +24,8 @@ from modules.management.handlers import (
     show_management_lesson,
     start_management_quiz,
     answer_management_quiz,
+    next_management_quiz_question,
+    stop_management_quiz,
     cancel_management_quiz,
 )
 
@@ -51,6 +53,10 @@ from modules.psychology.handlers import (
 
 logger = logging.getLogger(__name__)
 
+
+# ==========================================================
+# Main Menu
+# ==========================================================
 
 MAIN_MENU_TEXT = (
     "🏛️ <b>اندیشکده مدیریت و بازار</b>\n\n"
@@ -93,6 +99,10 @@ async def show_main_menu(
                 "Failed to edit main menu message."
             )
 
+
+# ==========================================================
+# Central Callback Router
+# ==========================================================
 
 async def route_menu_callback(
     update: Update,
@@ -154,9 +164,11 @@ async def route_menu_callback(
         )
         return
 
-    if data.startswith(
-        "management_quiz:"
-    ):
+    # ======================================================
+    # Management Quiz
+    # ======================================================
+
+    if data == "management_quiz_start":
         await start_management_quiz(
             update,
             context,
@@ -164,7 +176,7 @@ async def route_menu_callback(
         return
 
     if data.startswith(
-        "quiz_answer:"
+        "management_quiz_answer:"
     ):
         await answer_management_quiz(
             update,
@@ -172,7 +184,21 @@ async def route_menu_callback(
         )
         return
 
-    if data == "quiz_cancel":
+    if data == "management_quiz_next":
+        await next_management_quiz_question(
+            update,
+            context,
+        )
+        return
+
+    if data == "management_quiz_stop":
+        await stop_management_quiz(
+            update,
+            context,
+        )
+        return
+
+    if data == "management_quiz_cancel":
         await cancel_management_quiz(
             update,
             context,
@@ -333,17 +359,45 @@ async def route_menu_callback(
         )
 
 
+# ==========================================================
+# Health Check
+# ==========================================================
+
 def menu_health_check() -> bool:
     """Basic central menu health check."""
 
     try:
-        return bool(
-            MAIN_MENU_TEXT
-            and main_menu_keyboard
-            and show_management_menu
-            and show_international_trade_menu
-            and show_psychology_menu
-            and route_menu_callback
+        required_functions = (
+            main_menu_keyboard,
+            show_management_menu,
+            show_management_chapter,
+            show_management_lesson,
+            start_management_quiz,
+            answer_management_quiz,
+            next_management_quiz_question,
+            stop_management_quiz,
+            cancel_management_quiz,
+            show_international_trade_menu,
+            show_international_trade_chapters,
+            show_international_trade_chapter,
+            show_international_trade_lesson,
+            complete_international_trade_lesson,
+            start_international_trade_quiz,
+            answer_international_trade_quiz,
+            cancel_international_trade_quiz,
+            show_psychology_menu,
+            show_psychology_chapter,
+            show_psychology_lesson,
+            complete_psychology_lesson,
+            start_psychology_quiz,
+            answer_psychology_quiz,
+            cancel_psychology_quiz,
+            route_menu_callback,
+        )
+
+        return all(
+            callable(function)
+            for function in required_functions
         )
 
     except Exception:
@@ -351,3 +405,15 @@ def menu_health_check() -> bool:
             "Central menu health check failed."
         )
         return False
+
+
+# ==========================================================
+# Public Exports
+# ==========================================================
+
+__all__ = [
+    "MAIN_MENU_TEXT",
+    "show_main_menu",
+    "route_menu_callback",
+    "menu_health_check",
+]
