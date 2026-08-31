@@ -7,11 +7,16 @@ Responsibilities:
 - Register lessons
 - Keep an in-memory registry
 - Persist registered content into SQLite
-- Export registered content
-- Provide lookup and count helpers
+- Provide lookup helpers
+- Provide existence helpers
+- Provide count helpers
+- Provide listing helpers
+- Export registry data
+- Provide registry statistics
 
-The Registry keeps the existing public API simple so existing
-handlers and curriculum code can continue using it.
+The Registry is intentionally independent from Telegram handlers.
+
+SQLite is used as the persistent storage layer through core.database.
 """
 
 from __future__ import annotations
@@ -86,10 +91,13 @@ class Registry:
     """
     Central registry for educational content.
 
-    Content is maintained in memory and persisted to SQLite.
+    Content exists in two layers:
 
-    SQLite is used only as the persistent storage layer.
-    Telegram handlers do not need to know how the data is stored.
+    1. In-memory registry
+    2. SQLite persistent storage
+
+    Telegram handlers can use the registry without knowing
+    anything about SQLite.
     """
 
     def __init__(
@@ -110,8 +118,42 @@ class Registry:
             init_database()
 
     # ======================================================
-    # Internal database helpers
+    # Internal helpers
     # ======================================================
+
+    @staticmethod
+    def _validate_identifier(
+        value: str,
+        field_name: str,
+    ) -> None:
+        """Validate a registry identifier."""
+
+        if not isinstance(value, str):
+            raise TypeError(
+                f"{field_name} must be a string."
+            )
+
+        if not value.strip():
+            raise ValueError(
+                f"{field_name} cannot be empty."
+            )
+
+    @staticmethod
+    def _validate_title(
+        title: str,
+        field_name: str,
+    ) -> None:
+        """Validate a registry title."""
+
+        if not isinstance(title, str):
+            raise TypeError(
+                f"{field_name} must be a string."
+            )
+
+        if not title.strip():
+            raise ValueError(
+                f"{field_name} cannot be empty."
+            )
 
     def _ensure_database(self) -> None:
         """Ensure the SQLite database exists."""
@@ -120,7 +162,7 @@ class Registry:
             init_database()
 
     # ======================================================
-    # Module
+    # Module registration
     # ======================================================
 
     def register_module(
@@ -131,18 +173,18 @@ class Registry:
         """
         Register or update a module.
 
-        The module is stored both in memory and SQLite.
+        The module is stored in memory and SQLite.
         """
 
-        if not module_id:
-            raise ValueError(
-                "module_id cannot be empty."
-            )
+        self._validate_identifier(
+            module_id,
+            "module_id",
+        )
 
-        if not title:
-            raise ValueError(
-                "module title cannot be empty."
-            )
+        self._validate_title(
+            title,
+            "module title",
+        )
 
         module = self.modules.get(
             module_id
@@ -173,7 +215,7 @@ class Registry:
         return module
 
     # ======================================================
-    # Chapter
+    # Chapter registration
     # ======================================================
 
     def register_chapter(
@@ -185,24 +227,24 @@ class Registry:
         """
         Register or update a chapter.
 
-        If the module does not exist yet, it is created
+        If the module does not exist, it is created
         automatically.
         """
 
-        if not module_id:
-            raise ValueError(
-                "module_id cannot be empty."
-            )
+        self._validate_identifier(
+            module_id,
+            "module_id",
+        )
 
-        if not chapter_id:
-            raise ValueError(
-                "chapter_id cannot be empty."
-            )
+        self._validate_identifier(
+            chapter_id,
+            "chapter_id",
+        )
 
-        if not title:
-            raise ValueError(
-                "chapter title cannot be empty."
-            )
+        self._validate_title(
+            title,
+            "chapter title",
+        )
 
         if module_id not in self.modules:
 
@@ -246,7 +288,7 @@ class Registry:
         return chapter
 
     # ======================================================
-    # Lesson
+    # Lesson registration
     # ======================================================
 
     def register_lesson(
@@ -260,27 +302,36 @@ class Registry:
         """
         Register or update a lesson.
 
-        The lesson is automatically persisted to SQLite.
+        The parent module and chapter are created
+        automatically when necessary.
         """
 
-        if not module_id:
-            raise ValueError(
-                "module_id cannot be empty."
-            )
+        self._validate_identifier(
+            module_id,
+            "module_id",
+        )
 
-        if not chapter_id:
-            raise ValueError(
-                "chapter_id cannot be empty."
-            )
+        self._validate_identifier(
+            chapter_id,
+            "chapter_id",
+        )
 
-        if not lesson_id:
-            raise ValueError(
-                "lesson_id cannot be empty."
-            )
+        self._validate_identifier(
+            lesson_id,
+            "lesson_id",
+        )
 
-        if not title:
-            raise ValueError(
-                "lesson title cannot be empty."
+        self._validate_title(
+            title,
+            "lesson title",
+        )
+
+        if data is not None and not isinstance(
+            data,
+            dict,
+        ):
+            raise TypeError(
+                "lesson data must be a dictionary."
             )
 
         chapter = self.register_chapter(
@@ -300,7 +351,11 @@ class Registry:
                 title=title,
                 module_id=module_id,
                 chapter_id=chapter_id,
-                data=data or {},
+                data=(
+                    dict(data)
+                    if data is not None
+                    else {}
+                ),
             )
 
             chapter.lessons[
@@ -312,7 +367,7 @@ class Registry:
             lesson.title = title
 
             if data is not None:
-                lesson.data = data
+                lesson.data = dict(data)
 
         self._ensure_database()
 
@@ -340,7 +395,7 @@ class Registry:
         """
         Register multiple lessons.
 
-        Each lesson dictionary must contain:
+        Required lesson fields:
             lesson_id
             title
 
@@ -348,11 +403,27 @@ class Registry:
             data
         """
 
+        if not isinstance(
+            lessons,
+            list,
+        ):
+            raise TypeError(
+                "lessons must be a list."
+            )
+
         registered: list[
             LessonRecord
         ] = []
 
         for lesson_data in lessons:
+
+            if not isinstance(
+                lesson_data,
+                dict,
+            ):
+                raise TypeError(
+                    "Each lesson must be a dictionary."
+                )
 
             lesson_id = lesson_data.get(
                 "lesson_id"
@@ -445,30 +516,28 @@ class Registry:
         )
 
     # ======================================================
-    # Existence helpers
+    # Existence
     # ======================================================
 
     def has_module(
         self,
         module_id: str,
     ) -> bool:
-        """Check whether a module exists."""
+        """Return whether a module exists."""
 
-        return (
-            module_id in self.modules
-        )
+        return module_id in self.modules
 
     def has_chapter(
         self,
         module_id: str,
         chapter_id: str,
     ) -> bool:
-        """Check whether a chapter exists."""
+        """Return whether a chapter exists."""
 
         return (
             self.get_chapter(
-                module_id,
-                chapter_id,
+                module_id=module_id,
+                chapter_id=chapter_id,
             )
             is not None
         )
@@ -479,13 +548,13 @@ class Registry:
         chapter_id: str,
         lesson_id: str,
     ) -> bool:
-        """Check whether a lesson exists."""
+        """Return whether a lesson exists."""
 
         return (
             self.get_lesson(
-                module_id,
-                chapter_id,
-                lesson_id,
+                module_id=module_id,
+                chapter_id=chapter_id,
+                lesson_id=lesson_id,
             )
             is not None
         )
@@ -495,7 +564,7 @@ class Registry:
     # ======================================================
 
     def module_count(self) -> int:
-        """Return number of registered modules."""
+        """Return the number of modules."""
 
         return len(
             self.modules
@@ -505,7 +574,7 @@ class Registry:
         self,
         module_id: str,
     ) -> int:
-        """Return number of chapters in a module."""
+        """Return the number of chapters in a module."""
 
         module = self.get_module(
             module_id
@@ -524,9 +593,10 @@ class Registry:
         chapter_id: str | None = None,
     ) -> int:
         """
-        Return number of registered lessons.
+        Return lesson count.
 
-        If chapter_id is supplied, only that chapter is counted.
+        If chapter_id is provided, only that chapter
+        is counted.
         """
 
         module = self.get_module(
@@ -593,8 +663,8 @@ class Registry:
         """Return all lessons of a chapter."""
 
         chapter = self.get_chapter(
-            module_id,
-            chapter_id,
+            module_id=module_id,
+            chapter_id=chapter_id,
         )
 
         if chapter is None:
@@ -611,9 +681,7 @@ class Registry:
     def statistics(
         self,
     ) -> dict[str, int]:
-        """
-        Return basic registry statistics.
-        """
+        """Return basic registry statistics."""
 
         modules = self.module_count()
 
@@ -645,7 +713,10 @@ class Registry:
         self,
     ) -> dict[str, Any]:
         """
-        Export the complete registry as dictionaries.
+        Export the complete in-memory registry.
+
+        Returned data is independent from the internal
+        registry objects.
         """
 
         result: dict[
@@ -690,13 +761,15 @@ class Registry:
                     ][lesson_id] = {
                         "id": lesson.lesson_id,
                         "title": lesson.title,
-                        "data": lesson.data,
+                        "data": dict(
+                            lesson.data
+                        ),
                     }
 
         return result
 
     # ======================================================
-    # Clear
+    # Clear memory
     # ======================================================
 
     def clear_memory(
@@ -705,7 +778,7 @@ class Registry:
         """
         Clear only the in-memory registry.
 
-        SQLite data is intentionally preserved.
+        SQLite data remains untouched.
         """
 
         self.modules.clear()
