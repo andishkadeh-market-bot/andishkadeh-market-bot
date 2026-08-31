@@ -141,6 +141,17 @@ MANAGEMENT_CURRICULUM: list[dict[str, Any]] = [
 
 
 # ==========================================================
+# Compatibility Alias
+# ==========================================================
+# بعضی بخش‌های پروژه ممکن است از نام قدیمی
+# MANAGEMENT_CHAPTERS استفاده کنند.
+# بنابراین برای جلوگیری از ImportError این نام
+# به Curriculum اصلی متصل می‌شود.
+
+MANAGEMENT_CHAPTERS = MANAGEMENT_CURRICULUM
+
+
+# ==========================================================
 # Lessons
 # ==========================================================
 
@@ -982,10 +993,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
     list[dict[str, Any]],
 ] = {
 
-    (
-        "chapter_01",
-        "lesson_01_01",
-    ): [
+    ("chapter_01", "lesson_01_01"): [
         {
             "id": "m01_q01",
             "question": "کدام گزینه بهترین تعریف اثربخشی است؟",
@@ -1010,10 +1018,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_01",
-        "lesson_01_02",
-    ): [
+    ("chapter_01", "lesson_01_02"): [
         {
             "id": "m01_q03",
             "question": "کدام وظیفه مدیریت بیشتر با تعیین مسیر آینده مرتبط است؟",
@@ -1027,10 +1032,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_02",
-        "lesson_02_01",
-    ): [
+    ("chapter_02", "lesson_02_01"): [
         {
             "id": "m02_q01",
             "question": "فردریک تیلور بیشتر با کدام رویکرد شناخته می‌شود؟",
@@ -1044,10 +1046,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_02",
-        "lesson_02_02",
-    ): [
+    ("chapter_02", "lesson_02_02"): [
         {
             "id": "m02_q02",
             "question": "هنری فایول بیشتر بر کدام سطح تمرکز داشت؟",
@@ -1061,10 +1060,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_02",
-        "lesson_02_03",
-    ): [
+    ("chapter_02", "lesson_02_03"): [
         {
             "id": "m02_q03",
             "question": "مطالعات هاثورن بیشتر با کدام مکتب ارتباط دارد؟",
@@ -1078,10 +1074,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_03",
-        "lesson_03_01",
-    ): [
+    ("chapter_03", "lesson_03_01"): [
         {
             "id": "m03_q01",
             "question": "برنامه‌ریزی در مدیریت بیشتر با چه موضوعی آغاز می‌شود؟",
@@ -1095,10 +1088,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_03",
-        "lesson_03_02",
-    ): [
+    ("chapter_03", "lesson_03_02"): [
         {
             "id": "m03_q02",
             "question": "اولین گام مهم در تصمیم‌گیری چیست؟",
@@ -1112,10 +1102,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_04",
-        "lesson_04_01",
-    ): [
+    ("chapter_04", "lesson_04_01"): [
         {
             "id": "m04_q01",
             "question": "ساختار سازمانی چه چیزی را مشخص می‌کند؟",
@@ -1129,10 +1116,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_05",
-        "lesson_05_01",
-    ): [
+    ("chapter_05", "lesson_05_01"): [
         {
             "id": "m05_q01",
             "question": "هدف اصلی برنامه‌ریزی منابع انسانی چیست؟",
@@ -1148,10 +1132,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_06",
-        "lesson_06_01",
-    ): [
+    ("chapter_06", "lesson_06_01"): [
         {
             "id": "m06_q01",
             "question": "رهبری بیشتر با کدام مفهوم ارتباط دارد؟",
@@ -1165,10 +1146,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_07",
-        "lesson_07_01",
-    ): [
+    ("chapter_07", "lesson_07_01"): [
         {
             "id": "m07_q01",
             "question": "کدام گزینه درباره انگیزش درست است؟",
@@ -1182,10 +1160,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_08",
-        "lesson_08_01",
-    ): [
+    ("chapter_08", "lesson_08_01"): [
         {
             "id": "m08_q01",
             "question": "استاندارد در فرآیند کنترل چه نقشی دارد؟",
@@ -1199,10 +1174,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_09",
-        "lesson_09_02",
-    ): [
+    ("chapter_09", "lesson_09_02"): [
         {
             "id": "m09_q01",
             "question": "در SWOT کدام مورد معمولاً عامل داخلی است؟",
@@ -1216,10 +1188,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_10",
-        "lesson_10_01",
-    ): [
+    ("chapter_10", "lesson_10_01"): [
         {
             "id": "m10_q01",
             "question": "کدام گزینه با جریان نقدی متفاوت است؟",
@@ -1233,10 +1202,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_11",
-        "lesson_11_02",
-    ): [
+    ("chapter_11", "lesson_11_02"): [
         {
             "id": "m11_q01",
             "question": "ترتیب صحیح فرآیند STP کدام است؟",
@@ -1252,10 +1218,7 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
         },
     ],
 
-    (
-        "chapter_12",
-        "lesson_12_02",
-    ): [
+    ("chapter_12", "lesson_12_02"): [
         {
             "id": "m12_q01",
             "question": "یکی از ریسک‌های مهم استفاده مدیریتی از هوش مصنوعی چیست؟",
@@ -1275,10 +1238,8 @@ MANAGEMENT_QUIZ_QUESTIONS: dict[
 # Public API
 # ==========================================================
 
-
 def get_chapters() -> list[dict[str, Any]]:
     """Return all Management chapters."""
-
     return list(MANAGEMENT_CURRICULUM)
 
 
@@ -1351,6 +1312,7 @@ def get_curriculum_statistics() -> dict[str, int]:
     questions = 0
 
     for chapter_id, chapter_lessons in MANAGEMENT_LESSONS.items():
+
         if not isinstance(
             chapter_lessons,
             list,
@@ -1362,6 +1324,7 @@ def get_curriculum_statistics() -> dict[str, int]:
         )
 
         for lesson in chapter_lessons:
+
             lesson_id = lesson.get("id")
 
             if not lesson_id:
@@ -1388,6 +1351,7 @@ def data_health_check() -> bool:
     """Validate Management module data."""
 
     try:
+
         if not MODULE_ID:
             return False
 
@@ -1491,7 +1455,6 @@ def data_health_check() -> bool:
 # Compatibility Helpers
 # ==========================================================
 
-
 def get_module_info() -> dict[str, Any]:
     """Return Management module information."""
 
@@ -1516,6 +1479,7 @@ def get_all_lessons() -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
 
     for chapter in MANAGEMENT_CURRICULUM:
+
         chapter_id = chapter.get("id")
 
         if not chapter_id:
@@ -1566,6 +1530,7 @@ def get_all_questions() -> list[dict[str, Any]]:
 # ==========================================================
 
 if __name__ == "__main__":
+
     stats = get_curriculum_statistics()
 
     print(
