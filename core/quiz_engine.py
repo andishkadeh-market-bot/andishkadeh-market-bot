@@ -1048,8 +1048,8 @@ class QuizEngine:
         telegram_id: int,
     ) -> dict[str, Any] | None:
         """
-        Build the payload required by
-        the Progress layer.
+        Build the payload required by the
+        Progress layer.
         """
 
         result = self.get_result(
@@ -1105,6 +1105,8 @@ class QuizEngine:
         Check engine availability.
         """
 
+        test_telegram_id = -1
+
         try:
 
             test_questions = [
@@ -1120,7 +1122,7 @@ class QuizEngine:
             ]
 
             session = self.start_quiz(
-                telegram_id=-1,
+                telegram_id=test_telegram_id,
                 module_id="health",
                 chapter_id="health",
                 lesson_id="health",
@@ -1132,15 +1134,13 @@ class QuizEngine:
                 return False
 
             self.submit_answer(
-                telegram_id=-1,
+                telegram_id=test_telegram_id,
                 answer="yes",
             )
 
             result = self.get_result(
-                telegram_id=-1
+                telegram_id=test_telegram_id
             )
-
-            self.remove_session(-1)
 
             return (
                 result is not None
@@ -1155,12 +1155,26 @@ class QuizEngine:
         except Exception:
             return False
 
+        finally:
+            self.remove_session(
+                test_telegram_id
+            )
+
 
 # ==========================================================
 # Global Engine
 # ==========================================================
 
 quiz_engine = QuizEngine()
+
+# Backward-compatible alias.
+#
+# Some existing modules, especially Management handlers,
+# import the engine using the name `global_quiz_engine`.
+#
+# Keep both names pointing to the exact same QuizEngine
+# instance so all modules share the same quiz sessions.
+global_quiz_engine = quiz_engine
 
 
 # ==========================================================
