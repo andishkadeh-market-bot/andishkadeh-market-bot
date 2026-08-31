@@ -8,16 +8,18 @@ Responsibilities:
 - Retrieve lesson content
 - Retrieve quiz questions
 - Provide safe lookup helpers
+- Validate curriculum structure
+- Provide content statistics
 - Keep business logic independent from Telegram handlers
+
+This service is compatible with the refactored Management data layer.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from modules.management.data import (
-    MANAGEMENT_DATA,
-)
+from modules.management import data as management_data
 
 
 # ==========================================================
@@ -25,6 +27,7 @@ from modules.management.data import (
 # ==========================================================
 
 MODULE_ID = "management"
+MODULE_TITLE = "آموزش مدیریت"
 
 
 # ==========================================================
@@ -40,21 +43,79 @@ def _normalize_id(value: Any) -> str:
     return str(value).strip()
 
 
+def _load_curriculum() -> Any:
+    """
+    Load the Management curriculum from data.py.
+
+    The refactored data module may expose the curriculum
+    under different conventional names. This helper keeps
+    the service tolerant without requiring Telegram
+    handlers to know the data structure.
+    """
+
+    possible_names = (
+        "MANAGEMENT_CURRICULUM",
+        "MANAGEMENT_DATA",
+        "CURRICULUM",
+        "MANAGEMENT_CONTENT",
+    )
+
+    for name in possible_names:
+        value = getattr(
+            management_data,
+            name,
+            None,
+        )
+
+        if value is not None:
+            return value
+
+    return []
+
+
 def _get_chapters() -> list[dict[str, Any]]:
-    """Return the complete Management chapter list."""
+    """
+    Return the complete Management chapter list.
+    """
 
-    if isinstance(MANAGEMENT_DATA, dict):
+    curriculum = _load_curriculum()
 
-        chapters = MANAGEMENT_DATA.get(
+    if isinstance(
+        curriculum,
+        dict,
+    ):
+        chapters = curriculum.get(
             "chapters",
             [],
         )
 
-        if isinstance(chapters, list):
-            return chapters
+        if isinstance(
+            chapters,
+            list,
+        ):
+            return [
+                chapter
+                for chapter in chapters
+                if isinstance(
+                    chapter,
+                    dict,
+                )
+            ]
 
-    if isinstance(MANAGEMENT_DATA, list):
-        return MANAGEMENT_DATA
+        return []
+
+    if isinstance(
+        curriculum,
+        list,
+    ):
+        return [
+            chapter
+            for chapter in curriculum
+            if isinstance(
+                chapter,
+                dict,
+            )
+        ]
 
     return []
 
@@ -69,10 +130,20 @@ def _get_chapter_lessons(
         [],
     )
 
-    if isinstance(lessons, list):
-        return lessons
+    if not isinstance(
+        lessons,
+        list,
+    ):
+        return []
 
-    return []
+    return [
+        lesson
+        for lesson in lessons
+        if isinstance(
+            lesson,
+            dict,
+        )
+    ]
 
 
 # ==========================================================
@@ -88,16 +159,37 @@ def get_module_id() -> str:
 def get_module_title() -> str:
     """Return the Management module title."""
 
-    if isinstance(MANAGEMENT_DATA, dict):
+    curriculum = _load_curriculum()
 
-        title = MANAGEMENT_DATA.get(
+    if isinstance(
+        curriculum,
+        dict,
+    ):
+        title = curriculum.get(
             "title"
         )
 
         if title:
             return str(title)
 
-    return "آموزش مدیریت"
+        module_title = curriculum.get(
+            "module_title"
+        )
+
+        if module_title:
+            return str(module_title)
+
+    return MODULE_TITLE
+
+
+def get_module_info() -> dict[str, str]:
+    """Return basic Management module information."""
+
+    return {
+        "id": MODULE_ID,
+        "module_id": MODULE_ID,
+        "title": get_module_title(),
+    }
 
 
 # ==========================================================
@@ -121,9 +213,7 @@ def get_chapters() -> list[dict[str, Any]]:
 def get_chapter(
     chapter_id: str,
 ) -> dict[str, Any] | None:
-    """
-    Return one chapter by ID.
-    """
+    """Return one chapter by ID."""
 
     normalized_id = _normalize_id(
         chapter_id
@@ -157,7 +247,9 @@ def get_chapter_title(
     if chapter is None:
         return None
 
-    title = chapter.get("title")
+    title = chapter.get(
+        "title"
+    )
 
     if title is None:
         return None
@@ -269,7 +361,9 @@ def get_lesson_title(
     if lesson is None:
         return None
 
-    title = lesson.get("title")
+    title = lesson.get(
+        "title"
+    )
 
     if title is None:
         return None
@@ -312,7 +406,7 @@ def get_lesson_content(
     """
     Return the complete lesson content.
 
-    The returned dictionary is a copy so callers cannot
+    The returned dictionary is copied so callers cannot
     accidentally modify the source curriculum.
     """
 
@@ -355,9 +449,14 @@ def get_lesson_text(
 
     for key in content_keys:
 
-        value = lesson.get(key)
+        value = lesson.get(
+            key
+        )
 
-        if isinstance(value, str):
+        if isinstance(
+            value,
+            str,
+        ):
             cleaned = value.strip()
 
             if cleaned:
@@ -374,9 +473,7 @@ def get_lesson_summary(
     chapter_id: str,
     lesson_id: str,
 ) -> dict[str, Any] | None:
-    """
-    Return a compact lesson summary.
-    """
+    """Return a compact lesson summary."""
 
     lesson = get_lesson(
         chapter_id,
@@ -386,18 +483,23 @@ def get_lesson_summary(
     if lesson is None:
         return None
 
+    normalized_lesson_id = _normalize_id(
+        lesson.get("id")
+        or lesson.get("lesson_id")
+        or lesson_id
+    )
+
     return {
         "module_id": MODULE_ID,
         "chapter_id": _normalize_id(
             chapter_id
         ),
-        "lesson_id": _normalize_id(
-            lesson.get("id")
-            or lesson.get("lesson_id")
-        ),
-        "title": lesson.get(
-            "title",
-            lesson_id,
+        "lesson_id": normalized_lesson_id,
+        "title": str(
+            lesson.get(
+                "title",
+                normalized_lesson_id,
+            )
         ),
     }
 
@@ -413,7 +515,7 @@ def get_quiz_questions(
     """
     Return quiz questions for one Management lesson.
 
-    Supports common quiz field names:
+    Supported fields:
     - quiz
     - questions
     - quiz_questions
@@ -435,7 +537,9 @@ def get_quiz_questions(
 
     for key in possible_keys:
 
-        questions = lesson.get(key)
+        questions = lesson.get(
+            key
+        )
 
         if isinstance(
             questions,
@@ -480,8 +584,9 @@ def search_lessons(
     """
 
     normalized_keyword = (
-        _normalize_id(keyword)
-        .casefold()
+        _normalize_id(
+            keyword
+        ).casefold()
     )
 
     if not normalized_keyword:
@@ -512,10 +617,30 @@ def search_lessons(
                 )
             )
 
-            content = get_lesson_text(
-                chapter_id,
-                lesson_id,
-            ) or ""
+            content = ""
+
+            content_keys = (
+                "content",
+                "text",
+                "description",
+                "lesson_content",
+                "body",
+            )
+
+            for key in content_keys:
+
+                value = lesson.get(
+                    key
+                )
+
+                if isinstance(
+                    value,
+                    str,
+                ):
+                    content += (
+                        " "
+                        + value
+                    )
 
             searchable_text = (
                 f"{title}\n{content}"
@@ -574,12 +699,13 @@ def get_content_statistics() -> dict[str, int]:
                 or lesson.get("lesson_id")
             )
 
-            quiz_question_count += (
-                get_quiz_question_count(
-                    chapter_id,
-                    lesson_id,
+            if lesson_id:
+                quiz_question_count += (
+                    get_quiz_question_count(
+                        chapter_id,
+                        lesson_id,
+                    )
                 )
-            )
 
     return {
         "modules": 1,
@@ -603,10 +729,16 @@ def validate_management_data() -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
 
+    curriculum = _load_curriculum()
+
+    if curriculum is None:
+        errors.append(
+            "Management curriculum was not found."
+        )
+
     chapters = _get_chapters()
 
     if not chapters:
-
         errors.append(
             "No Management chapters found."
         )
@@ -622,11 +754,12 @@ def validate_management_data() -> dict[str, Any]:
             chapter,
             dict,
         ):
-
             errors.append(
-                f"Chapter #{chapter_index} is not a dictionary."
+                (
+                    f"Chapter #{chapter_index} "
+                    "is not a dictionary."
+                )
             )
-
             continue
 
         chapter_id = _normalize_id(
@@ -637,7 +770,10 @@ def validate_management_data() -> dict[str, Any]:
         if not chapter_id:
 
             errors.append(
-                f"Chapter #{chapter_index} has no ID."
+                (
+                    f"Chapter #{chapter_index} "
+                    "has no ID."
+                )
             )
 
         elif chapter_id in chapter_ids:
@@ -652,14 +788,16 @@ def validate_management_data() -> dict[str, Any]:
                 chapter_id
             )
 
-        title = chapter.get(
+        if not chapter.get(
             "title"
-        )
-
-        if not title:
+        ):
 
             warnings.append(
-                f"Chapter '{chapter_id or chapter_index}' has no title."
+                (
+                    f"Chapter "
+                    f"'{chapter_id or chapter_index}' "
+                    "has no title."
+                )
             )
 
         lessons = _get_chapter_lessons(
@@ -669,7 +807,11 @@ def validate_management_data() -> dict[str, Any]:
         if not lessons:
 
             warnings.append(
-                f"Chapter '{chapter_id or chapter_index}' has no lessons."
+                (
+                    f"Chapter "
+                    f"'{chapter_id or chapter_index}' "
+                    "has no lessons."
+                )
             )
 
         lesson_ids: set[str] = set()
@@ -687,7 +829,8 @@ def validate_management_data() -> dict[str, Any]:
                 errors.append(
                     (
                         f"Chapter '{chapter_id}' "
-                        f"lesson #{lesson_index} is not a dictionary."
+                        f"lesson #{lesson_index} "
+                        "is not a dictionary."
                     )
                 )
 
@@ -703,7 +846,8 @@ def validate_management_data() -> dict[str, Any]:
                 errors.append(
                     (
                         f"Chapter '{chapter_id}' "
-                        f"lesson #{lesson_index} has no ID."
+                        f"lesson #{lesson_index} "
+                        "has no ID."
                     )
                 )
 
@@ -729,8 +873,24 @@ def validate_management_data() -> dict[str, Any]:
 
                 warnings.append(
                     (
-                        f"Lesson '{lesson_id or lesson_index}' "
-                        f"in chapter '{chapter_id}' has no title."
+                        f"Lesson "
+                        f"'{lesson_id or lesson_index}' "
+                        f"in chapter '{chapter_id}' "
+                        "has no title."
+                    )
+                )
+
+            questions = get_quiz_questions(
+                chapter_id,
+                lesson_id,
+            )
+
+            if not questions:
+                warnings.append(
+                    (
+                        f"Lesson '{lesson_id}' "
+                        f"in chapter '{chapter_id}' "
+                        "has no quiz questions."
                     )
                 )
 
@@ -758,8 +918,84 @@ def management_service_health_check() -> bool:
         report = validate_management_data()
 
         return bool(
-            report["valid"]
+            report.get(
+                "valid",
+                False,
+            )
         )
 
     except Exception:
         return False
+
+
+# ==========================================================
+# Compatibility aliases
+# ==========================================================
+
+def get_management_data() -> Any:
+    """
+    Return the underlying Management curriculum.
+
+    Compatibility helper for older integrations.
+    """
+
+    return _load_curriculum()
+
+
+def get_all_lessons() -> list[dict[str, Any]]:
+    """
+    Return all Management lessons with chapter metadata.
+    """
+
+    result: list[dict[str, Any]] = []
+
+    for chapter in _get_chapters():
+
+        chapter_id = _normalize_id(
+            chapter.get("id")
+            or chapter.get("chapter_id")
+        )
+
+        chapter_title = str(
+            chapter.get(
+                "title",
+                chapter_id,
+            )
+        )
+
+        for lesson in _get_chapter_lessons(
+            chapter
+        ):
+
+            item = dict(
+                lesson
+            )
+
+            item["module_id"] = MODULE_ID
+            item["chapter_id"] = chapter_id
+            item["chapter_title"] = chapter_title
+
+            result.append(
+                item
+            )
+
+    return result
+
+
+# ==========================================================
+# Module-level test
+# ==========================================================
+
+if __name__ == "__main__":
+
+    report = validate_management_data()
+
+    print(
+        "Management Service Health:",
+        report["valid"],
+    )
+
+    print(
+        "Statistics:",
+        report["statistics"],
+    )
