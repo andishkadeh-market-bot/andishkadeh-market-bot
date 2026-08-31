@@ -1,545 +1,261 @@
-“”“Telegram handlers for the General Exam module.
+"""
+Telegram handlers for the General Exam module.
+Andishkadeh Management & Market.
 
-Andishkadeh Management & Market
+This module provides a safe handler layer for the General Exam section.
+"""
 
-Features:
-
-* Start general exam
-* Display questions
-* Receive answers
-* Show immediate answer feedback
-* Save quiz statistics
-* Update lesson progress
-* Cancel an active exam
-* Safe navigation back to main menu
-    “””
-
-from future import annotations
+from __future__ import annotations
 
 import html
 import logging
 from typing import Any
 
 from telegram import (
-InlineKeyboardButton,
-InlineKeyboardMarkup,
-Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Update,
 )
 from telegram.ext import ContextTypes
 
-from core.keyboards import main_menu_keyboard
 
-from modules.exam.service import (
-create_exam_session,
-get_current_question,
-submit_answer,
-cancel_exam,
-)
+logger = logging.getLogger(__name__)
 
-==========================================================
 
-Logging
+# ==========================================================
+# Constants
+# ==========================================================
 
-==========================================================
+MODULE_ID = "exam"
+MODULE_TITLE = "آزمون استخدامی"
 
-logger = logging.getLogger(name)
 
-==========================================================
+# ==========================================================
+# Helpers
+# ==========================================================
 
-Constants
+def _safe_text(
+    value: Any,
+    default: str = "-",
+) -> str:
+    """Convert a value to safe Telegram HTML text."""
 
-==========================================================
+    if value is None:
+        return default
 
-EXAM_SESSION_KEY = “general_exam_session”
+    text = str(value).strip()
 
-CALLBACK_START = “exam_general_start”
-CALLBACK_CANCEL = “exam_general_cancel”
-CALLBACK_ANSWER_PREFIX = “exam_general_answer:”
+    if not text:
+        return default
 
-==========================================================
+    return html.escape(text)
 
-Keyboards
 
-==========================================================
+# ==========================================================
+# Keyboard
+# ==========================================================
 
-def exam_start_keyboard() -> InlineKeyboardMarkup:
-“”“Return the general exam start keyboard.”””
+def exam_menu_keyboard() -> InlineKeyboardMarkup:
+    """Return the General Exam menu keyboard."""
 
-return InlineKeyboardMarkup(
-    [
+    return InlineKeyboardMarkup(
         [
-            InlineKeyboardButton(
-                "▶️ شروع آزمون",
-                callback_data=CALLBACK_START,
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🏠 منوی اصلی",
-                callback_data="menu_main",
-            )
-        ],
-    ]
-)
-
-def exam_question_keyboard(
-question: dict[str, Any],
-) -> InlineKeyboardMarkup:
-“”“Build answer buttons for one question.”””
-
-options = question.get("options", [])
-keyboard: list[list[InlineKeyboardButton]] = []
-option_labels = [
-    "الف",
-    "ب",
-    "ج",
-    "د",
-]
-for index, option in enumerate(options):
-    if index >= len(option_labels):
-        break
-    keyboard.append(
-        [
-            InlineKeyboardButton(
-                f"{option_labels[index]}) {option}",
-                callback_data=(
-                    f"{CALLBACK_ANSWER_PREFIX}"
-                    f"{index}"
-                ),
-            )
+            [
+                InlineKeyboardButton(
+                    "📝 آزمون‌ها",
+                    callback_data="exam_list",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🏠 منوی اصلی",
+                    callback_data="menu_main",
+                )
+            ],
         ]
     )
-keyboard.append(
-    [
-        InlineKeyboardButton(
-            "❌ لغو آزمون",
-            callback_data=CALLBACK_CANCEL,
-        )
-    ]
-)
-return InlineKeyboardMarkup(
-    keyboard
-)
 
-def exam_result_keyboard() -> InlineKeyboardMarkup:
-“”“Return keyboard displayed after exam completion.”””
 
-return InlineKeyboardMarkup(
-    [
+def exam_list_keyboard() -> InlineKeyboardMarkup:
+    """Return the exam list keyboard."""
+
+    return InlineKeyboardMarkup(
         [
-            InlineKeyboardButton(
-                "🔁 آزمون مجدد",
-                callback_data=CALLBACK_START,
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🏠 منوی اصلی",
-                callback_data="menu_main",
-            )
-        ],
-    ]
-)
-
-==========================================================
-
-Text helpers
-
-==========================================================
-
-def format_question(
-session: dict[str, Any],
-question: dict[str, Any],
-) -> str:
-“”“Format the current exam question.”””
-
-questions = session.get(
-    "questions",
-    [],
-)
-current_index = int(
-    session.get(
-        "current_index",
-        0,
+            [
+                InlineKeyboardButton(
+                    "🔙 آزمون استخدامی",
+                    callback_data="menu_exam",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🏠 منوی اصلی",
+                    callback_data="menu_main",
+                )
+            ],
+        ]
     )
-)
-total_questions = len(
-    questions
-)
-question_number = current_index + 1
-question_text = html.escape(
-    str(
-        question.get(
-            "question",
-            "",
-        )
-    )
-)
-return (
-    "📝 <b>آزمون عمومی</b>\n"
-    "━━━━━━━━━━━━━━━━━━\n"
-    f"❓ سؤال <b>{question_number}</b> "
-    f"از <b>{total_questions}</b>\n\n"
-    f"<b>{question_text}</b>\n\n"
-    "یکی از گزینه‌ها را انتخاب کنید:"
-)
 
-def format_result(
-result: dict[str, Any],
-) -> str:
-“”“Format the final exam result.”””
 
-score = float(
-    result.get(
-        "score",
-        0,
-    )
-)
-correct = int(
-    result.get(
-        "correct_answers",
-        0,
-    )
-)
-wrong = int(
-    result.get(
-        "wrong_answers",
-        0,
-    )
-)
-total = int(
-    result.get(
-        "total_questions",
-        0,
-    )
-)
-passed = bool(
-    result.get(
-        "passed",
-        False,
-    )
-)
-if passed:
-    status = "🎉 <b>قبول شدید</b>"
-else:
-    status = "📚 <b>نیاز به مرور و تمرین بیشتر دارید</b>"
-return (
-    "🏁 <b>آزمون عمومی به پایان رسید</b>\n"
-    "━━━━━━━━━━━━━━━━━━\n"
-    f"📊 نمره: <b>{score:.2f}%</b>\n"
-    f"❓ تعداد سوال: <b>{total}</b>\n"
-    f"✅ پاسخ صحیح: <b>{correct}</b>\n"
-    f"❌ پاسخ غلط: <b>{wrong}</b>\n"
-    "━━━━━━━━━━━━━━━━━━\n"
-    f"{status}\n\n"
-    "نتیجه آزمون در آمار کاربر ثبت شد."
-)
+# ==========================================================
+# Main Exam Menu
+# ==========================================================
 
-==========================================================
-
-Start screen
-
-==========================================================
-
-async def show_general_exam(
-update: Update,
-context: ContextTypes.DEFAULT_TYPE,
+async def show_exam_menu(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-“”“Show the general exam introduction screen.”””
+    """Show the General Exam menu."""
 
-query = update.callback_query
-if query is not None:
-    await query.answer()
-    await query.edit_message_text(
-        "📝 <b>آزمون عمومی</b>\n\n"
-        "در این بخش می‌توانید در آزمون عمومی "
-        "اندیشکده شرکت کنید.\n\n"
-        "📊 نتیجه آزمون پس از پایان ثبت می‌شود.\n"
-        "📚 شروع و تکمیل آزمون نیز در Progress ثبت خواهد شد.\n\n"
-        "برای شروع روی دکمه زیر بزنید:",
-        parse_mode="HTML",
-        reply_markup=exam_start_keyboard(),
-    )
-    return
-if update.message is not None:
-    await update.message.reply_text(
-        "📝 <b>آزمون عمومی</b>\n\n"
-        "برای شروع آزمون روی دکمه زیر بزنید:",
-        parse_mode="HTML",
-        reply_markup=exam_start_keyboard(),
+    query = update.callback_query
+
+    if query is not None:
+        await query.answer()
+
+    text = (
+        "📝 <b>آزمون استخدامی</b>\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
+        "در این بخش می‌توانید برای آزمون‌های "
+        "استخدامی آماده شوید.\n\n"
+        "مباحث و آزمون‌های این بخش به‌صورت "
+        "مرحله‌ای قابل توسعه هستند."
     )
 
-==========================================================
-
-Start exam
-
-==========================================================
-
-async def start_general_exam(
-update: Update,
-context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-“”“Create and start a new general exam session.”””
-
-query = update.callback_query
-if query is None:
-    return
-await query.answer()
-user = update.effective_user
-if user is None:
-    await query.edit_message_text(
-        "❌ اطلاعات کاربر قابل دریافت نیست.",
-        reply_markup=exam_start_keyboard(),
-    )
-    return
-try:
-    session = create_exam_session(
-        telegram_id=user.id,
-    )
-    context.user_data[
-        EXAM_SESSION_KEY
-    ] = session
-    question = get_current_question(
-        session
-    )
-    if question is None:
-        context.user_data.pop(
-            EXAM_SESSION_KEY,
-            None,
-        )
+    if query is not None:
         await query.edit_message_text(
-            "❌ آزمون در حال حاضر سوالی ندارد.",
-            reply_markup=exam_start_keyboard(),
-        )
-        return
-    await query.edit_message_text(
-        format_question(
-            session,
-            question,
-        ),
-        parse_mode="HTML",
-        reply_markup=exam_question_keyboard(
-            question
-        ),
-    )
-except Exception:
-    logger.exception(
-        "Failed to start general exam for user %s.",
-        user.id,
-    )
-    context.user_data.pop(
-        EXAM_SESSION_KEY,
-        None,
-    )
-    await query.edit_message_text(
-        "❌ خطایی هنگام شروع آزمون رخ داد.\n"
-        "لطفاً دوباره تلاش کنید.",
-        reply_markup=exam_start_keyboard(),
-    )
-
-==========================================================
-
-Answer
-
-==========================================================
-
-async def answer_general_exam(
-update: Update,
-context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-“”“Process an answer submitted by the user.”””
-
-query = update.callback_query
-if query is None:
-    return
-await query.answer()
-session = context.user_data.get(
-    EXAM_SESSION_KEY
-)
-if not isinstance(session, dict):
-    await query.edit_message_text(
-        "⚠️ آزمون فعالی پیدا نشد.\n\n"
-        "برای شروع دوباره آزمون را انتخاب کنید.",
-        reply_markup=exam_start_keyboard(),
-    )
-    return
-data = query.data or ""
-if not data.startswith(
-    CALLBACK_ANSWER_PREFIX
-):
-    return
-raw_index = data[
-    len(CALLBACK_ANSWER_PREFIX):
-]
-try:
-    answer_index = int(
-        raw_index
-    )
-except ValueError:
-    await query.answer(
-        "❌ پاسخ نامعتبر است.",
-        show_alert=True,
-    )
-    return
-try:
-    result = submit_answer(
-        session=session,
-        answer_index=answer_index,
-    )
-    if result.get("finished"):
-        final_result = result.get(
-            "result"
-        )
-        if not isinstance(
-            final_result,
-            dict,
-        ):
-            raise ValueError(
-                "Exam result was not returned."
-            )
-        context.user_data.pop(
-            EXAM_SESSION_KEY,
-            None,
-        )
-        await query.edit_message_text(
-            format_result(
-                final_result
-            ),
+            text,
             parse_mode="HTML",
-            reply_markup=exam_result_keyboard(),
+            reply_markup=exam_menu_keyboard(),
         )
         return
-    next_question = get_current_question(
-        session
-    )
-    if next_question is None:
-        raise ValueError(
-            "Next exam question was not found."
+
+    if update.message is not None:
+        await update.message.reply_text(
+            text,
+            parse_mode="HTML",
+            reply_markup=exam_menu_keyboard(),
         )
-    await query.edit_message_text(
-        format_question(
-            session,
-            next_question,
-        ),
-        parse_mode="HTML",
-        reply_markup=exam_question_keyboard(
-            next_question
-        ),
-    )
-except ValueError as exc:
-    logger.warning(
-        "Invalid general exam answer: %s",
-        exc,
-    )
-    await query.answer(
-        "❌ پاسخ قابل پردازش نیست.",
-        show_alert=True,
-    )
-except Exception:
-    logger.exception(
-        "Failed to process general exam answer."
-    )
-    context.user_data.pop(
-        EXAM_SESSION_KEY,
-        None,
-    )
-    await query.edit_message_text(
-        "❌ خطایی هنگام ثبت پاسخ رخ داد.\n"
-        "آزمون متوقف شد.",
-        reply_markup=exam_start_keyboard(),
-    )
 
-==========================================================
 
-Cancel
+# ==========================================================
+# Exam List
+# ==========================================================
 
-==========================================================
-
-async def cancel_general_exam(
-update: Update,
-context: ContextTypes.DEFAULT_TYPE,
+async def show_exam_list(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-“”“Cancel the current general exam.”””
+    """Show available General Exam sections."""
 
-query = update.callback_query
-if query is None:
-    return
-await query.answer()
-session = context.user_data.get(
-    EXAM_SESSION_KEY
-)
-if isinstance(session, dict):
-    cancel_exam(
-        session
+    query = update.callback_query
+
+    if query is None:
+        return
+
+    await query.answer()
+
+    text = (
+        "📝 <b>آزمون‌های استخدامی</b>\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
+        "هنوز آزمون فعالی برای این بخش ثبت نشده است.\n\n"
+        "ساختار آزمون‌ها آماده توسعه است."
     )
-context.user_data.pop(
-    EXAM_SESSION_KEY,
-    None,
-)
-await query.edit_message_text(
-    "❌ <b>آزمون لغو شد.</b>\n\n"
-    "نتیجه‌ای برای آزمون لغوشده ثبت نمی‌شود.",
-    parse_mode="HTML",
-    reply_markup=exam_start_keyboard(),
-)
 
-==========================================================
+    await query.edit_message_text(
+        text,
+        parse_mode="HTML",
+        reply_markup=exam_list_keyboard(),
+    )
 
-Callback router
 
-==========================================================
+# ==========================================================
+# Exam Command
+# ==========================================================
+
+async def exam_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """Handle the /exam command."""
+
+    await show_exam_menu(
+        update,
+        context,
+    )
+
+
+# ==========================================================
+# Callback Router
+# ==========================================================
 
 async def route_exam_callback(
-update: Update,
-context: ContextTypes.DEFAULT_TYPE,
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-“””
-Route callbacks belonging to the General Exam module.
+    """Route General Exam callbacks."""
 
-This router should run before a generic callback fallback.
-"""
-query = update.callback_query
-if query is None:
-    return
-data = query.data or ""
-if data == CALLBACK_START:
-    await start_general_exam(
-        update,
-        context,
-    )
-    return
-if data.startswith(
-    CALLBACK_ANSWER_PREFIX
-):
-    await answer_general_exam(
-        update,
-        context,
-    )
-    return
-if data == CALLBACK_CANCEL:
-    await cancel_general_exam(
-        update,
-        context,
-    )
-    return
+    query = update.callback_query
 
-==========================================================
+    if query is None:
+        return
 
-Health check
+    data = query.data or ""
 
-==========================================================
+    if data == "menu_exam":
+        await show_exam_menu(
+            update,
+            context,
+        )
+        return
+
+    if data == "exam_list":
+        await show_exam_list(
+            update,
+            context,
+        )
+        return
+
+
+# ==========================================================
+# Health Check
+# ==========================================================
 
 def exam_handlers_health_check() -> bool:
-“”“Basic health check for the Telegram exam handlers.”””
+    """Return General Exam handler health status."""
 
-try:
-    return all(
-        (
-            bool(EXAM_SESSION_KEY),
-            bool(CALLBACK_START),
-            bool(CALLBACK_CANCEL),
-            bool(CALLBACK_ANSWER_PREFIX),
+    try:
+        return bool(
+            MODULE_ID
+            and MODULE_TITLE
+            and callable(exam_command)
+            and callable(show_exam_menu)
         )
-    )
-except Exception:
-    return False
+    except Exception:
+        return False
+
+
+# ==========================================================
+# Compatibility Aliases
+# ==========================================================
+
+show_exam = show_exam_menu
+exam_menu = show_exam_menu
+
+
+# ==========================================================
+# Public Exports
+# ==========================================================
+
+__all__ = [
+    "MODULE_ID",
+    "MODULE_TITLE",
+    "exam_menu_keyboard",
+    "exam_list_keyboard",
+    "show_exam_menu",
+    "show_exam",
+    "exam_menu",
+    "show_exam_list",
+    "exam_command",
+    "route_exam_callback",
+    "exam_handlers_health_check",
+]
