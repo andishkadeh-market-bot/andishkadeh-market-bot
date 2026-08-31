@@ -12,6 +12,8 @@ Supported:
 - Lesson display
 - Lesson quizzes
 - Quiz result
+- Automatic progress tracking
+- Automatic quiz statistics
 """
 
 from telegram import (
@@ -29,9 +31,25 @@ from core.quiz import (
 
 from core.utils import send_long_text
 
+from core.progress import (
+    start_lesson,
+    complete_lesson,
+)
+
+from core.statistics import (
+    record_quiz_result,
+)
+
 from modules.management.curriculum import (
     MANAGEMENT_CURRICULUM,
 )
+
+
+# ==========================================================
+# Constants
+# ==========================================================
+
+MANAGEMENT_MODULE_ID = "management"
 
 
 # ==========================================================
@@ -125,6 +143,7 @@ from modules.management.lessons.lesson_50 import LESSON_50
 # ==========================================================
 
 QUIZ_SESSIONS: dict[int, QuizSession] = {}
+
 QUIZ_LESSON_CONTEXT: dict[int, dict] = {}
 
 
@@ -289,6 +308,7 @@ def get_chapter(
     chapter_id: str,
 ) -> dict | None:
     """Return a management chapter by ID."""
+
     return next(
         (
             chapter
@@ -303,6 +323,7 @@ def get_chapter_lessons(
     chapter_id: str,
 ) -> list[dict]:
     """Return detailed lessons for a chapter."""
+
     return MANAGEMENT_CHAPTER_LESSONS.get(
         chapter_id,
         [],
@@ -314,6 +335,7 @@ def get_management_lesson(
     lesson_index: int,
 ) -> dict | None:
     """Return detailed lesson content."""
+
     if lesson_index < 0:
         return None
 
@@ -335,6 +357,7 @@ def get_lesson_location(
     lesson_id: str,
 ) -> tuple[str, int] | None:
     """Return chapter ID and lesson index."""
+
     for chapter_id, lessons in (
         MANAGEMENT_CHAPTER_LESSONS.items()
     ):
@@ -351,6 +374,7 @@ def get_lesson_index(
     lesson_id: str,
 ) -> int | None:
     """Return lesson index inside its chapter."""
+
     location = get_lesson_location(
         lesson_id
     )
@@ -362,14 +386,101 @@ def get_lesson_index(
 
 
 # ==========================================================
+# Progress helpers
+# ==========================================================
+
+def register_lesson_started(
+    telegram_id: int,
+    chapter_id: str,
+    lesson_id: str,
+) -> None:
+    """
+    Register that a management lesson was opened.
+
+    Progress errors must not prevent the user from
+    viewing educational content.
+    """
+
+    try:
+
+        start_lesson(
+            telegram_id=telegram_id,
+            module_id=MANAGEMENT_MODULE_ID,
+            chapter_id=chapter_id,
+            lesson_id=lesson_id,
+        )
+
+    except Exception:
+        # Progress tracking is secondary to lesson delivery.
+        pass
+
+
+def register_lesson_completed(
+    telegram_id: int,
+    chapter_id: str,
+    lesson_id: str,
+) -> None:
+    """
+    Register lesson completion.
+
+    Progress errors must not break quiz result delivery.
+    """
+
+    try:
+
+        complete_lesson(
+            telegram_id=telegram_id,
+            module_id=MANAGEMENT_MODULE_ID,
+            chapter_id=chapter_id,
+            lesson_id=lesson_id,
+        )
+
+    except Exception:
+        pass
+
+
+def register_quiz_result(
+    telegram_id: int,
+    chapter_id: str,
+    lesson_id: str,
+    total_questions: int,
+    correct_answers: int,
+    score: float,
+) -> None:
+    """
+    Save completed quiz statistics.
+
+    Statistics errors must not prevent the user from
+    receiving the quiz result.
+    """
+
+    try:
+
+        record_quiz_result(
+            telegram_id=telegram_id,
+            module_id=MANAGEMENT_MODULE_ID,
+            chapter_id=chapter_id,
+            lesson_id=lesson_id,
+            total_questions=total_questions,
+            correct_answers=correct_answers,
+            score=score,
+        )
+
+    except Exception:
+        pass
+
+
+# ==========================================================
 # Management menu
 # ==========================================================
 
 def management_menu_keyboard() -> InlineKeyboardMarkup:
     """Create management chapter menu."""
+
     keyboard = []
 
     for chapter in MANAGEMENT_CURRICULUM:
+
         keyboard.append(
             [
                 InlineKeyboardButton(
@@ -410,6 +521,7 @@ def management_chapter_keyboard(
     )
 
     if chapter is None:
+
         return InlineKeyboardMarkup(
             [
                 [
@@ -430,19 +542,24 @@ def management_chapter_keyboard(
     display_lessons = detailed_lessons
 
     if not display_lessons:
+
         display_lessons = [
             {
                 "id": f"{chapter_id}_{index}",
                 "title": title,
             }
             for index, title in enumerate(
-                chapter.get("lessons", [])
+                chapter.get(
+                    "lessons",
+                    [],
+                )
             )
         ]
 
     for index, lesson in enumerate(
         display_lessons
     ):
+
         prefix = (
             "📖"
             if index < len(detailed_lessons)
@@ -555,10 +672,12 @@ async def show_management_chapter(
     )
 
     if chapter is None:
+
         await query.edit_message_text(
             "فصل موردنظر پیدا نشد.",
             reply_markup=management_menu_keyboard(),
         )
+
         return
 
     detailed_count = len(
@@ -568,7 +687,12 @@ async def show_management_chapter(
     )
 
     lesson_count = max(
-        len(chapter.get("lessons", [])),
+        len(
+            chapter.get(
+                "lessons",
+                [],
+            )
+        ),
         detailed_count,
     )
 
@@ -713,6 +837,7 @@ def lesson_navigation_keyboard(
     keyboard = []
 
     if lesson.get("quiz"):
+
         keyboard.append(
             [
                 InlineKeyboardButton(
@@ -732,6 +857,7 @@ def lesson_navigation_keyboard(
     navigation_row = []
 
     if lesson_index > 0:
+
         navigation_row.append(
             InlineKeyboardButton(
                 "⬅️ درس قبلی",
@@ -746,6 +872,7 @@ def lesson_navigation_keyboard(
     if lesson_index + 1 < len(
         lessons
     ):
+
         navigation_row.append(
             InlineKeyboardButton(
                 "درس بعدی ➡️",
@@ -824,9 +951,11 @@ async def show_management_lesson(
     _, chapter_id, lesson_index_raw = parts
 
     try:
+
         lesson_index = int(
             lesson_index_raw
         )
+
     except ValueError:
         return
 
@@ -835,10 +964,12 @@ async def show_management_lesson(
     )
 
     if chapter is None:
+
         await query.edit_message_text(
             "فصل موردنظر پیدا نشد.",
             reply_markup=management_menu_keyboard(),
         )
+
         return
 
     lesson = get_management_lesson(
@@ -847,6 +978,7 @@ async def show_management_lesson(
     )
 
     if lesson is None:
+
         await query.edit_message_text(
             "درس موردنظر هنوز محتوای کامل ندارد.",
             reply_markup=InlineKeyboardMarkup(
@@ -869,7 +1001,26 @@ async def show_management_lesson(
                 ]
             ),
         )
+
         return
+
+    # ------------------------------------------------------
+    # Automatic progress tracking
+    # ------------------------------------------------------
+
+    user = update.effective_user
+
+    if user is not None:
+
+        register_lesson_started(
+            telegram_id=user.id,
+            chapter_id=chapter_id,
+            lesson_id=lesson["id"],
+        )
+
+    # ------------------------------------------------------
+    # Lesson content
+    # ------------------------------------------------------
 
     text = format_lesson_text(
         lesson
@@ -908,6 +1059,7 @@ def quiz_keyboard(
     for index, option in enumerate(
         question.options
     ):
+
         keyboard.append(
             [
                 InlineKeyboardButton(
@@ -995,6 +1147,7 @@ async def start_management_quiz(
     )
 
     if lesson is None:
+
         await query.edit_message_text(
             "آزمون این درس هنوز فعال نشده است.",
             reply_markup=InlineKeyboardMarkup(
@@ -1008,6 +1161,7 @@ async def start_management_quiz(
                 ]
             ),
         )
+
         return
 
     user = update.effective_user
@@ -1023,6 +1177,7 @@ async def start_management_quiz(
     )
 
     if not questions:
+
         location = get_lesson_location(
             lesson_id
         )
@@ -1049,6 +1204,7 @@ async def start_management_quiz(
                 ]
             ),
         )
+
         return
 
     session = QuizSession(
@@ -1062,6 +1218,7 @@ async def start_management_quiz(
     )
 
     if location is not None:
+
         chapter_id, lesson_index = location
 
         QUIZ_LESSON_CONTEXT[user.id] = {
@@ -1069,6 +1226,13 @@ async def start_management_quiz(
             "chapter_id": chapter_id,
             "lesson_index": lesson_index,
         }
+
+        # Opening the quiz also counts as lesson activity.
+        register_lesson_started(
+            telegram_id=user.id,
+            chapter_id=chapter_id,
+            lesson_id=lesson_id,
+        )
 
     await query.edit_message_text(
         format_quiz_question(
@@ -1108,6 +1272,7 @@ async def answer_management_quiz(
     )
 
     if session is None:
+
         await query.edit_message_text(
             "آزمون فعالی برای شما پیدا نشد.",
             reply_markup=InlineKeyboardMarkup(
@@ -1121,6 +1286,7 @@ async def answer_management_quiz(
                 ]
             ),
         )
+
         return
 
     data = query.data or ""
@@ -1134,9 +1300,11 @@ async def answer_management_quiz(
     )
 
     try:
+
         selected_option = int(
             answer_index
         )
+
     except ValueError:
         return
 
@@ -1160,8 +1328,13 @@ async def answer_management_quiz(
     )
 
     if is_correct:
-        feedback = "✅ پاسخ شما درست است."
+
+        feedback = (
+            "✅ پاسخ شما درست است."
+        )
+
     else:
+
         feedback = (
             "❌ پاسخ شما نادرست است.\n\n"
             f"پاسخ صحیح: "
@@ -1170,6 +1343,10 @@ async def answer_management_quiz(
         )
 
     explanation = question.explanation
+
+    # ------------------------------------------------------
+    # Quiz finished
+    # ------------------------------------------------------
 
     if session.is_finished:
 
@@ -1198,6 +1375,31 @@ async def answer_management_quiz(
             "lesson_id"
         )
 
+        # --------------------------------------------------
+        # Automatic statistics
+        # --------------------------------------------------
+
+        register_quiz_result(
+            telegram_id=user.id,
+            chapter_id=chapter_id,
+            lesson_id=lesson_id or "",
+            total_questions=result.total,
+            correct_answers=result.correct,
+            score=result.percentage,
+        )
+
+        # --------------------------------------------------
+        # Automatic lesson completion
+        # --------------------------------------------------
+
+        if lesson_id:
+
+            register_lesson_completed(
+                telegram_id=user.id,
+                chapter_id=chapter_id,
+                lesson_id=lesson_id,
+            )
+
         final_text = f"""
 <b>{feedback}</b>
 
@@ -1206,6 +1408,11 @@ async def answer_management_quiz(
 ━━━━━━━━━━━━━━
 
 {result_text}
+
+━━━━━━━━━━━━━━
+
+📚 <b>پیشرفت شما ثبت شد.</b>
+📊 نتیجه آزمون نیز در آمار شما ذخیره شد.
 """
 
         keyboard = [
@@ -1266,6 +1473,10 @@ async def answer_management_quiz(
         )
 
         return
+
+    # ------------------------------------------------------
+    # Continue quiz
+    # ------------------------------------------------------
 
     next_question_text = format_quiz_question(
         session
