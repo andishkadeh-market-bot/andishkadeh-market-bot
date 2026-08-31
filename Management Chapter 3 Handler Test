@@ -1,0 +1,604 @@
+"""
+Handler tests for Management Chapter 3.
+
+Covers:
+- Lesson 20
+- Lesson 21
+- Lesson 22
+- Lesson 23
+- Lesson 24
+- Lesson 25
+- Lesson 26
+"""
+
+import importlib
+
+import pytest
+
+
+HANDLERS_MODULE = (
+    "modules.management.handlers"
+)
+
+
+CHAPTER_ID = "organizing"
+
+
+EXPECTED_LESSON_COUNT = 7
+
+EXPECTED_LESSON_MODULES = [
+    "modules.management.lessons.lesson_20",
+    "modules.management.lessons.lesson_21",
+    "modules.management.lessons.lesson_22",
+    "modules.management.lessons.lesson_23",
+    "modules.management.lessons.lesson_24",
+    "modules.management.lessons.lesson_25",
+    "modules.management.lessons.lesson_26",
+]
+
+
+EXPECTED_LESSON_VARIABLES = [
+    "LESSON_20",
+    "LESSON_21",
+    "LESSON_22",
+    "LESSON_23",
+    "LESSON_24",
+    "LESSON_25",
+    "LESSON_26",
+]
+
+
+# ==========================================================
+# Helpers
+# ==========================================================
+
+def load_handlers():
+    """Import management handlers."""
+
+    return importlib.import_module(
+        HANDLERS_MODULE
+    )
+
+
+def load_chapter_3_lessons():
+    """Import all Chapter 3 lessons."""
+
+    lessons = []
+
+    for module_name, variable_name in zip(
+        EXPECTED_LESSON_MODULES,
+        EXPECTED_LESSON_VARIABLES,
+    ):
+        module = importlib.import_module(
+            module_name
+        )
+
+        assert hasattr(
+            module,
+            variable_name,
+        ), (
+            f"{module_name} must contain "
+            f"{variable_name}"
+        )
+
+        lessons.append(
+            getattr(
+                module,
+                variable_name,
+            )
+        )
+
+    return lessons
+
+
+# ==========================================================
+# Import tests
+# ==========================================================
+
+def test_management_handlers_import():
+    """Management handlers must import successfully."""
+
+    handlers = load_handlers()
+
+    assert handlers is not None
+
+
+# ==========================================================
+# Chapter 3 registration
+# ==========================================================
+
+def test_chapter_3_exists_in_handler_mapping():
+    """Chapter 3 must exist in the handler lesson mapping."""
+
+    handlers = load_handlers()
+
+    assert hasattr(
+        handlers,
+        "MANAGEMENT_CHAPTER_LESSONS",
+    )
+
+    mapping = handlers.MANAGEMENT_CHAPTER_LESSONS
+
+    assert CHAPTER_ID in mapping
+
+
+def test_chapter_3_contains_seven_lessons():
+    """Chapter 3 must contain exactly seven lessons."""
+
+    handlers = load_handlers()
+
+    lessons = handlers.MANAGEMENT_CHAPTER_LESSONS[
+        CHAPTER_ID
+    ]
+
+    assert len(lessons) == (
+        EXPECTED_LESSON_COUNT
+    )
+
+
+# ==========================================================
+# Lesson imports
+# ==========================================================
+
+def test_chapter_3_lessons_are_loaded():
+    """All seven Chapter 3 lessons must be loaded."""
+
+    lessons = load_chapter_3_lessons()
+
+    assert len(lessons) == (
+        EXPECTED_LESSON_COUNT
+    )
+
+
+def test_chapter_3_lesson_ids_are_unique():
+    """Chapter 3 lesson IDs must be unique."""
+
+    lessons = load_chapter_3_lessons()
+
+    lesson_ids = [
+        lesson["id"]
+        for lesson in lessons
+    ]
+
+    assert len(lesson_ids) == len(
+        set(lesson_ids)
+    )
+
+
+def test_chapter_3_lessons_are_registered():
+    """All Chapter 3 lessons must be available in MANAGEMENT_LESSONS."""
+
+    handlers = load_handlers()
+
+    lessons = load_chapter_3_lessons()
+
+    for lesson in lessons:
+        lesson_id = lesson["id"]
+
+        assert lesson_id in (
+            handlers.MANAGEMENT_LESSONS
+        )
+
+        assert (
+            handlers.MANAGEMENT_LESSONS[
+                lesson_id
+            ]
+            is lesson
+        )
+
+
+# ==========================================================
+# Chapter 3 exact order
+# ==========================================================
+
+def test_chapter_3_lesson_order():
+    """Lessons 20-26 must appear in the expected order."""
+
+    handlers = load_handlers()
+
+    lessons = handlers.MANAGEMENT_CHAPTER_LESSONS[
+        CHAPTER_ID
+    ]
+
+    actual_ids = [
+        lesson["id"]
+        for lesson in lessons
+    ]
+
+    expected_ids = [
+        lesson["id"]
+        for lesson in load_chapter_3_lessons()
+    ]
+
+    assert actual_ids == expected_ids
+
+
+# ==========================================================
+# get_management_lesson
+# ==========================================================
+
+@pytest.mark.parametrize(
+    "lesson_index, expected_variable",
+    [
+        (0, "LESSON_20"),
+        (1, "LESSON_21"),
+        (2, "LESSON_22"),
+        (3, "LESSON_23"),
+        (4, "LESSON_24"),
+        (5, "LESSON_25"),
+        (6, "LESSON_26"),
+    ],
+)
+def test_get_management_lesson_chapter_3(
+    lesson_index,
+    expected_variable,
+):
+    """get_management_lesson must return the correct lesson."""
+
+    handlers = load_handlers()
+
+    lesson = handlers.get_management_lesson(
+        CHAPTER_ID,
+        lesson_index,
+    )
+
+    lessons = load_chapter_3_lessons()
+
+    expected_lesson = lessons[
+        lesson_index
+    ]
+
+    assert lesson is expected_lesson
+
+    assert lesson["id"] == expected_lesson[
+        "id"
+    ]
+
+
+def test_get_management_lesson_rejects_negative_index():
+    """Negative lesson indexes must be rejected."""
+
+    handlers = load_handlers()
+
+    lesson = handlers.get_management_lesson(
+        CHAPTER_ID,
+        -1,
+    )
+
+    assert lesson is None
+
+
+def test_get_management_lesson_rejects_invalid_index():
+    """Out-of-range lesson indexes must be rejected."""
+
+    handlers = load_handlers()
+
+    lesson = handlers.get_management_lesson(
+        CHAPTER_ID,
+        EXPECTED_LESSON_COUNT,
+    )
+
+    assert lesson is None
+
+
+# ==========================================================
+# get_lesson_location
+# ==========================================================
+
+@pytest.mark.parametrize(
+    "lesson_index",
+    range(7),
+)
+def test_get_lesson_location_for_chapter_3(
+    lesson_index,
+):
+    """Every Chapter 3 lesson must have a valid location."""
+
+    handlers = load_handlers()
+
+    lessons = load_chapter_3_lessons()
+
+    lesson_id = lessons[
+        lesson_index
+    ]["id"]
+
+    location = handlers.get_lesson_location(
+        lesson_id
+    )
+
+    assert location is not None
+
+    chapter_id, returned_index = location
+
+    assert chapter_id == CHAPTER_ID
+
+    assert returned_index == lesson_index
+
+
+# ==========================================================
+# get_lesson_index
+# ==========================================================
+
+@pytest.mark.parametrize(
+    "lesson_index",
+    range(7),
+)
+def test_get_lesson_index_for_chapter_3(
+    lesson_index,
+):
+    """Every Chapter 3 lesson must return its correct index."""
+
+    handlers = load_handlers()
+
+    lessons = load_chapter_3_lessons()
+
+    lesson_id = lessons[
+        lesson_index
+    ]["id"]
+
+    returned_index = handlers.get_lesson_index(
+        lesson_id
+    )
+
+    assert returned_index == lesson_index
+
+
+# ==========================================================
+# Lesson navigation keyboard
+# ==========================================================
+
+@pytest.mark.parametrize(
+    "lesson_index",
+    range(7),
+)
+def test_lesson_navigation_keyboard_chapter_3(
+    lesson_index,
+):
+    """Navigation keyboard must be created for every lesson."""
+
+    handlers = load_handlers()
+
+    lessons = load_chapter_3_lessons()
+
+    lesson = lessons[
+        lesson_index
+    ]
+
+    keyboard = handlers.lesson_navigation_keyboard(
+        CHAPTER_ID,
+        lesson_index,
+        lesson,
+    )
+
+    assert keyboard is not None
+
+    assert hasattr(
+        keyboard,
+        "inline_keyboard",
+    )
+
+    assert len(
+        keyboard.inline_keyboard
+    ) > 0
+
+
+# ==========================================================
+# Chapter 3 navigation callbacks
+# ==========================================================
+
+@pytest.mark.parametrize(
+    "lesson_index",
+    range(7),
+)
+def test_lesson_navigation_contains_chapter_callback(
+    lesson_index,
+):
+    """Every lesson must provide a callback to its chapter."""
+
+    handlers = load_handlers()
+
+    lessons = load_chapter_3_lessons()
+
+    lesson = lessons[
+        lesson_index
+    ]
+
+    keyboard = handlers.lesson_navigation_keyboard(
+        CHAPTER_ID,
+        lesson_index,
+        lesson,
+    )
+
+    callbacks = [
+        button.callback_data
+        for row in keyboard.inline_keyboard
+        for button in row
+        if button.callback_data
+    ]
+
+    expected_callback = (
+        f"management_chapter:"
+        f"{CHAPTER_ID}"
+    )
+
+    assert expected_callback in callbacks
+
+
+# ==========================================================
+# Quiz registration
+# ==========================================================
+
+@pytest.mark.parametrize(
+    "lesson_index",
+    range(7),
+)
+def test_chapter_3_lesson_has_quiz(
+    lesson_index,
+):
+    """Every Chapter 3 lesson must have quiz content."""
+
+    lessons = load_chapter_3_lessons()
+
+    lesson = lessons[
+        lesson_index
+    ]
+
+    assert "quiz" in lesson
+
+    assert isinstance(
+        lesson["quiz"],
+        list,
+    )
+
+    assert len(
+        lesson["quiz"]
+    ) > 0
+
+
+# ==========================================================
+# Quiz button
+# ==========================================================
+
+@pytest.mark.parametrize(
+    "lesson_index",
+    range(7),
+)
+def test_navigation_has_quiz_button(
+    lesson_index,
+):
+    """Every Chapter 3 lesson must expose a quiz button."""
+
+    handlers = load_handlers()
+
+    lessons = load_chapter_3_lessons()
+
+    lesson = lessons[
+        lesson_index
+    ]
+
+    keyboard = handlers.lesson_navigation_keyboard(
+        CHAPTER_ID,
+        lesson_index,
+        lesson,
+    )
+
+    callbacks = [
+        button.callback_data
+        for row in keyboard.inline_keyboard
+        for button in row
+        if button.callback_data
+    ]
+
+    expected_callback = (
+        f"management_quiz:"
+        f"{lesson['id']}"
+    )
+
+    assert expected_callback in callbacks
+
+
+# ==========================================================
+# Quiz session storage
+# ==========================================================
+
+def test_quiz_session_storage_exists():
+    """Quiz session storage must exist."""
+
+    handlers = load_handlers()
+
+    assert hasattr(
+        handlers,
+        "QUIZ_SESSIONS",
+    )
+
+    assert isinstance(
+        handlers.QUIZ_SESSIONS,
+        dict,
+    )
+
+
+def test_quiz_lesson_context_storage_exists():
+    """Quiz lesson context storage must exist."""
+
+    handlers = load_handlers()
+
+    assert hasattr(
+        handlers,
+        "QUIZ_LESSON_CONTEXT",
+    )
+
+    assert isinstance(
+        handlers.QUIZ_LESSON_CONTEXT,
+        dict,
+    )
+
+
+# ==========================================================
+# Handler functions
+# ==========================================================
+
+def test_required_handler_functions_exist():
+    """All required management handlers must exist."""
+
+    handlers = load_handlers()
+
+    required_functions = [
+        "show_management_menu",
+        "show_management_chapter",
+        "show_management_lesson",
+        "start_management_quiz",
+        "answer_management_quiz",
+        "cancel_management_quiz",
+    ]
+
+    for function_name in required_functions:
+        assert hasattr(
+            handlers,
+            function_name,
+        )
+
+        assert callable(
+            getattr(
+                handlers,
+                function_name,
+            )
+        )
+
+
+# ==========================================================
+# Chapter 3 complete handler coverage
+# ==========================================================
+
+def test_chapter_3_handler_coverage():
+    """Chapter 3 must be completely covered by handlers."""
+
+    handlers = load_handlers()
+
+    lessons = handlers.MANAGEMENT_CHAPTER_LESSONS[
+        CHAPTER_ID
+    ]
+
+    assert len(lessons) == 7
+
+    for index, lesson in enumerate(
+        lessons
+    ):
+        assert lesson["id"] in (
+            handlers.MANAGEMENT_LESSONS
+        )
+
+        loaded_lesson = handlers.get_management_lesson(
+            CHAPTER_ID,
+            index,
+        )
+
+        assert loaded_lesson is lesson
+
+        location = handlers.get_lesson_location(
+            lesson["id"]
+        )
+
+        assert location == (
+            CHAPTER_ID,
+            index,
+        )
