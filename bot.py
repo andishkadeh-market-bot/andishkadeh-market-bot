@@ -17,7 +17,10 @@ Modules:
 - International Trade
 - Psychology & Social Work
 - Banking
+- Random Quiz
+- Profile
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -61,6 +64,15 @@ from modules.membership.handlers import (
     is_member,
     show_membership_required,
     membership_handlers,
+)
+
+# ==========================================================
+# Profile
+# ==========================================================
+
+from modules.profile.handlers import (
+    route_profile_callback,
+    profile_handlers_health_check,
 )
 
 # ==========================================================
@@ -194,6 +206,7 @@ from modules.random_quiz.handlers import (
     route_random_quiz_callback,
     random_quiz_handlers_health_check,
 )
+
 # ==========================================================
 # Logging
 # ==========================================================
@@ -1220,6 +1233,58 @@ def run_banking_health_checks() -> bool:
 
 
 # ==========================================================
+# Profile Health Check
+# ==========================================================
+
+def run_profile_health_check() -> bool:
+    """
+    Run Profile handlers health check.
+    """
+    logger.info(
+        "Running Profile handlers health check..."
+    )
+
+    try:
+        result = profile_handlers_health_check()
+
+        if not isinstance(
+            result,
+            dict,
+        ):
+            logger.error(
+                "Profile handlers health check returned invalid result."
+            )
+            return False
+
+        status = result.get(
+            "status",
+            "error",
+        )
+
+        if status not in (
+            "ok",
+            "healthy",
+        ):
+            logger.error(
+                "Profile handlers health check failed: %s",
+                result,
+            )
+            return False
+
+        logger.info(
+            "Profile handlers health check: OK"
+        )
+
+        return True
+
+    except Exception:
+        logger.exception(
+            "Profile handlers health check failed."
+        )
+        return False
+
+
+# ==========================================================
 # Core Initialization
 # ==========================================================
 
@@ -1241,9 +1306,9 @@ def initialize_core() -> None:
         "SQLite database initialized successfully."
     )
 
-# ------------------------------------------------------
-# Registry
-# ------------------------------------------------------
+    # ------------------------------------------------------
+    # Registry
+    # ------------------------------------------------------
 
     logger.info(
         "Initializing complete Auto Registry..."
@@ -1263,9 +1328,9 @@ def initialize_core() -> None:
         registry_result["lessons"],
     )
 
-# ------------------------------------------------------
-# Progress
-# ------------------------------------------------------
+    # ------------------------------------------------------
+    # Progress
+    # ------------------------------------------------------
 
     logger.info(
         "Initializing Progress system..."
@@ -1277,9 +1342,9 @@ def initialize_core() -> None:
         "Progress system initialized successfully."
     )
 
-# ------------------------------------------------------
-# Statistics
-# ------------------------------------------------------
+    # ------------------------------------------------------
+    # Statistics
+    # ------------------------------------------------------
 
     logger.info(
         "Initializing Statistics system..."
@@ -1291,9 +1356,9 @@ def initialize_core() -> None:
         "Statistics system initialized successfully."
     )
 
-# ------------------------------------------------------
-# Health Checks
-# ------------------------------------------------------
+    # ------------------------------------------------------
+    # Health Checks
+    # ------------------------------------------------------
 
     if not run_core_health_checks():
         raise RuntimeError(
@@ -1318,6 +1383,11 @@ def initialize_core() -> None:
     if not run_banking_health_checks():
         raise RuntimeError(
             "Banking health checks failed."
+        )
+
+    if not run_profile_health_check():
+        raise RuntimeError(
+            "Profile handlers health check failed."
         )
 
     logger.info(
@@ -1524,6 +1594,35 @@ async def guarded_menu_callback(
 
 
 # ==========================================================
+# Membership Guard for Profile
+# ==========================================================
+
+async def guarded_profile_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """
+    Check mandatory channel membership before allowing
+    access to the user profile/dashboard.
+    """
+
+    if not await is_member(
+        update,
+        context,
+    ):
+        await show_membership_required(
+            update,
+            context,
+        )
+        return
+
+    await route_profile_callback(
+        update,
+        context,
+    )
+
+
+# ==========================================================
 # Error Handler
 # ==========================================================
 
@@ -1540,17 +1639,22 @@ async def error_handler(
         exc_info=context.error,
     )
 
+
 # ==========================================================
 # Application Factory
 # ==========================================================
+
 def build_application() -> Application:
     """
     Create and configure Telegram application.
+
     Handler groups:
     Group -1:
         Auto User Registry.
+
     Group 0:
         Commands and module-specific callback routers.
+
     Group 1:
         Generic central menu router.
     """
@@ -1558,15 +1662,19 @@ def build_application() -> Application:
         raise RuntimeError(
             "BOT_TOKEN is not configured."
         )
+
     initialize_core()
+
     application = (
         Application.builder()
         .token(BOT_TOKEN)
         .build()
     )
+
     # ======================================================
     # Callback Auto User Registry
     # ======================================================
+
     application.add_handler(
         CallbackQueryHandler(
             callback_user_registry,
@@ -1574,9 +1682,11 @@ def build_application() -> Application:
         ),
         group=-1,
     )
+
     # ======================================================
     # Commands
     # ======================================================
+
     application.add_handler(
         CommandHandler(
             "start",
@@ -1584,6 +1694,7 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     application.add_handler(
         CommandHandler(
             "menu",
@@ -1591,6 +1702,7 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     application.add_handler(
         CommandHandler(
             "admin",
@@ -1598,16 +1710,32 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     # ======================================================
     # Membership callbacks
     # ======================================================
+
     application.add_handlers(
         membership_handlers,
         group=0,
     )
+
+    # ======================================================
+    # Profile callbacks
+    # ======================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            guarded_profile_callback,
+            pattern=r"^menu_profile$",
+        ),
+        group=0,
+    )
+
     # ======================================================
     # Admin callbacks
     # ======================================================
+
     application.add_handler(
         CallbackQueryHandler(
             route_admin_callback,
@@ -1624,9 +1752,11 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     # ======================================================
     # General Exam callbacks
     # ======================================================
+
     application.add_handler(
         CallbackQueryHandler(
             route_exam_callback,
@@ -1640,9 +1770,11 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     # ======================================================
     # International Trade callbacks
     # ======================================================
+
     application.add_handler(
         CallbackQueryHandler(
             route_international_trade_callback,
@@ -1662,9 +1794,11 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     # ======================================================
     # Psychology & Social Work callbacks
     # ======================================================
+
     application.add_handler(
         CallbackQueryHandler(
             route_psychology_callback,
@@ -1682,9 +1816,11 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     # ======================================================
     # Management callbacks
     # ======================================================
+
     application.add_handler(
         CallbackQueryHandler(
             show_management_menu,
@@ -1692,6 +1828,7 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     application.add_handler(
         CallbackQueryHandler(
             show_management_chapter,
@@ -1699,6 +1836,7 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     application.add_handler(
         CallbackQueryHandler(
             show_management_lesson,
@@ -1706,9 +1844,11 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     # ------------------------------------------------------
     # Management Quiz Start
     # ------------------------------------------------------
+
     application.add_handler(
         CallbackQueryHandler(
             start_management_quiz,
@@ -1721,9 +1861,11 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     # ------------------------------------------------------
     # Management Quiz Answers
     # ------------------------------------------------------
+
     application.add_handler(
         CallbackQueryHandler(
             answer_management_quiz,
@@ -1736,9 +1878,11 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     # ------------------------------------------------------
     # Management Quiz Cancellation
     # ------------------------------------------------------
+
     application.add_handler(
         CallbackQueryHandler(
             cancel_management_quiz,
@@ -1751,9 +1895,11 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     # ======================================================
     # Banking callbacks
     # ======================================================
+
     application.add_handler(
         CallbackQueryHandler(
             route_banking_callback,
@@ -1772,9 +1918,11 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     # ======================================================
     # Random Quiz callbacks
     # ======================================================
+
     application.add_handler(
         CallbackQueryHandler(
             route_random_quiz_callback,
@@ -1782,9 +1930,11 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     # ======================================================
     # Generic Central Menu Router
     # ======================================================
+
     application.add_handler(
         CallbackQueryHandler(
             guarded_menu_callback,
@@ -1792,16 +1942,21 @@ def build_application() -> Application:
         ),
         group=1,
     )
+
     # ======================================================
     # Global Error Handler
     # ======================================================
+
     application.add_error_handler(
         error_handler
     )
+
     logger.info(
         "Telegram application configured successfully."
     )
+
     return application
+
 
 # ==========================================================
 # Integration Health Check
@@ -1829,6 +1984,9 @@ def integration_health_check() -> bool:
         if not run_banking_health_checks():
             return False
 
+        if not run_profile_health_check():
+            return False
+
         logger.info(
             "========================================"
         )
@@ -1848,6 +2006,7 @@ def integration_health_check() -> bool:
             "Integration health check failed."
         )
         return False
+
 
 # ==========================================================
 # Main Async Runner
@@ -1930,6 +2089,7 @@ async def run_bot() -> None:
             "Application shutdown complete."
         )
 
+
 # ==========================================================
 # Main
 # ==========================================================
@@ -1969,6 +2129,7 @@ def main() -> None:
             "Fatal application error."
         )
         raise
+
 
 # ==========================================================
 # Entry Point
