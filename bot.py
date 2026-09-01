@@ -1482,11 +1482,11 @@ def build_application() -> Application:
         ),
         group=0,
     )
-    # ======================================================
-    # Generic Central Menu Router
-    #
-    # Must remain after module-specific routers.
-    # ======================================================
+# ======================================================
+# Generic Central Menu Router
+#
+# Must remain after module-specific routers.
+# ======================================================
     application.add_handler(
     CallbackQueryHandler(
         guarded_menu_callback,
@@ -1494,7 +1494,7 @@ def build_application() -> Application:
     ),
     group=1,
 )
-  # ======================================================
+# ======================================================
 # Callback Auto User Registry
 #
 # Separate group.
@@ -1508,9 +1508,9 @@ application.add_handler(
     ),
     group=-1,
 )
-    # ======================================================
-    # Global Error Handler
-    # ======================================================
+# ======================================================
+# Global Error Handler
+# ======================================================
     application.add_error_handler(
         error_handler
     )
