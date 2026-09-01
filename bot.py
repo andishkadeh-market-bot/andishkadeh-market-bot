@@ -5,6 +5,7 @@ Main Telegram bot entry point.
 Core:
 - SQLite database
 - Auto Registry
+- Content Initializer
 - Auto User Registry
 - Progress
 - Statistics
@@ -44,6 +45,7 @@ from config import (
 )
 
 from core.database import init_database
+from core.content_initializer import initialize_all_content
 from core.registry import registry
 
 from core.progress import (
@@ -198,6 +200,7 @@ except ImportError:
     def banking_handlers_health_check() -> bool:
         return False
 
+
 # ==========================================================
 # Random Quiz
 # ==========================================================
@@ -341,6 +344,10 @@ async def start_health_server() -> web.AppRunner:
 def register_management_content() -> dict[str, int]:
     """
     Register complete Management module.
+
+    Kept for compatibility with the existing bot architecture.
+    Primary content initialization is now handled by
+    core.content_initializer.
     """
     logger.info(
         "Starting Management Auto Registry..."
@@ -478,6 +485,10 @@ def register_general_exam_content() -> dict[str, int]:
 def register_international_trade_content() -> dict[str, int]:
     """
     Register complete International Trade module.
+
+    Kept for compatibility with the existing bot architecture.
+    Primary content initialization is now handled by
+    core.content_initializer.
     """
     logger.info(
         "Starting International Trade Auto Registry..."
@@ -643,6 +654,10 @@ def register_international_trade_content() -> dict[str, int]:
 def register_psychology_content() -> dict[str, int]:
     """
     Register complete Psychology & Social Work module.
+
+    Kept for compatibility with the existing bot architecture.
+    Primary content initialization is now handled by
+    core.content_initializer.
     """
     logger.info(
         "Starting Psychology & Social Work Auto Registry..."
@@ -687,6 +702,10 @@ def register_psychology_content() -> dict[str, int]:
 def register_banking_content() -> dict[str, int]:
     """
     Register complete Banking module.
+
+    Kept for compatibility with the existing bot architecture.
+    Primary content initialization is now handled by
+    core.content_initializer.
     """
     logger.info(
         "Starting Banking Auto Registry..."
@@ -820,38 +839,118 @@ def register_banking_content() -> dict[str, int]:
 
 
 # ==========================================================
-# Complete Auto Registry
+# Complete Content Initialization
 # ==========================================================
 
 def register_all_content() -> dict[str, int]:
     """
-    Register all available modules.
+    Initialize all educational content.
+
+    The new architecture uses core.content_initializer as
+    the primary source of truth for module content.
+
+    General Exam remains registered separately because it is
+    not part of the current CONTENT_PACKAGES handled by the
+    content initializer.
     """
     logger.info(
         "========================================"
     )
 
     logger.info(
-        "Starting complete Auto Registry..."
+        "Starting complete Content Initialization..."
     )
 
-    register_management_content()
-    register_general_exam_content()
-    register_international_trade_content()
-    register_psychology_content()
-    register_banking_content()
+    # ------------------------------------------------------
+    # Primary content initializer
+    # ------------------------------------------------------
+
+    try:
+        initializer_result = (
+            initialize_all_content()
+        )
+
+        if not isinstance(
+            initializer_result,
+            dict,
+        ):
+            logger.warning(
+                (
+                    "Content Initializer returned "
+                    "an unexpected result: %r"
+                ),
+                initializer_result,
+            )
+            initializer_result = {}
+
+        logger.info(
+            (
+                "Content Initializer finished: "
+                "modules=%s chapters=%s lessons=%s"
+            ),
+            initializer_result.get(
+                "modules",
+                0,
+            ),
+            initializer_result.get(
+                "chapters",
+                0,
+            ),
+            initializer_result.get(
+                "lessons",
+                0,
+            ),
+        )
+
+    except Exception:
+        logger.exception(
+            "Content Initializer failed."
+        )
+        raise
+
+    # ------------------------------------------------------
+    # General Exam
+    # ------------------------------------------------------
+
+    try:
+        register_general_exam_content()
+
+    except Exception:
+        logger.exception(
+            "General Exam content registration failed."
+        )
+        raise
+
+    # ------------------------------------------------------
+    # Final Registry Statistics
+    # ------------------------------------------------------
 
     statistics = registry.statistics()
 
     result = {
-        "modules": statistics["modules"],
-        "chapters": statistics["chapters"],
-        "lessons": statistics["lessons"],
+        "modules": int(
+            statistics.get(
+                "modules",
+                0,
+            )
+        ),
+        "chapters": int(
+            statistics.get(
+                "chapters",
+                0,
+            )
+        ),
+        "lessons": int(
+            statistics.get(
+                "lessons",
+                0,
+            )
+        ),
     }
 
     logger.info(
         (
-            "Complete Auto Registry finished: "
+            "Complete Content Initialization finished: "
             "modules=%s chapters=%s lessons=%s"
         ),
         result["modules"],
@@ -904,8 +1003,35 @@ def run_core_health_checks() -> bool:
             )
             return False
 
+        if (
+            registry_stats.get(
+                "lessons",
+                0,
+            )
+            < 1
+        ):
+            logger.error(
+                "Registry contains no lessons."
+            )
+            return False
+
         logger.info(
-            "Registry health check: OK"
+            (
+                "Registry health check: OK "
+                "modules=%s chapters=%s lessons=%s"
+            ),
+            registry_stats.get(
+                "modules",
+                0,
+            ),
+            registry_stats.get(
+                "chapters",
+                0,
+            ),
+            registry_stats.get(
+                "lessons",
+                0,
+            ),
         )
 
     except Exception:
@@ -1285,6 +1411,83 @@ def run_profile_health_check() -> bool:
 
 
 # ==========================================================
+# Content Initializer Health Check
+# ==========================================================
+
+def run_content_initializer_health_check() -> bool:
+    """
+    Verify that the content initializer is available and
+    the registry contains educational content.
+    """
+    logger.info(
+        "Running Content Initializer health check..."
+    )
+
+    try:
+        registry_stats = registry.statistics()
+
+        if not isinstance(
+            registry_stats,
+            dict,
+        ):
+            logger.error(
+                "Content Initializer registry result is invalid."
+            )
+            return False
+
+        modules = int(
+            registry_stats.get(
+                "modules",
+                0,
+            )
+        )
+
+        chapters = int(
+            registry_stats.get(
+                "chapters",
+                0,
+            )
+        )
+
+        lessons = int(
+            registry_stats.get(
+                "lessons",
+                0,
+            )
+        )
+
+        if modules < 1:
+            logger.error(
+                "Content Initializer registered no modules."
+            )
+            return False
+
+        if lessons < 1:
+            logger.error(
+                "Content Initializer registered no lessons."
+            )
+            return False
+
+        logger.info(
+            (
+                "Content Initializer health check: OK "
+                "modules=%s chapters=%s lessons=%s"
+            ),
+            modules,
+            chapters,
+            lessons,
+        )
+
+        return True
+
+    except Exception:
+        logger.exception(
+            "Content Initializer health check failed."
+        )
+        return False
+
+
+# ==========================================================
 # Core Initialization
 # ==========================================================
 
@@ -1307,11 +1510,11 @@ def initialize_core() -> None:
     )
 
     # ------------------------------------------------------
-    # Registry
+    # Content / Registry
     # ------------------------------------------------------
 
     logger.info(
-        "Initializing complete Auto Registry..."
+        "Initializing complete educational content..."
     )
 
     registry_result = (
@@ -1320,7 +1523,7 @@ def initialize_core() -> None:
 
     logger.info(
         (
-            "Registry initialized: "
+            "Educational content initialized: "
             "modules=%s chapters=%s lessons=%s"
         ),
         registry_result["modules"],
@@ -1363,6 +1566,11 @@ def initialize_core() -> None:
     if not run_core_health_checks():
         raise RuntimeError(
             "Core health checks failed."
+        )
+
+    if not run_content_initializer_health_check():
+        raise RuntimeError(
+            "Content Initializer health check failed."
         )
 
     if not run_exam_health_checks():
@@ -1970,6 +2178,9 @@ def integration_health_check() -> bool:
     try:
 
         if not run_core_health_checks():
+            return False
+
+        if not run_content_initializer_health_check():
             return False
 
         if not run_exam_health_checks():
