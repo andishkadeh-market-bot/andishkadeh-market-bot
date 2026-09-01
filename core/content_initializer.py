@@ -1,41 +1,32 @@
 """
-Central content initializer for Andishkadeh Management & Market.
+Content Initializer for Andishkadeh Management & Market.
 
-Responsibilities:
-- Initialize the SQLite database.
-- Discover educational content from module packages.
-- Register modules, chapters and lessons in the central Registry.
-- Persist discovered content into SQLite through core.registry.
-- Keep initialization idempotent.
-- Provide health-check information.
+This module discovers educational content from the project modules,
+registers modules/chapters/lessons in the central registry and database,
+and provides health/statistics helpers.
 
-This module does NOT:
-- Handle Telegram updates.
-- Modify bot.py.
-- Modify core.database.py.
-- Modify core.registry.py.
+It does NOT handle Telegram UI.
 """
 
 from __future__ import annotations
 
 import importlib
 import inspect
+import logging
 import pkgutil
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Iterable
 
 from core.database import init_database
-from core.registry import (
-    registry,
-    register_chapter,
-    register_lesson,
-    register_module,
-)
+from core.registry import registry
 
 
-# ==========================================================
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
 # Configuration
-# ==========================================================
+# ---------------------------------------------------------------------------
 
 CONTENT_PACKAGES = (
     "modules.management",
@@ -52,327 +43,255 @@ CONTENT_MODULE_IDS = {
 }
 
 
-# ==========================================================
-# Internal Data Models
-# ==========================================================
+# ---------------------------------------------------------------------------
+# Data models
+# ---------------------------------------------------------------------------
 
 @dataclass
 class DiscoveredLesson:
     module_id: str
-    module_title: str
     chapter_id: str
-    chapter_title: str
     lesson_id: str
-    lesson_title: str
-    data: dict[str, Any]
+    title: str
+    description: str = ""
+    data: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class DiscoveredChapter:
     module_id: str
-    module_title: str
     chapter_id: str
-    chapter_title: str
-    data: dict[str, Any]
+    title: str
+    lessons: list[DiscoveredLesson] = field(default_factory=list)
+    data: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class DiscoveredModule:
     module_id: str
-    module_title: str
-    description: str
-    data: dict[str, Any]
+    title: str
+    chapters: list[DiscoveredChapter] = field(default_factory=list)
+    data: dict[str, Any] = field(default_factory=dict)
 
 
-# ==========================================================
-# Generic Helpers
-# ==========================================================
+# ---------------------------------------------------------------------------
+# Generic helpers
+# ---------------------------------------------------------------------------
 
 def _clean_text(value: Any, default: str = "") -> str:
-    """Normalize a value into clean text."""
     if value is None:
         return default
 
-    text = str(value).strip()
+    if isinstance(value, str):
+        text = value.strip()
+        return text if text else default
 
-    return text if text else default
+    return str(value).strip() or default
 
 
-def _as_dict(value: Any) -> dict[str, Any] | None:
-    """Return value when it is a dictionary."""
+def _as_dict(value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
         return value
 
-    return None
+    if hasattr(value, "__dict__"):
+        try:
+            return dict(vars(value))
+        except Exception:
+            return {}
+
+    return {}
 
 
-def _first_value(
-    data: dict[str, Any],
-    keys: tuple[str, ...],
-    default: Any = None,
-) -> Any:
-    """Return the first non-empty value from a dictionary."""
+def _first_value(data: dict[str, Any], keys: Iterable[str], default: Any = None) -> Any:
     for key in keys:
-        if key not in data:
-            continue
-
-        value = data.get(key)
-
-        if value is None:
-            continue
-
-        if isinstance(value, str) and not value.strip():
-            continue
-
-        return value
+        if key in data and data[key] is not None:
+            return data[key]
 
     return default
 
 
 def _normalize_identifier(value: Any, fallback: str) -> str:
-    """
-    Normalize identifiers while preserving meaningful source IDs.
-    """
-    text = _clean_text(value)
+    text = _clean_text(value, fallback)
 
-    if text:
-        return text
+    replacements = {
+        " ": "_",
+        "-": "_",
+        "/": "_",
+    }
 
-    return fallback
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    return text.strip("_") or fallback
 
 
 def _looks_like_lesson(data: dict[str, Any]) -> bool:
-    """
-    Detect whether a dictionary appears to describe a lesson.
-
-    We deliberately require stronger evidence than just `id` + `title`
-    because chapter dictionaries and quiz questions may use the same keys.
-    """
-    lesson_markers = (
+    lesson_keys = {
         "lesson_id",
-        "lesson_title",
         "lesson",
+        "lesson_number",
+        "lesson_no",
+        "lesson_title",
+        "title",
         "content",
-        "lesson_content",
-        "lesson_text",
+        "text",
         "body",
-        "example",
-        "specialized_notes",
-        "special_points",
-        "exam_notes",
-        "exam_points",
-    )
+    }
 
-    if not any(key in data for key in lesson_markers):
-        return False
-
-    if "questions" in data and len(data) <= 5:
-        return False
-
-    return True
+    return bool(set(data.keys()) & lesson_keys)
 
 
 def _looks_like_chapter(data: dict[str, Any]) -> bool:
-    """Detect whether a dictionary appears to describe a chapter."""
-    chapter_markers = (
+    chapter_keys = {
         "chapter_id",
+        "chapter",
+        "chapter_number",
+        "chapter_no",
         "chapter_title",
         "chapters",
         "lessons",
-        "lesson_list",
-    )
+    }
 
-    if any(key in data for key in chapter_markers):
-        return True
+    return bool(set(data.keys()) & chapter_keys)
 
-    identifier = _first_value(
-        data,
-        ("id", "code", "slug"),
-    )
+
+# ---------------------------------------------------------------------------
+# Module metadata
+# ---------------------------------------------------------------------------
+
+def _extract_module_metadata(
+    module: Any,
+    module_id: str,
+) -> tuple[str, dict[str, Any]]:
+    data = _as_dict(module)
 
     title = _first_value(
         data,
-        ("title", "name", "chapter_name"),
-    )
-
-    if identifier and title:
-        return True
-
-    return False
-
-
-def _extract_module_metadata(
-    package_name: str,
-    package_data: dict[str, Any] | None,
-) -> DiscoveredModule:
-    """Extract module metadata from a package or data module."""
-    package_data = package_data or {}
-
-    module_id = _first_value(
-        package_data,
-        (
-            "MODULE_ID",
-            "module_id",
-        ),
-        CONTENT_MODULE_IDS.get(package_name, package_name),
-    )
-
-    module_title = _first_value(
-        package_data,
         (
             "MODULE_TITLE",
             "module_title",
+            "MODULE_NAME",
+            "module_name",
             "TITLE",
+            "title",
+            "NAME",
+            "name",
         ),
         module_id,
     )
 
-    description = _first_value(
-        package_data,
-        (
-            "MODULE_DESCRIPTION",
-            "module_description",
-            "DESCRIPTION",
-        ),
-        "",
-    )
+    title = _clean_text(title, module_id)
 
-    return DiscoveredModule(
-        module_id=_normalize_identifier(module_id, package_name),
-        module_title=_clean_text(module_title, module_id),
-        description=_clean_text(description),
-        data=package_data,
-    )
+    return title, data
 
 
-# ==========================================================
-# Module Discovery
-# ==========================================================
+# ---------------------------------------------------------------------------
+# Import / discovery
+# ---------------------------------------------------------------------------
 
-def _import_optional(module_name: str) -> Any | None:
-    """Import a module without making optional discovery fatal."""
+def _import_optional(name: str) -> Any | None:
     try:
-        return importlib.import_module(module_name)
-    except Exception:
+        return importlib.import_module(name)
+    except Exception as exc:
+        logger.warning(
+            "Could not import content package/module %s: %s",
+            name,
+            exc,
+        )
         return None
 
 
-def _iter_package_modules(package_name: str):
-    """
-    Recursively discover Python modules under a package.
-
-    This allows the initializer to work with structures such as:
-
-        modules.management.lessons.lesson_01
-        modules.management.lessons.lesson_02
-
-    as well as data.py based modules.
-    """
+def _iter_package_modules(package_name: str) -> list[Any]:
     package = _import_optional(package_name)
 
     if package is None:
-        return
+        return []
 
-    yield package
+    modules: list[Any] = [package]
 
     package_path = getattr(package, "__path__", None)
 
-    if not package_path:
-        return
+    if package_path:
+        try:
+            for item in pkgutil.walk_packages(
+                package_path,
+                package.__name__ + ".",
+            ):
+                imported = _import_optional(item.name)
 
-    prefix = package.__name__ + "."
+                if imported is not None:
+                    modules.append(imported)
 
-    for module_info in pkgutil.walk_packages(
-        package_path,
-        prefix,
-    ):
-        module = _import_optional(module_info.name)
+        except Exception as exc:
+            logger.warning(
+                "Could not scan package %s: %s",
+                package_name,
+                exc,
+            )
 
-        if module is not None:
-            yield module
+    return modules
 
 
 def _find_data_modules(package_name: str) -> list[Any]:
-    """Find likely data/content modules inside a module package."""
-    candidates: list[Any] = []
+    modules = _iter_package_modules(package_name)
 
-    for module in _iter_package_modules(package_name):
+    result: list[Any] = []
+
+    for module in modules:
         module_name = getattr(module, "__name__", "")
 
-        if module_name.endswith(".data"):
-            candidates.append(module)
-            continue
+        if (
+            module_name.endswith(".data")
+            or module_name.endswith(".content")
+            or module_name.endswith(".lessons")
+            or module_name.endswith(".curriculum")
+            or module_name == package_name
+        ):
+            result.append(module)
 
-        if module_name.endswith(".curriculum"):
-            candidates.append(module)
-            continue
-
-        if module_name.endswith(".content"):
-            candidates.append(module)
-            continue
-
-        if module_name.endswith(".psychology_socialwork"):
-            candidates.append(module)
-
-    return candidates
+    return result or modules
 
 
-# ==========================================================
-# Recursive Content Extraction
-# ==========================================================
+# ---------------------------------------------------------------------------
+# Recursive data extraction
+# ---------------------------------------------------------------------------
 
-def _iter_dicts(
-    value: Any,
-    visited: set[int] | None = None,
-):
-    """
-    Recursively yield dictionaries from nested Python structures.
-
-    Cyclic structures are protected against.
-    """
-    if visited is None:
-        visited = set()
-
-    object_id = id(value)
-
-    if object_id in visited:
-        return
-
-    visited.add(object_id)
-
+def _iter_dicts(value: Any) -> Iterable[dict[str, Any]]:
     if isinstance(value, dict):
         yield value
 
-        for child in value.values():
-            yield from _iter_dicts(child, visited)
+        for nested in value.values():
+            yield from _iter_dicts(nested)
 
-        return
+    elif isinstance(value, (list, tuple, set)):
+        for item in value:
+            yield from _iter_dicts(item)
 
-    if isinstance(value, (list, tuple, set)):
-        for child in value:
-            yield from _iter_dicts(child, visited)
+    elif hasattr(value, "__dict__"):
+        try:
+            yield from _iter_dicts(vars(value))
+        except Exception:
+            return
 
 
 def _collect_public_values(module: Any) -> list[Any]:
-    """Collect safe public values from a Python module."""
     values: list[Any] = []
 
     try:
-        attributes = vars(module)
+        names = dir(module)
     except Exception:
         return values
 
-    for name, value in attributes.items():
+    for name in names:
         if name.startswith("_"):
             continue
 
-        if inspect.ismodule(value):
+        try:
+            value = getattr(module, name)
+        except Exception:
             continue
 
-        if inspect.isfunction(value):
-            continue
-
-        if inspect.isclass(value):
+        if inspect.ismodule(value) or inspect.isfunction(value) or inspect.isclass(value):
             continue
 
         values.append(value)
@@ -380,250 +299,89 @@ def _collect_public_values(module: Any) -> list[Any]:
     return values
 
 
-# ==========================================================
-# Chapter Extraction
-# ==========================================================
-
-def _extract_chapters_from_module(
-    module: Any,
-    discovered_module: DiscoveredModule,
-) -> list[DiscoveredChapter]:
-    """Extract chapter records from a content module."""
-    chapters: list[DiscoveredChapter] = []
-    seen: set[tuple[str, str]] = set()
-
-    values = _collect_public_values(module)
-
-    for value in values:
-        for data in _iter_dicts(value):
-            chapter_id_raw = _first_value(
-                data,
-                (
-                    "chapter_id",
-                    "chapterId",
-                ),
-            )
-
-            chapter_title_raw = _first_value(
-                data,
-                (
-                    "chapter_title",
-                    "chapterTitle",
-                    "chapter_name",
-                ),
-            )
-
-            identifier = _first_value(
-                data,
-                (
-                    "id",
-                    "code",
-                    "slug",
-                ),
-            )
-
-            title = _first_value(
-                data,
-                (
-                    "title",
-                    "name",
-                ),
-            )
-
-            chapter_id = chapter_id_raw or identifier
-            chapter_title = chapter_title_raw or title
-
-            if not chapter_id or not chapter_title:
-                continue
-
-            if _looks_like_lesson(data):
-                continue
-
-            if not _looks_like_chapter(data):
-                continue
-
-            chapter_id = _normalize_identifier(
-                chapter_id,
-                "chapter",
-            )
-
-            chapter_title = _clean_text(
-                chapter_title,
-                chapter_id,
-            )
-
-            key = (
-                discovered_module.module_id,
-                chapter_id,
-            )
-
-            if key in seen:
-                continue
-
-            seen.add(key)
-
-            chapters.append(
-                DiscoveredChapter(
-                    module_id=discovered_module.module_id,
-                    module_title=discovered_module.module_title,
-                    chapter_id=chapter_id,
-                    chapter_title=chapter_title,
-                    data=data,
-                )
-            )
-
-    return chapters
-
-
-# ==========================================================
-# Lesson Extraction
-# ==========================================================
+# ---------------------------------------------------------------------------
+# Chapter / lesson extraction
+# ---------------------------------------------------------------------------
 
 def _extract_lessons_from_module(
     module: Any,
-    discovered_module: DiscoveredModule,
+    module_id: str,
+    chapter_id: str,
 ) -> list[DiscoveredLesson]:
-    """Extract lesson records from a content module."""
     lessons: list[DiscoveredLesson] = []
-    seen: set[tuple[str, str, str]] = set()
 
-    values = _collect_public_values(module)
+    public_values = _collect_public_values(module)
 
-    current_chapter_id = "chapter_01"
-    current_chapter_title = "فصل اول"
+    for value in public_values:
+        candidates: list[Any]
 
-    for value in values:
-        if isinstance(value, dict):
-            possible_chapter_id = _first_value(
-                value,
-                (
-                    "chapter_id",
-                    "chapterId",
-                ),
-            )
+        if isinstance(value, (list, tuple, set)):
+            candidates = list(value)
+        elif isinstance(value, dict):
+            candidates = list(value.values())
+        else:
+            candidates = [value]
 
-            possible_chapter_title = _first_value(
-                value,
-                (
-                    "chapter_title",
-                    "chapterTitle",
-                    "chapter_name",
-                ),
-            )
+        for candidate in candidates:
+            data = _as_dict(candidate)
 
-            if possible_chapter_id:
-                current_chapter_id = _clean_text(
-                    possible_chapter_id,
-                    current_chapter_id,
-                )
+            if not data:
+                continue
 
-            if possible_chapter_title:
-                current_chapter_title = _clean_text(
-                    possible_chapter_title,
-                    current_chapter_title,
-                )
-
-        for data in _iter_dicts(value):
             if not _looks_like_lesson(data):
                 continue
 
-            lesson_id_raw = _first_value(
+            lesson_id_value = _first_value(
                 data,
                 (
                     "lesson_id",
-                    "lessonId",
+                    "id",
+                    "lesson_number",
+                    "lesson_no",
+                    "number",
                 ),
             )
 
-            lesson_title_raw = _first_value(
+            title_value = _first_value(
                 data,
                 (
                     "lesson_title",
-                    "lessonTitle",
-                ),
-            )
-
-            identifier = _first_value(
-                data,
-                (
-                    "id",
-                    "code",
-                    "slug",
-                ),
-            )
-
-            title = _first_value(
-                data,
-                (
                     "title",
                     "name",
+                    "subject",
                 ),
-            )
-
-            lesson_id = lesson_id_raw or identifier
-            lesson_title = lesson_title_raw or title
-
-            if not lesson_id or not lesson_title:
-                continue
-
-            chapter_id = _first_value(
-                data,
-                (
-                    "chapter_id",
-                    "chapterId",
-                ),
-                current_chapter_id,
-            )
-
-            chapter_title = _first_value(
-                data,
-                (
-                    "chapter_title",
-                    "chapterTitle",
-                    "chapter_name",
-                ),
-                current_chapter_title,
+                lesson_id_value,
             )
 
             lesson_id = _normalize_identifier(
-                lesson_id,
-                "lesson",
+                lesson_id_value,
+                f"lesson_{len(lessons) + 1}",
             )
 
-            lesson_title = _clean_text(
-                lesson_title,
-                lesson_id,
-            )
-
-            chapter_id = _normalize_identifier(
-                chapter_id,
-                "chapter_01",
-            )
-
-            chapter_title = _clean_text(
-                chapter_title,
-                chapter_id,
-            )
-
-            key = (
-                discovered_module.module_id,
-                chapter_id,
+            title = _clean_text(
+                title_value,
                 lesson_id,
             )
 
-            if key in seen:
-                continue
-
-            seen.add(key)
+            description = _clean_text(
+                _first_value(
+                    data,
+                    (
+                        "description",
+                        "summary",
+                        "intro",
+                    ),
+                    "",
+                ),
+            )
 
             lessons.append(
                 DiscoveredLesson(
-                    module_id=discovered_module.module_id,
-                    module_title=discovered_module.module_title,
+                    module_id=module_id,
                     chapter_id=chapter_id,
-                    chapter_title=chapter_title,
                     lesson_id=lesson_id,
-                    lesson_title=lesson_title,
+                    title=title,
+                    description=description,
                     data=data,
                 )
             )
@@ -631,416 +389,577 @@ def _extract_lessons_from_module(
     return lessons
 
 
-# ==========================================================
-# Special Curriculum Support
-# ==========================================================
-
-def _extract_management_curriculum(
+def _extract_chapters_from_module(
     module: Any,
-    discovered_module: DiscoveredModule,
-) -> tuple[list[DiscoveredChapter], list[DiscoveredLesson]]:
-    """
-    Support management/curriculum.py explicitly.
-
-    The management curriculum is structured around chapters, while
-    detailed lessons may live in separate files.
-    """
+    module_id: str,
+) -> list[DiscoveredChapter]:
     chapters: list[DiscoveredChapter] = []
-    lessons: list[DiscoveredLesson] = []
 
-    curriculum = getattr(
-        module,
-        "MANAGEMENT_CURRICULUM",
-        None,
-    )
+    public_values = _collect_public_values(module)
 
-    if curriculum is None:
-        curriculum = getattr(
-            module,
-            "CURRICULUM",
-            None,
-        )
+    for value in public_values:
+        candidates: list[Any]
 
-    if not isinstance(curriculum, list):
-        return chapters, lessons
+        if isinstance(value, dict):
+            candidates = list(value.values())
+        elif isinstance(value, (list, tuple, set)):
+            candidates = list(value)
+        else:
+            candidates = [value]
 
-    for chapter in curriculum:
-        if not isinstance(chapter, dict):
-            continue
+        for candidate in candidates:
+            data = _as_dict(candidate)
 
-        chapter_id = _first_value(
-            chapter,
-            ("id", "chapter_id", "code"),
-        )
-
-        chapter_title = _first_value(
-            chapter,
-            ("title", "name", "chapter_title"),
-        )
-
-        if not chapter_id or not chapter_title:
-            continue
-
-        chapter_id = _clean_text(chapter_id)
-        chapter_title = _clean_text(
-            chapter_title,
-            chapter_id,
-        )
-
-        chapters.append(
-            DiscoveredChapter(
-                module_id=discovered_module.module_id,
-                module_title=discovered_module.module_title,
-                chapter_id=chapter_id,
-                chapter_title=chapter_title,
-                data=chapter,
-            )
-        )
-
-        chapter_lessons = _first_value(
-            chapter,
-            (
-                "lessons",
-                "lesson_list",
-                "items",
-            ),
-            [],
-        )
-
-        if not isinstance(chapter_lessons, list):
-            continue
-
-        for index, lesson in enumerate(chapter_lessons, start=1):
-            if not isinstance(lesson, dict):
+            if not data:
                 continue
 
-            lesson_id = _first_value(
-                lesson,
+            if not _looks_like_chapter(data):
+                continue
+
+            chapter_id_value = _first_value(
+                data,
                 (
+                    "chapter_id",
                     "id",
-                    "lesson_id",
-                    "code",
-                    "slug",
+                    "chapter_number",
+                    "chapter_no",
+                    "number",
                 ),
-                f"{chapter_id}_lesson_{index:02d}",
             )
 
-            lesson_title = _first_value(
-                lesson,
+            title_value = _first_value(
+                data,
                 (
+                    "chapter_title",
                     "title",
                     "name",
-                    "lesson_title",
+                    "subject",
                 ),
-                f"درس {index}",
+                chapter_id_value,
             )
 
-            lessons.append(
-                DiscoveredLesson(
-                    module_id=discovered_module.module_id,
-                    module_title=discovered_module.module_title,
+            chapter_id = _normalize_identifier(
+                chapter_id_value,
+                f"chapter_{len(chapters) + 1}",
+            )
+
+            title = _clean_text(
+                title_value,
+                chapter_id,
+            )
+
+            lessons_data = _first_value(
+                data,
+                (
+                    "lessons",
+                    "lesson_list",
+                    "items",
+                    "contents",
+                ),
+                [],
+            )
+
+            lessons: list[DiscoveredLesson] = []
+
+            if isinstance(lessons_data, dict):
+                lesson_candidates = list(lessons_data.values())
+            elif isinstance(lessons_data, (list, tuple, set)):
+                lesson_candidates = list(lessons_data)
+            else:
+                lesson_candidates = [lessons_data]
+
+            for index, lesson_value in enumerate(lesson_candidates, start=1):
+                lesson_data = _as_dict(lesson_value)
+
+                if not lesson_data:
+                    continue
+
+                lesson_id_value = _first_value(
+                    lesson_data,
+                    (
+                        "lesson_id",
+                        "id",
+                        "lesson_number",
+                        "lesson_no",
+                        "number",
+                    ),
+                    index,
+                )
+
+                lesson_title_value = _first_value(
+                    lesson_data,
+                    (
+                        "lesson_title",
+                        "title",
+                        "name",
+                        "subject",
+                    ),
+                    lesson_id_value,
+                )
+
+                lesson_id = _normalize_identifier(
+                    lesson_id_value,
+                    f"lesson_{index}",
+                )
+
+                lessons.append(
+                    DiscoveredLesson(
+                        module_id=module_id,
+                        chapter_id=chapter_id,
+                        lesson_id=lesson_id,
+                        title=_clean_text(
+                            lesson_title_value,
+                            lesson_id,
+                        ),
+                        description=_clean_text(
+                            _first_value(
+                                lesson_data,
+                                (
+                                    "description",
+                                    "summary",
+                                    "intro",
+                                ),
+                                "",
+                            ),
+                        ),
+                        data=lesson_data,
+                    )
+                )
+
+            chapters.append(
+                DiscoveredChapter(
+                    module_id=module_id,
                     chapter_id=chapter_id,
-                    chapter_title=chapter_title,
-                    lesson_id=_clean_text(
-                        lesson_id,
-                        f"{chapter_id}_lesson_{index:02d}",
-                    ),
-                    lesson_title=_clean_text(
-                        lesson_title,
-                        f"درس {index}",
-                    ),
-                    data=lesson,
+                    title=title,
+                    lessons=lessons,
+                    data=data,
                 )
             )
 
-    return chapters, lessons
+    return chapters
 
 
-# ==========================================================
-# Registration
-# ==========================================================
+# ---------------------------------------------------------------------------
+# Special management curriculum support
+# ---------------------------------------------------------------------------
 
-def _register_module(
-    discovered_module: DiscoveredModule,
-) -> None:
-    """Register a module in the central Registry."""
-    try:
-        register_module(
-            module_id=discovered_module.module_id,
-            title=discovered_module.module_title,
-            description=discovered_module.description,
-        )
-    except TypeError:
-        register_module(
-            discovered_module.module_id,
-            discovered_module.module_title,
-        )
+def _extract_management_curriculum(
+    module_id: str = "management",
+) -> list[DiscoveredChapter]:
+    chapters: list[DiscoveredChapter] = []
 
+    package_name = "modules.management"
 
-def _register_chapter(
-    chapter: DiscoveredChapter,
-) -> None:
-    """Register a chapter in Registry and SQLite."""
-    try:
-        register_chapter(
-            module_id=chapter.module_id,
-            chapter_id=chapter.chapter_id,
-            title=chapter.chapter_title,
-        )
-    except TypeError:
-        register_chapter(
-            chapter.module_id,
-            chapter.chapter_id,
-            chapter.chapter_title,
-        )
+    for module in _find_data_modules(package_name):
+        public_values = _collect_public_values(module)
 
+        for value in public_values:
+            data = _as_dict(value)
 
-def _register_lesson(
-    lesson: DiscoveredLesson,
-) -> None:
-    """Register a lesson in Registry and SQLite."""
-    try:
-        register_lesson(
-            module_id=lesson.module_id,
-            chapter_id=lesson.chapter_id,
-            lesson_id=lesson.lesson_id,
-            title=lesson.lesson_title,
-        )
-    except TypeError:
-        register_lesson(
-            lesson.module_id,
-            lesson.chapter_id,
-            lesson.lesson_id,
-            lesson.lesson_title,
-        )
-
-
-# ==========================================================
-# Main Initialization
-# ==========================================================
-
-def initialize_content() -> dict[str, Any]:
-    """
-    Discover and register all educational content.
-
-    The operation is designed to be idempotent.
-    Running it repeatedly should not create duplicate logical records.
-    """
-    init_database()
-
-    result: dict[str, Any] = {
-        "status": "ok",
-        "modules": 0,
-        "chapters": 0,
-        "lessons": 0,
-        "module_details": {},
-        "errors": [],
-    }
-
-    for package_name in CONTENT_PACKAGES:
-        module_result: dict[str, Any] = {
-            "status": "ok",
-            "chapters": 0,
-            "lessons": 0,
-            "sources": [],
-        }
-
-        try:
-            data_modules = _find_data_modules(package_name)
-
-            if not data_modules:
-                module_result["status"] = "warning"
-                module_result["sources"] = []
-                result["module_details"][package_name] = module_result
+            if not data:
                 continue
 
-            primary_data_module = data_modules[0]
-
-            package_data = {}
-
-            for key in (
-                "MODULE_ID",
-                "MODULE_TITLE",
-                "MODULE_DESCRIPTION",
-                "MODULE_VERSION",
-            ):
-                if hasattr(primary_data_module, key):
-                    package_data[key] = getattr(
-                        primary_data_module,
-                        key,
-                    )
-
-            discovered_module = _extract_module_metadata(
-                package_name,
-                package_data,
+            chapter_values = _first_value(
+                data,
+                (
+                    "chapters",
+                    "curriculum",
+                    "management_curriculum",
+                    "lessons",
+                ),
             )
 
-            _register_module(discovered_module)
+            if chapter_values is None:
+                continue
 
-            result["modules"] += 1
+            if isinstance(chapter_values, dict):
+                items = list(chapter_values.values())
+            elif isinstance(chapter_values, (list, tuple, set)):
+                items = list(chapter_values)
+            else:
+                items = [chapter_values]
 
-            all_chapters: list[DiscoveredChapter] = []
-            all_lessons: list[DiscoveredLesson] = []
+            for chapter_index, chapter_value in enumerate(items, start=1):
+                chapter_data = _as_dict(chapter_value)
 
-            for source_module in data_modules:
-                module_name = getattr(
-                    source_module,
-                    "__name__",
-                    "unknown",
+                if not chapter_data:
+                    continue
+
+                chapter_id_value = _first_value(
+                    chapter_data,
+                    (
+                        "chapter_id",
+                        "id",
+                        "chapter_number",
+                        "chapter_no",
+                        "number",
+                    ),
+                    chapter_index,
                 )
 
-                module_result["sources"].append(
-                    module_name
+                chapter_title_value = _first_value(
+                    chapter_data,
+                    (
+                        "chapter_title",
+                        "title",
+                        "name",
+                    ),
+                    f"فصل {chapter_index}",
                 )
 
-                if (
-                    discovered_module.module_id == "management"
-                    and module_name.endswith(".curriculum")
+                chapter_id = _normalize_identifier(
+                    chapter_id_value,
+                    f"chapter_{chapter_index}",
+                )
+
+                lessons_value = _first_value(
+                    chapter_data,
+                    (
+                        "lessons",
+                        "items",
+                        "contents",
+                    ),
+                    [],
+                )
+
+                if isinstance(lessons_value, dict):
+                    lesson_items = list(lessons_value.values())
+                elif isinstance(lessons_value, (list, tuple, set)):
+                    lesson_items = list(lessons_value)
+                else:
+                    lesson_items = [lessons_value]
+
+                lessons: list[DiscoveredLesson] = []
+
+                for lesson_index, lesson_value in enumerate(
+                    lesson_items,
+                    start=1,
                 ):
-                    special_chapters, special_lessons = (
-                        _extract_management_curriculum(
-                            source_module,
-                            discovered_module,
+                    lesson_data = _as_dict(lesson_value)
+
+                    if not lesson_data:
+                        continue
+
+                    lesson_id_value = _first_value(
+                        lesson_data,
+                        (
+                            "lesson_id",
+                            "id",
+                            "lesson_number",
+                            "lesson_no",
+                            "number",
+                        ),
+                        lesson_index,
+                    )
+
+                    lesson_title_value = _first_value(
+                        lesson_data,
+                        (
+                            "lesson_title",
+                            "title",
+                            "name",
+                        ),
+                        f"درس {lesson_index}",
+                    )
+
+                    lesson_id = _normalize_identifier(
+                        lesson_id_value,
+                        f"lesson_{lesson_index}",
+                    )
+
+                    lessons.append(
+                        DiscoveredLesson(
+                            module_id=module_id,
+                            chapter_id=chapter_id,
+                            lesson_id=lesson_id,
+                            title=_clean_text(
+                                lesson_title_value,
+                                lesson_id,
+                            ),
+                            description=_clean_text(
+                                _first_value(
+                                    lesson_data,
+                                    (
+                                        "description",
+                                        "summary",
+                                        "intro",
+                                    ),
+                                    "",
+                                ),
+                            ),
+                            data=lesson_data,
                         )
                     )
 
-                    all_chapters.extend(
-                        special_chapters
-                    )
-
-                    all_lessons.extend(
-                        special_lessons
-                    )
-
-                generic_chapters = (
-                    _extract_chapters_from_module(
-                        source_module,
-                        discovered_module,
+                chapters.append(
+                    DiscoveredChapter(
+                        module_id=module_id,
+                        chapter_id=chapter_id,
+                        title=_clean_text(
+                            chapter_title_value,
+                            chapter_id,
+                        ),
+                        lessons=lessons,
+                        data=chapter_data,
                     )
                 )
 
-                generic_lessons = (
-                    _extract_lessons_from_module(
-                        source_module,
-                        discovered_module,
-                    )
+    return chapters
+
+
+# ---------------------------------------------------------------------------
+# Registry registration
+# ---------------------------------------------------------------------------
+
+def _register_module(
+    module_id: str,
+    title: str,
+) -> None:
+    try:
+        registry.register_module(
+            module_id=module_id,
+            title=title,
+        )
+    except TypeError:
+        try:
+            registry.register_module(
+                module_id,
+                title,
+            )
+        except Exception:
+            logger.exception(
+                "Could not register module %s",
+                module_id,
+            )
+            raise
+
+
+def _register_chapter(
+    module_id: str,
+    chapter_id: str,
+    title: str,
+) -> None:
+    try:
+        registry.register_chapter(
+            module_id=module_id,
+            chapter_id=chapter_id,
+            title=title,
+        )
+    except TypeError:
+        try:
+            registry.register_chapter(
+                module_id,
+                chapter_id,
+                title,
+            )
+        except Exception:
+            logger.exception(
+                "Could not register chapter %s/%s",
+                module_id,
+                chapter_id,
+            )
+            raise
+
+
+def _register_lesson(
+    module_id: str,
+    chapter_id: str,
+    lesson_id: str,
+    title: str,
+) -> None:
+    try:
+        registry.register_lesson(
+            module_id=module_id,
+            chapter_id=chapter_id,
+            lesson_id=lesson_id,
+            title=title,
+        )
+    except TypeError:
+        try:
+            registry.register_lesson(
+                module_id,
+                chapter_id,
+                lesson_id,
+                title,
+            )
+        except Exception:
+            logger.exception(
+                "Could not register lesson %s/%s/%s",
+                module_id,
+                chapter_id,
+                lesson_id,
+            )
+            raise
+
+
+# ---------------------------------------------------------------------------
+# Main initialization
+# ---------------------------------------------------------------------------
+
+def initialize_content() -> dict[str, Any]:
+    """
+    Discover and register all supported educational content.
+    """
+
+    init_database()
+
+    discovered_modules: list[DiscoveredModule] = []
+
+    for package_name in CONTENT_PACKAGES:
+        module_id = CONTENT_MODULE_IDS.get(
+            package_name,
+            package_name.split(".")[-1],
+        )
+
+        data_modules = _find_data_modules(package_name)
+
+        module_title = module_id
+        module_data: dict[str, Any] = {}
+
+        for data_module in data_modules:
+            title, metadata = _extract_module_metadata(
+                data_module,
+                module_id,
+            )
+
+            if title and title != module_id:
+                module_title = title
+
+            module_data.update(metadata)
+
+        chapters: list[DiscoveredChapter] = []
+
+        if module_id == "management":
+            chapters.extend(
+                _extract_management_curriculum(module_id)
+            )
+
+        for data_module in data_modules:
+            extracted = _extract_chapters_from_module(
+                data_module,
+                module_id,
+            )
+
+            for chapter in extracted:
+                duplicate = any(
+                    existing.chapter_id == chapter.chapter_id
+                    for existing in chapters
                 )
 
-                all_chapters.extend(generic_chapters)
-                all_lessons.extend(generic_lessons)
+                if not duplicate:
+                    chapters.append(chapter)
 
-            unique_chapters: dict[
-                tuple[str, str],
-                DiscoveredChapter,
-            ] = {}
+        discovered_modules.append(
+            DiscoveredModule(
+                module_id=module_id,
+                title=module_title,
+                chapters=chapters,
+                data=module_data,
+            )
+        )
 
-            for chapter in all_chapters:
-                unique_chapters[
-                    (
-                        chapter.module_id,
-                        chapter.chapter_id,
-                    )
-                ] = chapter
+    total_modules = 0
+    total_chapters = 0
+    total_lessons = 0
 
-            unique_lessons: dict[
-                tuple[str, str, str],
-                DiscoveredLesson,
-            ] = {}
+    for module in discovered_modules:
+        _register_module(
+            module.module_id,
+            module.title,
+        )
 
-            for lesson in all_lessons:
-                unique_lessons[
-                    (
-                        lesson.module_id,
-                        lesson.chapter_id,
-                        lesson.lesson_id,
-                    )
-                ] = lesson
+        total_modules += 1
 
-            for chapter in unique_chapters.values():
-                _register_chapter(chapter)
-
-            for lesson in unique_lessons.values():
-                _register_lesson(lesson)
-
-            module_result["chapters"] = len(
-                unique_chapters
+        for chapter in module.chapters:
+            _register_chapter(
+                module.module_id,
+                chapter.chapter_id,
+                chapter.title,
             )
 
-            module_result["lessons"] = len(
-                unique_lessons
-            )
+            total_chapters += 1
 
-            result["chapters"] += len(
-                unique_chapters
-            )
+            for lesson in chapter.lessons:
+                _register_lesson(
+                    module.module_id,
+                    chapter.chapter_id,
+                    lesson.lesson_id,
+                    lesson.title,
+                )
 
-            result["lessons"] += len(
-                unique_lessons
-            )
+                total_lessons += 1
 
-            result["module_details"][
-                package_name
-            ] = module_result
+    result = {
+        "status": "ok",
+        "modules": total_modules,
+        "chapters": total_chapters,
+        "lessons": total_lessons,
+    }
 
-        except Exception as exc:
-            result["status"] = "warning"
-
-            module_result["status"] = "error"
-            module_result["error"] = str(exc)
-
-            result["module_details"][
-                package_name
-            ] = module_result
-
-            result["errors"].append(
-                {
-                    "package": package_name,
-                    "error": str(exc),
-                }
-            )
+    logger.info(
+        "Content initialization completed: %s",
+        result,
+    )
 
     return result
 
 
-# ==========================================================
-# Aliases
-# ==========================================================
-
 def initialize_all_content() -> dict[str, Any]:
-    """Compatibility alias for initialize_content()."""
-    return initialize_content()
+    """
+    Public entry point used by bot.py.
+    """
 
+    try:
+        return initialize_content()
+    except Exception as exc:
+        logger.exception(
+            "Content initialization failed."
+        )
+
+        return {
+            "status": "error",
+            "modules": 0,
+            "chapters": 0,
+            "lessons": 0,
+            "error": str(exc),
+        }
+
+
+# ---------------------------------------------------------------------------
+# Health check
+# ---------------------------------------------------------------------------
 
 def content_initializer_health_check() -> dict[str, Any]:
     """
-    Run a lightweight content initialization health check.
+    Verify that the content initializer can access the registry
+    and database.
     """
+
     result: dict[str, Any] = {
         "module": "core.content_initializer",
         "status": "ok",
+        "details": {},
     }
 
     try:
-        initialization = initialize_content()
+        init_database()
 
-        result["initialization"] = initialization
+        statistics = registry.statistics()
 
-        if initialization.get("errors"):
-            result["status"] = "warning"
+        result["details"]["registry"] = statistics
 
     except Exception as exc:
         result["status"] = "error"
-        result["error"] = str(exc)
+        result["details"]["error"] = str(exc)
 
     return result
 
 
 def get_content_statistics() -> dict[str, Any]:
     """
-    Return current Registry statistics.
-
-    This is intentionally read-only.
+    Return current registry statistics.
     """
+
     try:
         statistics = registry.statistics()
 
@@ -1048,23 +967,32 @@ def get_content_statistics() -> dict[str, Any]:
             return statistics
 
         return {
-            "status": "ok",
-            "registry_statistics": statistics,
+            "modules": 0,
+            "chapters": 0,
+            "lessons": 0,
         }
 
     except Exception as exc:
+        logger.exception(
+            "Could not read content statistics."
+        )
+
         return {
             "status": "error",
             "error": str(exc),
         }
 
 
-# ==========================================================
-# Public API
-# ==========================================================
+# ---------------------------------------------------------------------------
+# Exported API
+# ---------------------------------------------------------------------------
 
 __all__ = [
     "CONTENT_PACKAGES",
+    "CONTENT_MODULE_IDS",
+    "DiscoveredLesson",
+    "DiscoveredChapter",
+    "DiscoveredModule",
     "initialize_content",
     "initialize_all_content",
     "content_initializer_health_check",
@@ -1072,25 +1000,25 @@ __all__ = [
 ]
 
 
-# ==========================================================
-# Local Smoke Test
-# ==========================================================
+# ---------------------------------------------------------------------------
+# Smoke test
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    output = initialize_content()
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(levelname)s | %(message)s",
+    )
 
-    print("Content initializer")
-    print("===================")
-    print(f"Status: {output.get('status')}")
-    print(f"Modules: {output.get('modules')}")
-    print(f"Chapters: {output.get('chapters')}")
-    print(f"Lessons: {output.get('lessons')}")
+    print("Starting content initializer...")
 
-    if output.get("errors"):
-        print()
-        print("Errors:")
-        for error in output["errors"]:
-            print(
-                f"- {error.get('package')}: "
-                f"{error.get('error')}"
-            )
+    result = initialize_all_content()
+
+    print("Initialization result:")
+    print(result)
+
+    print("\nCurrent content statistics:")
+    print(get_content_statistics())
+
+    print("\nHealth check:")
+    print(content_initializer_health_check())
