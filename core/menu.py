@@ -59,11 +59,13 @@ def _load_module(module_path: str) -> Any | None:
     """
     try:
         return importlib.import_module(module_path)
+
     except Exception:
         logger.exception(
             "Unable to load module: %s",
             module_path,
         )
+
         return None
 
 
@@ -78,6 +80,7 @@ def _get_function(
         return None
 
     for name in names:
+
         function = getattr(
             module,
             name,
@@ -99,6 +102,7 @@ async def _call_handler(
     """
     Safely execute the first available handler function.
     """
+
     module = _load_module(
         module_path
     )
@@ -109,21 +113,26 @@ async def _call_handler(
     )
 
     if function is None:
+
         logger.warning(
             "No compatible handler found in %s: %s",
             module_path,
             function_names,
         )
+
         return False
 
     try:
+
         await function(
             update,
             context,
         )
+
         return True
 
     except TypeError:
+
         logger.exception(
             "Handler signature mismatch: %s.%s",
             module_path,
@@ -133,9 +142,11 @@ async def _call_handler(
                 "unknown",
             ),
         )
+
         return False
 
     except Exception:
+
         logger.exception(
             "Handler execution failed: %s.%s",
             module_path,
@@ -145,6 +156,7 @@ async def _call_handler(
                 "unknown",
             ),
         )
+
         return False
 
 
@@ -158,15 +170,18 @@ async def _answer_callback(
     """
     Close Telegram callback loading state.
     """
+
     query = update.callback_query
 
     if query is None:
         return
 
     try:
+
         await query.answer()
 
     except Exception:
+
         logger.exception(
             "Failed to answer callback query."
         )
@@ -187,19 +202,23 @@ async def show_main_menu(
     query = update.callback_query
 
     if query is not None:
+
         await _answer_callback(
             update
         )
 
         try:
+
             await query.edit_message_text(
                 text=MAIN_MENU_TEXT,
                 reply_markup=main_menu_keyboard(),
                 parse_mode="HTML",
             )
+
             return
 
         except Exception:
+
             logger.exception(
                 "Unable to edit main menu message."
             )
@@ -207,7 +226,9 @@ async def show_main_menu(
     message = update.effective_message
 
     if message is not None:
+
         try:
+
             await message.reply_text(
                 text=MAIN_MENU_TEXT,
                 reply_markup=main_menu_keyboard(),
@@ -215,6 +236,7 @@ async def show_main_menu(
             )
 
         except Exception:
+
             logger.exception(
                 "Unable to send main menu."
             )
@@ -482,7 +504,10 @@ async def _route_marketing(
         "modules.marketing.handlers"
     )
 
+    # ------------------------------------------------------
     # Main marketing menu
+    # ------------------------------------------------------
+
     if data == "menu_marketing":
 
         return await _call_handler(
@@ -495,7 +520,10 @@ async def _route_marketing(
             ),
         )
 
+    # ------------------------------------------------------
     # Chapter
+    # ------------------------------------------------------
+
     if data.startswith(
         "marketing_chapter:"
     ):
@@ -511,7 +539,10 @@ async def _route_marketing(
             ),
         )
 
+    # ------------------------------------------------------
     # Lesson
+    # ------------------------------------------------------
+
     if data.startswith(
         "marketing_lesson:"
     ):
@@ -526,7 +557,10 @@ async def _route_marketing(
             ),
         )
 
+    # ------------------------------------------------------
     # Lesson quiz
+    # ------------------------------------------------------
+
     if data.startswith(
         "marketing_quiz_lesson:"
     ):
@@ -541,7 +575,10 @@ async def _route_marketing(
             ),
         )
 
+    # ------------------------------------------------------
     # Chapter quiz
+    # ------------------------------------------------------
+
     if data.startswith(
         "marketing_quiz_chapter:"
     ):
@@ -555,7 +592,10 @@ async def _route_marketing(
             ),
         )
 
+    # ------------------------------------------------------
     # Comprehensive quiz
+    # ------------------------------------------------------
+
     if data == "marketing_quiz_all":
 
         return await _call_handler(
@@ -568,7 +608,10 @@ async def _route_marketing(
             ),
         )
 
+    # ------------------------------------------------------
     # Quiz answer
+    # ------------------------------------------------------
+
     if data.startswith(
         "marketing_quiz_answer:"
     ):
@@ -583,7 +626,10 @@ async def _route_marketing(
             ),
         )
 
+    # ------------------------------------------------------
     # Statistics
+    # ------------------------------------------------------
+
     if data == "marketing_statistics":
 
         return await _call_handler(
@@ -599,7 +645,7 @@ async def _route_marketing(
 
 
 # ==========================================================
-# Economy
+# Economy & Market
 # ==========================================================
 
 async def _route_economy(
@@ -612,8 +658,22 @@ async def _route_economy(
         "modules.economy.handlers"
     )
 
-    # Main menu
+    # ------------------------------------------------------
+    # Main economy menu
+    #
+    # IMPORTANT:
+    # main_menu_keyboard() uses:
+    #
+    # menu_economics
+    #
+    # Older versions may use:
+    #
+    # menu_economy
+    # menu_market
+    # ------------------------------------------------------
+
     if data in {
+        "menu_economics",
         "menu_economy",
         "menu_market",
     }:
@@ -629,7 +689,10 @@ async def _route_economy(
             ),
         )
 
-    # Chapters
+    # ------------------------------------------------------
+    # Economy chapters
+    # ------------------------------------------------------
+
     if data in {
         "economy_chapters",
         "market_chapters",
@@ -645,11 +708,17 @@ async def _route_economy(
             ),
         )
 
-    # Chapter
-    if data.startswith(
-        "economy_chapter:"
-    ) or data.startswith(
-        "market_chapter:"
+    # ------------------------------------------------------
+    # Economy chapter
+    # ------------------------------------------------------
+
+    if (
+        data.startswith(
+            "economy_chapter:"
+        )
+        or data.startswith(
+            "market_chapter:"
+        )
     ):
 
         return await _call_handler(
@@ -663,11 +732,17 @@ async def _route_economy(
             ),
         )
 
-    # Lesson
-    if data.startswith(
-        "economy_lesson:"
-    ) or data.startswith(
-        "market_lesson:"
+    # ------------------------------------------------------
+    # Economy lesson
+    # ------------------------------------------------------
+
+    if (
+        data.startswith(
+            "economy_lesson:"
+        )
+        or data.startswith(
+            "market_lesson:"
+        )
     ):
 
         return await _call_handler(
@@ -681,11 +756,17 @@ async def _route_economy(
             ),
         )
 
-    # Complete lesson
-    if data.startswith(
-        "economy_complete:"
-    ) or data.startswith(
-        "market_complete:"
+    # ------------------------------------------------------
+    # Complete economy lesson
+    # ------------------------------------------------------
+
+    if (
+        data.startswith(
+            "economy_complete:"
+        )
+        or data.startswith(
+            "market_complete:"
+        )
     ):
 
         return await _call_handler(
@@ -698,11 +779,17 @@ async def _route_economy(
             ),
         )
 
+    # ------------------------------------------------------
     # Lesson quiz
-    if data.startswith(
-        "economy_quiz_lesson:"
-    ) or data.startswith(
-        "market_quiz_lesson:"
+    # ------------------------------------------------------
+
+    if (
+        data.startswith(
+            "economy_quiz_lesson:"
+        )
+        or data.startswith(
+            "market_quiz_lesson:"
+        )
     ):
 
         return await _call_handler(
@@ -716,11 +803,17 @@ async def _route_economy(
             ),
         )
 
+    # ------------------------------------------------------
     # Chapter quiz
-    if data.startswith(
-        "economy_quiz_chapter:"
-    ) or data.startswith(
-        "market_quiz_chapter:"
+    # ------------------------------------------------------
+
+    if (
+        data.startswith(
+            "economy_quiz_chapter:"
+        )
+        or data.startswith(
+            "market_quiz_chapter:"
+        )
     ):
 
         return await _call_handler(
@@ -733,7 +826,10 @@ async def _route_economy(
             ),
         )
 
+    # ------------------------------------------------------
     # Comprehensive quiz
+    # ------------------------------------------------------
+
     if data in {
         "economy_quiz_all",
         "market_quiz_all",
@@ -750,11 +846,17 @@ async def _route_economy(
             ),
         )
 
+    # ------------------------------------------------------
     # Quiz answer
-    if data.startswith(
-        "economy_quiz_answer:"
-    ) or data.startswith(
-        "market_quiz_answer:"
+    # ------------------------------------------------------
+
+    if (
+        data.startswith(
+            "economy_quiz_answer:"
+        )
+        or data.startswith(
+            "market_quiz_answer:"
+        )
     ):
 
         return await _call_handler(
@@ -768,7 +870,36 @@ async def _route_economy(
             ),
         )
 
+    # ------------------------------------------------------
+    # Quiz cancel
+    # ------------------------------------------------------
+
+    if (
+        data == "economy_quiz_cancel"
+        or data.startswith(
+            "economy_quiz_cancel:"
+        )
+        or data == "market_quiz_cancel"
+        or data.startswith(
+            "market_quiz_cancel:"
+        )
+    ):
+
+        return await _call_handler(
+            update,
+            context,
+            module_path,
+            (
+                "cancel_economy_quiz",
+                "cancel_market_quiz",
+                "stop_economy_quiz",
+            ),
+        )
+
+    # ------------------------------------------------------
     # Statistics
+    # ------------------------------------------------------
+
     if data in {
         "economy_statistics",
         "market_statistics",
@@ -801,6 +932,10 @@ async def _route_psychology(
         "modules.psychology.handlers"
     )
 
+    # ------------------------------------------------------
+    # Main psychology menu
+    # ------------------------------------------------------
+
     if data == "menu_psychology":
 
         return await _call_handler(
@@ -813,6 +948,10 @@ async def _route_psychology(
             ),
         )
 
+    # ------------------------------------------------------
+    # Chapter
+    # ------------------------------------------------------
+
     if data.startswith(
         "psychology_chapter:"
     ):
@@ -823,8 +962,13 @@ async def _route_psychology(
             module_path,
             (
                 "show_psychology_chapter",
+                "show_psychology_chapter_menu",
             ),
         )
+
+    # ------------------------------------------------------
+    # Lesson
+    # ------------------------------------------------------
 
     if data.startswith(
         "psychology_lesson:"
@@ -840,6 +984,10 @@ async def _route_psychology(
             ),
         )
 
+    # ------------------------------------------------------
+    # Complete lesson
+    # ------------------------------------------------------
+
     if data.startswith(
         "psychology_complete:"
     ):
@@ -854,6 +1002,10 @@ async def _route_psychology(
             ),
         )
 
+    # ------------------------------------------------------
+    # Quiz
+    # ------------------------------------------------------
+
     if data.startswith(
         "psychology_quiz:"
     ):
@@ -866,6 +1018,10 @@ async def _route_psychology(
                 "start_psychology_quiz",
             ),
         )
+
+    # ------------------------------------------------------
+    # Quiz answer
+    # ------------------------------------------------------
 
     if data.startswith(
         "psychology_quiz_answer:"
@@ -880,7 +1036,16 @@ async def _route_psychology(
             ),
         )
 
-    if data == "psychology_quiz_cancel":
+    # ------------------------------------------------------
+    # Quiz cancel
+    # ------------------------------------------------------
+
+    if (
+        data == "psychology_quiz_cancel"
+        or data.startswith(
+            "psychology_quiz_cancel:"
+        )
+    ):
 
         return await _call_handler(
             update,
@@ -888,6 +1053,7 @@ async def _route_psychology(
             module_path,
             (
                 "cancel_psychology_quiz",
+                "stop_psychology_quiz",
             ),
         )
 
@@ -1009,12 +1175,14 @@ async def route_menu_callback(
     )
 
     try:
+
         await query.answer(
             "این بخش هنوز فعال نشده است.",
             show_alert=False,
         )
 
     except Exception:
+
         logger.exception(
             "Unable to answer unknown callback."
         )
@@ -1052,9 +1220,11 @@ def menu_health_check() -> bool:
         return True
 
     except Exception:
+
         logger.exception(
             "Central menu health check failed."
         )
+
         return False
 
 
