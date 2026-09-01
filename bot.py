@@ -17,10 +17,12 @@ Modules:
 - Banking
 """
 from __future__ import annotations
+
 import asyncio
 import logging
 import os
 from contextlib import suppress
+
 from aiohttp import web
 from telegram import Update
 from telegram.ext import (
@@ -29,23 +31,35 @@ from telegram.ext import (
     CommandHandler,
     ContextTypes,
 )
+
 from config import (
     APP_NAME,
     APP_VERSION,
     BOT_TOKEN,
 )
+
 from core.database import init_database
+
 from core.registry import registry
+
 from core.progress import (
     initialize_progress_system,
     register_user,
 )
+
 from core.statistics import (
     initialize_statistics_system,
 )
+
 from core.menu import (
     route_menu_callback,
     show_main_menu,
+)
+
+from modules.membership.handlers import (
+    is_member,
+    show_membership_required,
+    membership_handlers,
 )
 # ==========================================================
 # Management
@@ -1109,19 +1123,29 @@ async def start(
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Handle /start.
+    Handle /start with mandatory channel membership check.
     """
     if update.message is None:
         return
+
+    if not await is_member(update, context):
+        await show_membership_required(
+            update,
+            context,
+        )
+        return
+
     registered = await register_telegram_user(
         update
     )
+
     if not registered:
         await update.message.reply_text(
             "❌ خطایی در ثبت اطلاعات شما رخ داد.\n\n"
             "لطفاً چند لحظه بعد دوباره /start را ارسال کنید."
         )
         return
+
     await show_main_menu(
         update,
         context,
@@ -1134,18 +1158,28 @@ async def menu_command(
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Handle /menu.
+    Handle /menu with mandatory channel membership check.
     """
     if update.message is None:
         return
+
+    if not await is_member(update, context):
+        await show_membership_required(
+            update,
+            context,
+        )
+        return
+
     registered = await register_telegram_user(
         update
     )
+
     if not registered:
         await update.message.reply_text(
             "❌ خطایی در ثبت اطلاعات شما رخ داد."
         )
         return
+
     await show_main_menu(
         update,
         context,
@@ -1180,6 +1214,32 @@ async def callback_user_registry(
             ),
             user.id,
         )
+# ==========================================================
+# Membership Guard for Callback Menus
+# ==========================================================
+async def guarded_menu_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """
+    Check mandatory channel membership before allowing
+    access to the main menu callback router.
+    """
+
+    if not await is_member(
+        update,
+        context,
+    ):
+        await show_membership_required(
+            update,
+            context,
+        )
+        return
+
+    await route_menu_callback(
+        update,
+        context,
+    )
 # ==========================================================
 # Error Handler
 # ==========================================================
@@ -1227,6 +1287,12 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
+    application.add_handlers(
+        membership_handlers,
+        group=0,
+    )
+
     application.add_handler(
         CommandHandler(
             "menu",
@@ -1234,6 +1300,7 @@ def build_application() -> Application:
         ),
         group=0,
     )
+
     application.add_handler(
         CommandHandler(
             "admin",
@@ -1421,11 +1488,12 @@ def build_application() -> Application:
     # Must remain after module-specific routers.
     # ======================================================
     application.add_handler(
-        CallbackQueryHandler(
-            route_menu_callback,
-        ),
-        group=0,
-    )
+    CallbackQueryHandler(
+        guarded_menu_callback,
+        pattern=r"^(?!check_membership$).*",
+    ),
+    group=0,
+)
     # ======================================================
     # Callback Auto User Registry
     #
