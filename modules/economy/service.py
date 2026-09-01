@@ -1,37 +1,13 @@
 """
 Economy & Market service layer.
 Andishkadeh Management & Market
-
-Responsibilities:
-- Module information
-- Chapter retrieval
-- Lesson retrieval
-- Quiz retrieval
-- Curriculum statistics
-- Search
-- Validation
-- Health check
-
-This layer contains business logic only.
-It does not import Telegram handlers.
 """
 
 from __future__ import annotations
 
 from typing import Any, Mapping
 
-from modules.economy.data import (
-    MODULE_ID,
-    MODULE_TITLE,
-    MODULE_DESCRIPTION,
-    get_chapters,
-    get_chapter,
-    get_lessons,
-    get_lesson,
-    get_quiz_questions,
-    get_all_quiz_questions,
-    get_curriculum_statistics,
-)
+from modules.economy import data
 
 
 # ==========================================================
@@ -39,11 +15,11 @@ from modules.economy.data import (
 # ==========================================================
 
 def get_module_id() -> str:
-    return str(MODULE_ID)
+    return str(data.MODULE_ID)
 
 
 def get_module_title() -> str:
-    return str(MODULE_TITLE)
+    return str(data.MODULE_TITLE)
 
 
 def get_module_info() -> dict[str, str]:
@@ -52,7 +28,7 @@ def get_module_info() -> dict[str, str]:
         "module_id": get_module_id(),
         "title": get_module_title(),
         "description": str(
-            MODULE_DESCRIPTION
+            data.MODULE_DESCRIPTION
         ),
     }
 
@@ -62,24 +38,15 @@ def get_module_info() -> dict[str, str]:
 # ==========================================================
 
 def get_economy_chapters() -> list[dict[str, Any]]:
-    try:
-        chapters = get_chapters()
-    except Exception:
-        return []
+    chapters = data.get_chapters()
 
-    if not isinstance(
-        chapters,
-        list,
-    ):
+    if not isinstance(chapters, list):
         return []
 
     return [
-        dict(chapter)
-        for chapter in chapters
-        if isinstance(
-            chapter,
-            Mapping,
-        )
+        dict(item)
+        for item in chapters
+        if isinstance(item, Mapping)
     ]
 
 
@@ -87,25 +54,12 @@ def get_economy_chapter(
     chapter_id: str,
 ) -> dict[str, Any] | None:
 
-    normalized = str(
-        chapter_id or ""
-    ).strip()
+    result = data.get_chapter(
+        str(chapter_id or "").strip()
+    )
 
-    if not normalized:
-        return None
-
-    try:
-        chapter = get_chapter(
-            normalized
-        )
-    except Exception:
-        return None
-
-    if isinstance(
-        chapter,
-        Mapping,
-    ):
-        return dict(chapter)
+    if isinstance(result, Mapping):
+        return dict(result)
 
     return None
 
@@ -113,7 +67,6 @@ def get_economy_chapter(
 def get_chapter_by_id(
     chapter_id: str,
 ) -> dict[str, Any] | None:
-
     return get_economy_chapter(
         chapter_id
     )
@@ -127,33 +80,17 @@ def get_economy_lessons(
     chapter_id: str,
 ) -> list[dict[str, Any]]:
 
-    normalized = str(
-        chapter_id or ""
-    ).strip()
+    lessons = data.get_lessons(
+        str(chapter_id or "").strip()
+    )
 
-    if not normalized:
-        return []
-
-    try:
-        lessons = get_lessons(
-            normalized
-        )
-    except Exception:
-        return []
-
-    if not isinstance(
-        lessons,
-        list,
-    ):
+    if not isinstance(lessons, list):
         return []
 
     return [
-        dict(lesson)
-        for lesson in lessons
-        if isinstance(
-            lesson,
-            Mapping,
-        )
+        dict(item)
+        for item in lessons
+        if isinstance(item, Mapping)
     ]
 
 
@@ -162,29 +99,12 @@ def get_economy_lesson(
     lesson_id: str,
 ) -> dict[str, Any] | None:
 
-    chapter = str(
-        chapter_id or ""
-    ).strip()
+    result = data.get_lesson(
+        str(chapter_id or "").strip(),
+        str(lesson_id or "").strip(),
+    )
 
-    lesson = str(
-        lesson_id or ""
-    ).strip()
-
-    if not chapter or not lesson:
-        return None
-
-    try:
-        result = get_lesson(
-            chapter,
-            lesson,
-        )
-    except Exception:
-        return None
-
-    if isinstance(
-        result,
-        Mapping,
-    ):
+    if isinstance(result, Mapping):
         return dict(result)
 
     return None
@@ -194,22 +114,16 @@ def get_lesson_by_id(
     chapter_id: str,
     lesson_id: str,
 ) -> dict[str, Any] | None:
-
     return get_economy_lesson(
         chapter_id,
         lesson_id,
     )
 
 
-# ==========================================================
-# Lesson Content
-# ==========================================================
-
 def get_economy_lesson_content(
     chapter_id: str,
     lesson_id: str,
 ) -> dict[str, Any] | None:
-
     return get_economy_lesson(
         chapter_id,
         lesson_id,
@@ -237,18 +151,10 @@ def get_economy_lesson_text(
         "body",
         "details",
     ):
-        value = lesson.get(
-            key
-        )
+        value = lesson.get(key)
 
-        if isinstance(
-            value,
-            str,
-        ):
-            value = value.strip()
-
-            if value:
-                return value
+        if isinstance(value, str) and value.strip():
+            return value.strip()
 
     return None
 
@@ -262,38 +168,18 @@ def get_economy_quiz(
     lesson_id: str,
 ) -> list[dict[str, Any]]:
 
-    chapter = str(
-        chapter_id or ""
-    ).strip()
+    questions = data.get_quiz_questions(
+        str(chapter_id or "").strip(),
+        str(lesson_id or "").strip(),
+    )
 
-    lesson = str(
-        lesson_id or ""
-    ).strip()
-
-    if not chapter or not lesson:
-        return []
-
-    try:
-        questions = get_quiz_questions(
-            chapter,
-            lesson,
-        )
-    except Exception:
-        return []
-
-    if not isinstance(
-        questions,
-        list,
-    ):
+    if not isinstance(questions, list):
         return []
 
     return [
-        dict(question)
-        for question in questions
-        if isinstance(
-            question,
-            Mapping,
-        )
+        dict(item)
+        for item in questions
+        if isinstance(item, Mapping)
     ]
 
 
@@ -301,7 +187,6 @@ def get_economy_quiz_questions(
     chapter_id: str,
     lesson_id: str,
 ) -> list[dict[str, Any]]:
-
     return get_economy_quiz(
         chapter_id,
         lesson_id,
@@ -310,75 +195,31 @@ def get_economy_quiz_questions(
 
 def get_all_quiz_questions() -> list[dict[str, Any]]:
 
-    try:
-        questions = get_all_quiz_questions_from_data()
-    except Exception:
+    questions = data.get_all_quiz_questions()
+
+    if not isinstance(questions, list):
         return []
 
     return [
-        dict(question)
-        for question in questions
-        if isinstance(
-            question,
-            Mapping,
-        )
+        dict(item)
+        for item in questions
+        if isinstance(item, Mapping)
     ]
 
 
-def get_all_quiz_questions_from_data() -> list[dict[str, Any]]:
-    return get_all_quiz_questions.__wrapped__()  # type: ignore[attr-defined]
-
-
-# Replace recursive wrapper safely after function creation.
-get_all_quiz_questions_from_data = (
-    lambda: __import__(
-        "modules.economy.data",
-        fromlist=["get_all_quiz_questions"],
-    ).get_all_quiz_questions()
-)
-
-
 # ==========================================================
-# Curriculum Statistics
+# Statistics
 # ==========================================================
 
 def get_curriculum_stats() -> dict[str, int]:
-
-    try:
-        stats = get_curriculum_statistics()
-    except Exception:
-        stats = {}
-
-    if not isinstance(
-        stats,
-        Mapping,
-    ):
-        stats = {}
+    stats = data.get_curriculum_statistics()
 
     return {
-        "modules": int(
-            stats.get(
-                "modules",
-                1,
-            )
-        ),
-        "chapters": int(
-            stats.get(
-                "chapters",
-                0,
-            )
-        ),
-        "lessons": int(
-            stats.get(
-                "lessons",
-                0,
-            )
-        ),
+        "modules": int(stats.get("modules", 1)),
+        "chapters": int(stats.get("chapters", 0)),
+        "lessons": int(stats.get("lessons", 0)),
         "quiz_questions": int(
-            stats.get(
-                "quiz_questions",
-                0,
-            )
+            stats.get("quiz_questions", 0)
         ),
     }
 
@@ -410,64 +251,39 @@ def search_lessons(
     if not normalized:
         return []
 
-    results: list[
-        dict[str, Any]
-    ] = []
+    results = []
 
     for chapter in get_economy_chapters():
 
         chapter_id = str(
-            chapter.get(
-                "id",
-                "",
-            )
-        ).strip()
-
-        chapter_title = str(
-            chapter.get(
-                "title",
-                "",
-            )
+            chapter.get("id", "")
         )
 
-        chapter_description = str(
-            chapter.get(
-                "description",
-                "",
-            )
-        )
+        chapter_text = (
+            str(chapter.get("title", ""))
+            + "\n"
+            + str(chapter.get("description", ""))
+        ).casefold()
 
         for lesson in get_economy_lessons(
             chapter_id
         ):
 
             lesson_id = str(
-                lesson.get(
-                    "id",
-                    "",
-                )
-            ).strip()
-
-            title = str(
-                lesson.get(
-                    "title",
-                    "",
-                )
+                lesson.get("id", "")
             )
 
-            content = str(
-                lesson.get(
-                    "content",
-                    "",
-                )
-            )
+            lesson_text = (
+                str(lesson.get("title", ""))
+                + "\n"
+                + str(lesson.get("content", ""))
+            ).casefold()
 
             searchable = (
-                f"{chapter_title}\n"
-                f"{chapter_description}\n"
-                f"{title}\n"
-                f"{content}"
-            ).casefold()
+                chapter_text
+                + "\n"
+                + lesson_text
+            )
 
             if normalized in searchable:
                 results.append(
@@ -475,7 +291,12 @@ def search_lessons(
                         "module_id": get_module_id(),
                         "chapter_id": chapter_id,
                         "lesson_id": lesson_id,
-                        "title": title,
+                        "title": str(
+                            lesson.get(
+                                "title",
+                                lesson_id,
+                            )
+                        ),
                     }
                 )
 
@@ -488,8 +309,8 @@ def search_lessons(
 
 def validate_module() -> dict[str, Any]:
 
-    errors: list[str] = []
-    warnings: list[str] = []
+    errors = []
+    warnings = []
 
     chapters = get_economy_chapters()
 
@@ -498,23 +319,20 @@ def validate_module() -> dict[str, Any]:
             "Economy curriculum has no chapters."
         )
 
-    chapter_ids: set[str] = set()
+    chapter_ids = set()
 
-    for chapter_index, chapter in enumerate(
+    for index, chapter in enumerate(
         chapters,
         start=1,
     ):
 
         chapter_id = str(
-            chapter.get(
-                "id",
-                "",
-            )
+            chapter.get("id", "")
         ).strip()
 
         if not chapter_id:
             errors.append(
-                f"Chapter #{chapter_index} has no ID."
+                f"Chapter #{index} has no ID."
             )
             continue
 
@@ -523,13 +341,9 @@ def validate_module() -> dict[str, Any]:
                 f"Duplicate chapter ID: {chapter_id}"
             )
 
-        chapter_ids.add(
-            chapter_id
-        )
+        chapter_ids.add(chapter_id)
 
-        if not chapter.get(
-            "title"
-        ):
+        if not chapter.get("title"):
             warnings.append(
                 f"Chapter '{chapter_id}' has no title."
             )
@@ -543,7 +357,7 @@ def validate_module() -> dict[str, Any]:
                 f"Chapter '{chapter_id}' has no lessons."
             )
 
-        lesson_ids: set[str] = set()
+        lesson_ids = set()
 
         for lesson_index, lesson in enumerate(
             lessons,
@@ -551,10 +365,7 @@ def validate_module() -> dict[str, Any]:
         ):
 
             lesson_id = str(
-                lesson.get(
-                    "id",
-                    "",
-                )
+                lesson.get("id", "")
             ).strip()
 
             if not lesson_id:
@@ -579,9 +390,7 @@ def validate_module() -> dict[str, Any]:
                 lesson_id
             )
 
-            if not lesson.get(
-                "title"
-            ):
+            if not lesson.get("title"):
                 warnings.append(
                     (
                         f"Lesson '{lesson_id}' "
@@ -599,28 +408,19 @@ def validate_module() -> dict[str, Any]:
 
 
 # ==========================================================
-# Health Check
+# Health
 # ==========================================================
 
 def service_health_check() -> bool:
 
     try:
-        if not get_module_id():
-            return False
-
-        if not get_module_title():
-            return False
-
-        if not get_economy_chapters():
-            return False
-
         validation = validate_module()
 
-        return bool(
-            validation.get(
-                "valid",
-                False,
-            )
+        return (
+            bool(get_module_id())
+            and bool(get_module_title())
+            and bool(get_economy_chapters())
+            and bool(validation["valid"])
         )
 
     except Exception:
@@ -630,10 +430,6 @@ def service_health_check() -> bool:
 def economy_service_health_check() -> bool:
     return service_health_check()
 
-
-# ==========================================================
-# Public Exports
-# ==========================================================
 
 __all__ = [
     "get_module_id",
@@ -665,20 +461,3 @@ __all__ = [
     "service_health_check",
     "economy_service_health_check",
 ]
-
-
-if __name__ == "__main__":
-    print(
-        "Economy Service Health:",
-        service_health_check(),
-    )
-
-    print(
-        "Module:",
-        get_module_info(),
-    )
-
-    print(
-        "Statistics:",
-        get_curriculum_stats(),
-    )
