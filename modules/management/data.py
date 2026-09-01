@@ -1645,192 +1645,255 @@ CHAPTER_20 = {
         },
     ],
 }
-# ==========================================================
-# All Chapters
-# ==========================================================
+==========================================================
+
+All Chapters
+
+==========================================================
+
 CHAPTERS = [
-    CHAPTER_1,
-    CHAPTER_2,
-    CHAPTER_3,
-    CHAPTER_4,
-    CHAPTER_5,
-    CHAPTER_6,
-    CHAPTER_7,
-    CHAPTER_8,
-    CHAPTER_9,
-    CHAPTER_10,
-    CHAPTER_11,
-    CHAPTER_12,
-    CHAPTER_13,
-    CHAPTER_14,
-    CHAPTER_15,
-    CHAPTER_16,
-    CHAPTER_17,
-    CHAPTER_18,
-    CHAPTER_19,
-    CHAPTER_20,
+CHAPTER_1,
+CHAPTER_2,
+CHAPTER_3,
+CHAPTER_4,
+CHAPTER_5,
+CHAPTER_6,
+CHAPTER_7,
+CHAPTER_8,
+CHAPTER_9,
+CHAPTER_10,
+CHAPTER_11,
+CHAPTER_12,
+CHAPTER_13,
+CHAPTER_14,
+CHAPTER_15,
+CHAPTER_16,
+CHAPTER_17,
+CHAPTER_18,
+CHAPTER_19,
+CHAPTER_20,
 ]
-# ==========================================================
-# Basic Data Access Functions
-# ==========================================================
+
+==========================================================
+
+Compatibility Exports
+
+==========================================================
+
+handlers.py در نسخه فعلی پروژه از MANAGEMENT_CHAPTERS
+
+استفاده می‌کند، در حالی که ساختار اصلی داده‌ها CHAPTERS است.
+
+این alias باعث می‌شود هر دو نام بدون ایجاد داده تکراری
+
+قابل استفاده باشند.
+
+MANAGEMENT_CHAPTERS = CHAPTERS
+
+==========================================================
+
+Basic Data Access Functions
+
+==========================================================
+
 def get_management_chapters() -> list[dict]:
-    """Return all management chapters."""
-    return CHAPTERS
+“”“Return all management chapters.”””
+return MANAGEMENT_CHAPTERS
+
 def get_management_chapter(
-    chapter_id: str,
+chapter_id: str,
 ) -> dict | None:
-    """Return one management chapter by ID."""
-    for chapter in CHAPTERS:
-        if chapter.get("id") == chapter_id:
-            return chapter
-    return None
+“”“Return one management chapter by ID.”””
+
+for chapter in MANAGEMENT_CHAPTERS:
+    if chapter.get("id") == chapter_id:
+        return chapter
+return None
+
 def get_management_lessons(
-    chapter_id: str,
+chapter_id: str,
 ) -> list[dict]:
-    """Return lessons for a chapter."""
-    chapter = get_management_chapter(
-        chapter_id
-    )
-    if chapter is None:
-        return []
-    return chapter.get(
-        "lessons",
-        [],
-    )
+“”“Return lessons for a chapter.”””
+
+chapter = get_management_chapter(chapter_id)
+if chapter is None:
+    return []
+lessons = chapter.get("lessons", [])
+if not isinstance(lessons, list):
+    return []
+return lessons
+
 def get_management_lesson(
-    chapter_id: str,
-    lesson_id: str,
+chapter_id: str,
+lesson_id: str,
 ) -> dict | None:
-    """Return one lesson."""
-    lessons = get_management_lessons(
-        chapter_id
-    )
-    for lesson in lessons:
-        if lesson.get("id") == lesson_id:
-            return lesson
-    return None
+“”“Return one lesson.”””
+
+lessons = get_management_lessons(chapter_id)
+for lesson in lessons:
+    if not isinstance(lesson, dict):
+        continue
+    if lesson.get("id") == lesson_id:
+        return lesson
+return None
+
 def get_management_quiz(
-    chapter_id: str,
-    lesson_id: str,
+chapter_id: str,
+lesson_id: str,
 ) -> list[dict]:
-    """Return quiz questions for one lesson."""
-    lesson = get_management_lesson(
-        chapter_id,
-        lesson_id,
-    )
-    if lesson is None:
-        return []
-    return lesson.get(
-        "quiz",
-        [],
-    )
+“”“Return quiz questions for one lesson.”””
+
+lesson = get_management_lesson(
+    chapter_id,
+    lesson_id,
+)
+if lesson is None:
+    return []
+quiz = lesson.get("quiz", [])
+if not isinstance(quiz, list):
+    return []
+return quiz
+
 def get_all_quiz_questions() -> list[dict]:
-    """Return all management quiz questions."""
-    questions: list[dict] = []
-    for chapter in CHAPTERS:
-        for lesson in chapter.get(
-            "lessons",
-            [],
-        ):
-            questions.extend(
+“”“Return all management quiz questions.”””
+
+questions: list[dict] = []
+for chapter in MANAGEMENT_CHAPTERS:
+    if not isinstance(chapter, dict):
+        continue
+    lessons = chapter.get("lessons", [])
+    if not isinstance(lessons, list):
+        continue
+    for lesson in lessons:
+        if not isinstance(lesson, dict):
+            continue
+        quiz = lesson.get("quiz", [])
+        if not isinstance(quiz, list):
+            continue
+        for question in quiz:
+            if isinstance(question, dict):
+                questions.append(question)
+return questions
+
+==========================================================
+
+Statistics
+
+==========================================================
+
+def get_curriculum_stats() -> dict[str, int]:
+“”“Return curriculum statistics.”””
+
+chapters = len(MANAGEMENT_CHAPTERS)
+lessons = 0
+quiz_questions = 0
+for chapter in MANAGEMENT_CHAPTERS:
+    if not isinstance(chapter, dict):
+        continue
+    chapter_lessons = chapter.get("lessons", [])
+    if not isinstance(chapter_lessons, list):
+        continue
+    lessons += len(chapter_lessons)
+    for lesson in chapter_lessons:
+        if not isinstance(lesson, dict):
+            continue
+        quiz = lesson.get("quiz", [])
+        if isinstance(quiz, list):
+            quiz_questions += len(quiz)
+return {
+    "chapters": chapters,
+    "lessons": lessons,
+    "quiz_questions": quiz_questions,
+}
+
+==========================================================
+
+Search
+
+==========================================================
+
+def search_management(
+query: str,
+) -> list[dict]:
+“””
+Search chapters, lessons and educational metadata.
+“””
+
+query = str(query or "").strip().casefold()
+if not query:
+    return []
+results: list[dict] = []
+for chapter in MANAGEMENT_CHAPTERS:
+    if not isinstance(chapter, dict):
+        continue
+    chapter_id = str(
+        chapter.get("id", "")
+    )
+    chapter_title = str(
+        chapter.get("title", "")
+    )
+    chapter_description = str(
+        chapter.get("description", "")
+    )
+    chapter_text = " ".join(
+        [
+            chapter_id,
+            chapter_title,
+            chapter_description,
+        ]
+    )
+    if query in chapter_text.casefold():
+        results.append(
+            {
+                "type": "chapter",
+                "chapter_id": chapter_id,
+                "title": chapter_title,
+            }
+        )
+    lessons = chapter.get("lessons", [])
+    if not isinstance(lessons, list):
+        continue
+    for lesson in lessons:
+        if not isinstance(lesson, dict):
+            continue
+        searchable: list[str] = []
+        searchable.append(
+            str(
                 lesson.get(
-                    "quiz",
-                    [],
+                    "id",
+                    "",
                 )
             )
-    return questions
-# ==========================================================
-# Statistics
-# ==========================================================
-def get_curriculum_stats() -> dict[str, int]:
-    """Return curriculum statistics."""
-    chapters = len(
-        CHAPTERS
-    )
-    lessons = sum(
-        len(
-            chapter.get(
-                "lessons",
-                [],
-            )
         )
-        for chapter in CHAPTERS
-    )
-    quiz_questions = len(
-        get_all_quiz_questions()
-    )
-    return {
-        "chapters": chapters,
-        "lessons": lessons,
-        "quiz_questions": quiz_questions,
-    }
-# ==========================================================
-# Search
-# ==========================================================
-def search_management(
-    query: str,
-) -> list[dict]:
-    """Search chapters, lessons and keywords."""
-    query = str(
-        query or ""
-    ).strip().casefold()
-    if not query:
-        return []
-    results: list[dict] = []
-    for chapter in CHAPTERS:
-        chapter_text = " ".join(
-            [
-                str(
-                    chapter.get(
-                        "title",
-                        "",
-                    )
-                ),
-                str(
-                    chapter.get(
-                        "description",
-                        "",
-                    )
-                ),
-            ]
-        )
-        if query in chapter_text.casefold():
-            results.append(
-                {
-                    "type": "chapter",
-                    "chapter_id": chapter.get(
-                        "id"
-                    ),
-                    "title": chapter.get(
-                        "title"
-                    ),
-                }
-            )
-        for lesson in chapter.get(
-            "lessons",
-            [],
-        ):
-            searchable = [
+        searchable.append(
+            str(
                 lesson.get(
                     "title",
                     "",
-                ),
+                )
+            )
+        )
+        searchable.append(
+            str(
                 lesson.get(
                     "content",
                     "",
-                ),
-            ]
-            for key in (
-                "subtopics",
-                "specialized_tips",
-                "exam_tips",
-                "examples",
-                "keywords",
-            ):
-                values = lesson.get(
-                    key,
-                    [],
                 )
+            )
+        )
+        for key in (
+            "subtopics",
+            "specialized_tips",
+            "exam_tips",
+            "examples",
+            "keywords",
+            "review",
+        ):
+            values = lesson.get(
+                key,
+                [],
+            )
+            if isinstance(values, list):
                 for value in values:
                     if isinstance(
                         value,
@@ -1838,95 +1901,353 @@ def search_management(
                     ):
                         searchable.extend(
                             [
-                                value.get(
-                                    "title",
-                                    "",
+                                str(
+                                    value.get(
+                                        "title",
+                                        "",
+                                    )
                                 ),
-                                value.get(
-                                    "text",
-                                    "",
+                                str(
+                                    value.get(
+                                        "text",
+                                        "",
+                                    )
                                 ),
-                                value.get(
-                                    "description",
-                                    "",
+                                str(
+                                    value.get(
+                                        "description",
+                                        "",
+                                    )
                                 ),
                             ]
                         )
                     else:
                         searchable.append(
-                            str(
-                                value
-                            )
+                            str(value)
                         )
-            searchable_text = " ".join(
-                str(
-                    item
+            elif values:
+                searchable.append(
+                    str(values)
                 )
-                for item in searchable
+        searchable_text = " ".join(
+            searchable
+        )
+        if query in searchable_text.casefold():
+            results.append(
+                {
+                    "type": "lesson",
+                    "chapter_id": chapter_id,
+                    "lesson_id": lesson.get(
+                        "id",
+                        "",
+                    ),
+                    "title": lesson.get(
+                        "title",
+                        lesson.get(
+                            "id",
+                            "",
+                        ),
+                    ),
+                }
             )
-            if query in searchable_text.casefold():
-                results.append(
-                    {
-                        "type": "lesson",
-                        "chapter_id": chapter.get(
-                            "id"
-                        ),
-                        "lesson_id": lesson.get(
-                            "id"
-                        ),
-                        "title": lesson.get(
-                            "title"
-                        ),
-                    }
-                )
-    return results
-# ==========================================================
-# Module Health Check
-# ==========================================================
+return results
+
+==========================================================
+
+Advanced Search
+
+==========================================================
+
+def search_management_chapters(
+query: str,
+) -> list[dict]:
+“”“Search only management chapters.”””
+
+query = str(query or "").strip().casefold()
+if not query:
+    return []
+results: list[dict] = []
+for chapter in MANAGEMENT_CHAPTERS:
+    if not isinstance(chapter, dict):
+        continue
+    searchable = " ".join(
+        [
+            str(chapter.get("id", "")),
+            str(chapter.get("title", "")),
+            str(chapter.get("description", "")),
+        ]
+    )
+    if query in searchable.casefold():
+        results.append(chapter)
+return results
+
+def search_management_lessons(
+query: str,
+) -> list[dict]:
+“”“Search only management lessons.”””
+
+query = str(query or "").strip().casefold()
+if not query:
+    return []
+results: list[dict] = []
+for chapter in MANAGEMENT_CHAPTERS:
+    if not isinstance(chapter, dict):
+        continue
+    chapter_id = str(
+        chapter.get("id", "")
+    )
+    lessons = chapter.get(
+        "lessons",
+        [],
+    )
+    if not isinstance(lessons, list):
+        continue
+    for lesson in lessons:
+        if not isinstance(lesson, dict):
+            continue
+        searchable = " ".join(
+            [
+                str(
+                    lesson.get(
+                        "id",
+                        "",
+                    )
+                ),
+                str(
+                    lesson.get(
+                        "title",
+                        "",
+                    )
+                ),
+                str(
+                    lesson.get(
+                        "content",
+                        "",
+                    )
+                ),
+                " ".join(
+                    str(x)
+                    for x in lesson.get(
+                        "subtopics",
+                        [],
+                    )
+                    if not isinstance(
+                        x,
+                        dict,
+                    )
+                ),
+                " ".join(
+                    str(x)
+                    for x in lesson.get(
+                        "keywords",
+                        [],
+                    )
+                    if not isinstance(
+                        x,
+                        dict,
+                    )
+                ),
+            ]
+        )
+        if query in searchable.casefold():
+            result = dict(lesson)
+            result[
+                "chapter_id"
+            ] = chapter_id
+            results.append(result)
+return results
+
+==========================================================
+
+Module Health Check
+
+==========================================================
+
 def management_data_health_check() -> bool:
-    """Validate basic management curriculum structure."""
-    try:
+“””
+Validate the basic integrity of the Management
+curriculum data.
+“””
+
+try:
+    if not isinstance(
+        MANAGEMENT_CHAPTERS,
+        list,
+    ):
+        return False
+    if not MANAGEMENT_CHAPTERS:
+        return False
+    chapter_ids: set[str] = set()
+    for chapter in MANAGEMENT_CHAPTERS:
         if not isinstance(
-            CHAPTERS,
+            chapter,
+            dict,
+        ):
+            return False
+        chapter_id = chapter.get(
+            "id"
+        )
+        if not chapter_id:
+            return False
+        chapter_id = str(
+            chapter_id
+        )
+        if chapter_id in chapter_ids:
+            return False
+        chapter_ids.add(
+            chapter_id
+        )
+        if not isinstance(
+            chapter.get(
+                "title",
+                "",
+            ),
+            str,
+        ):
+            return False
+        lessons = chapter.get(
+            "lessons",
+            [],
+        )
+        if not isinstance(
+            lessons,
             list,
         ):
             return False
-        for chapter in CHAPTERS:
+        lesson_ids: set[str] = set()
+        for lesson in lessons:
             if not isinstance(
-                chapter,
+                lesson,
                 dict,
             ):
                 return False
-            if not chapter.get(
+            lesson_id = lesson.get(
                 "id"
+            )
+            if not lesson_id:
+                return False
+            lesson_id = str(
+                lesson_id
+            )
+            if lesson_id in lesson_ids:
+                return False
+            lesson_ids.add(
+                lesson_id
+            )
+            if not isinstance(
+                lesson.get(
+                    "title",
+                    "",
+                ),
+                str,
             ):
                 return False
             if not isinstance(
-                chapter.get(
-                    "lessons",
-                    [],
+                lesson.get(
+                    "content",
+                    "",
                 ),
+                str,
+            ):
+                return False
+            quiz = lesson.get(
+                "quiz",
+                [],
+            )
+            if not isinstance(
+                quiz,
                 list,
             ):
                 return False
-        return True
-    except Exception:
-        return False
-# ==========================================================
-# Public Exports
-# ==========================================================
-__all__ = [
-    "MODULE_KEY",
-    "MODULE_TITLE",
-    "MODULE_DESCRIPTION",
-    "CHAPTERS",
-    "get_management_chapters",
-    "get_management_chapter",
-    "get_management_lessons",
-    "get_management_lesson",
-    "get_management_quiz",
-    "get_all_quiz_questions",
-    "get_curriculum_stats",
-    "search_management",
-    "management_data_health_check",
+            for question in quiz:
+                if not isinstance(
+                    question,
+                    dict,
+                ):
+                    return False
+                if not question.get(
+                    "question"
+                ):
+                    return False
+                options = question.get(
+                    "options",
+                    [],
+                )
+                if not isinstance(
+                    options,
+                    list,
+                ):
+                    return False
+                if len(options) < 2:
+                    return False
+                correct_index = question.get(
+                    "correct_index"
+                )
+                if not isinstance(
+                    correct_index,
+                    int,
+                ):
+                    return False
+                if not (
+                    0
+                    <= correct_index
+                    < len(options)
+                ):
+                    return False
+    return True
+except Exception:
+    return False
+
+==========================================================
+
+Module Metadata
+
+==========================================================
+
+def get_management_module_info() -> dict[str, object]:
+“”“Return module metadata and statistics.”””
+
+stats = get_curriculum_stats()
+return {
+    "key": MODULE_KEY,
+    "title": MODULE_TITLE,
+    "description": MODULE_DESCRIPTION,
+    "chapters": stats["chapters"],
+    "lessons": stats["lessons"],
+    "quiz_questions": stats["quiz_questions"],
+    "healthy": management_data_health_check(),
+}
+
+==========================================================
+
+Public Exports
+
+==========================================================
+
+all = [
+“MODULE_KEY”,
+“MODULE_TITLE”,
+“MODULE_DESCRIPTION”,
+
+# Primary curriculum export
+"CHAPTERS",
+# Compatibility export required by handlers.py
+"MANAGEMENT_CHAPTERS",
+# Data access
+"get_management_chapters",
+"get_management_chapter",
+"get_management_lessons",
+"get_management_lesson",
+"get_management_quiz",
+"get_all_quiz_questions",
+# Statistics
+"get_curriculum_stats",
+# Search
+"search_management",
+"search_management_chapters",
+"search_management_lessons",
+# Health / metadata
+"management_data_health_check",
+"get_management_module_info",
+
 ]
