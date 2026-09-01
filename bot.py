@@ -1492,7 +1492,7 @@ def build_application() -> Application:
         guarded_menu_callback,
         pattern=r"^(?!check_membership$).*",
     ),
-    group=0,
+    group=1,
 )
     # ======================================================
     # Callback Auto User Registry
@@ -1500,13 +1500,12 @@ def build_application() -> Application:
     # Separate group.
     # ======================================================
     application.add_handler(
-        CallbackQueryHandler(
-            callback_user_registry,
-            pattern=r".+",
-            block=False,
-        ),
-        group=1,
-    )
+    CallbackQueryHandler(
+        guarded_menu_callback,
+        pattern=r"^(?!check_membership$).*",
+    ),
+    group=-1,
+)
     # ======================================================
     # Global Error Handler
     # ======================================================
