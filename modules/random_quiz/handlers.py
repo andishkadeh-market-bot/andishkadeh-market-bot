@@ -1,810 +1,900 @@
-"""
-Telegram handlers for the Random Quiz module.
+“””
+Random Quiz Handlers
 Andishkadeh Management & Market
-Features:
-- Random quiz start
-- Random question selection
-- Central QuizEngine integration
-- Statistics integration
-- Progress integration
-- Safe quiz cancellation
-- Quiz completion
-- Multi-user isolation
-This handler uses the central QuizEngine instance.
-"""
-from __future__ import annotations
-import logging
+
+Responsibilities:
+
+* Show Random Quiz menu
+* Start random quizzes
+* Display questions
+* Handle answers
+* Show final result
+* Cancel active quiz
+* Provide module health check
+
+This module is independent from other quiz handlers
+and uses the central QuizEngine.
+“””
+
+from future import annotations
+
 import random
 from typing import Any
-from telegram import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    Update,
-)
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
+
 from core.quiz_engine import (
-    global_quiz_engine,
+QuizEngine,
+STATUS_ACTIVE,
+STATUS_CANCELLED,
+STATUS_COMPLETED,
+quiz_engine,
 )
-from core.statistics import (
-    record_quiz_result,
-)
-from core.progress import (
-    mark_lesson_completed,
-)
+
 from modules.random_quiz.data import (
-    RANDOM_QUESTIONS,
+RANDOM_QUIZ_CONFIG,
+RANDOM_QUESTIONS,
+data_health_check,
 )
-# ==========================================================
-# Logging
-# ==========================================================
-logger = logging.getLogger(__name__)
-# ==========================================================
-# Constants
-# ==========================================================
-RANDOM_QUIZ_MODULE_ID = "random_quiz"
-RANDOM_QUIZ_CHAPTER_ID = "random"
-RANDOM_QUIZ_LESSON_ID = "random_questions"
-DEFAULT_QUESTION_COUNT = 10
-MIN_QUESTION_COUNT = 1
-MAX_QUESTION_COUNT = 20
-# ==========================================================
-# Keyboards
-# ==========================================================
-def random_quiz_start_keyboard() -> InlineKeyboardMarkup:
-    """Return Random Quiz start keyboard."""
-    return InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    "🎲 شروع آزمون",
-                    callback_data="random_quiz:start",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "🏠 منوی اصلی",
-                    callback_data="menu_main",
-                )
-            ],
-        ]
-    )
-def random_quiz_result_keyboard() -> InlineKeyboardMarkup:
-    """Return keyboard shown after quiz completion."""
-    return InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    "🎲 آزمون تصادفی جدید",
-                    callback_data="random_quiz:start",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "🏠 منوی اصلی",
-                    callback_data="menu_main",
-                )
-            ],
-        ]
-    )
-# ==========================================================
-# Question helpers
-# ==========================================================
-def _question_text(
-    question: dict[str, Any],
-) -> str:
-    """Extract question text."""
-    return str(
-        question.get(
-            "question",
-            question.get(
-                "text",
-                "",
-            ),
-        )
-    )
-def _question_options(
-    question: dict[str, Any],
-) -> list[Any]:
-    """Extract question options."""
-    options = question.get(
-        "options",
-        [],
-    )
-    if not isinstance(
-        options,
-        list,
-    ):
-        return []
-    return options
-def _question_answer(
-    question: dict[str, Any],
-) -> Any:
-    """Extract correct answer."""
-    if "correct_answer" in question:
-        return question["correct_answer"]
-    if "answer" in question:
-        return question["answer"]
-    if "correct" in question:
-        return question["correct"]
-    return None
-def _option_text(
-    option: Any,
-) -> str:
-    """Convert an option to display text."""
-    if isinstance(
-        option,
-        dict,
-    ):
-        return str(
-            option.get(
-                "text",
-                option.get(
-                    "label",
-                    option.get(
-                        "value",
-                        "",
-                    ),
-                ),
-            )
-        )
-    return str(option)
-def _option_value(
-    option: Any,
-) -> str:
-    """Convert an option to its comparable value."""
-    if isinstance(
-        option,
-        dict,
-    ):
-        if "value" in option:
-            return str(option["value"])
-        if "id" in option:
-            return str(option["id"])
-        if "text" in option:
-            return str(option["text"])
-        if "label" in option:
-            return str(option["label"])
-    return str(option)
-# ==========================================================
-# Question pool
-# ==========================================================
-def get_random_question_pool() -> list[dict[str, Any]]:
-    """
-    Return valid Random Quiz questions.
-    """
-    if not isinstance(
-        RANDOM_QUESTIONS,
-        list,
-    ):
-        return []
-    valid_questions: list[
-        dict[str, Any]
-    ] = []
-    for question in RANDOM_QUESTIONS:
-        if not isinstance(
-            question,
-            dict,
-        ):
-            continue
-        text = _question_text(
-            question
-        )
-        options = _question_options(
-            question
-        )
-        answer = _question_answer(
-            question
-        )
-        if not text:
-            continue
-        if len(options) < 2:
-            continue
-        if answer is None:
-            continue
-        answer_text = str(answer)
-        option_values = [
-            _option_value(option)
-            for option in options
-        ]
-        if answer_text not in option_values:
-            continue
-        valid_questions.append(
-            question
-        )
-    return valid_questions
-# ==========================================================
-# Random question selection
-# ==========================================================
-def select_random_questions(
-    count: int = DEFAULT_QUESTION_COUNT,
+
+==========================================================
+
+Constants
+
+==========================================================
+
+MODULE_ID = str(
+RANDOM_QUIZ_CONFIG.get(
+“module_id”,
+“random_quiz”,
+)
+)
+
+MODULE_TITLE = str(
+RANDOM_QUIZ_CONFIG.get(
+“title”,
+“🎲 سوالات تصادفی”,
+)
+)
+
+MODULE_DESCRIPTION = str(
+RANDOM_QUIZ_CONFIG.get(
+“description”,
+“آزمون تصادفی از میان سوالات ثبت‌شده اندیشکده”,
+)
+)
+
+DEFAULT_QUESTION_COUNT = int(
+RANDOM_QUIZ_CONFIG.get(
+“default_question_count”,
+10,
+)
+)
+
+MINIMUM_QUESTION_COUNT = int(
+RANDOM_QUIZ_CONFIG.get(
+“minimum_question_count”,
+1,
+)
+)
+
+MAXIMUM_QUESTION_COUNT = int(
+RANDOM_QUIZ_CONFIG.get(
+“maximum_question_count”,
+20,
+)
+)
+
+==========================================================
+
+Helpers
+
+==========================================================
+
+def _safe_question_count(
+requested_count: int | None,
+) -> int:
+“””
+Normalize requested question count.
+“””
+
+if requested_count is None:
+    requested_count = DEFAULT_QUESTION_COUNT
+try:
+    count = int(requested_count)
+except (TypeError, ValueError):
+    count = DEFAULT_QUESTION_COUNT
+count = max(
+    MINIMUM_QUESTION_COUNT,
+    count,
+)
+count = min(
+    MAXIMUM_QUESTION_COUNT,
+    count,
+)
+count = min(
+    count,
+    len(RANDOM_QUESTIONS),
+)
+return max(
+    1,
+    count,
+)
+
+def _get_random_questions(
+count: int,
 ) -> list[dict[str, Any]]:
-    """
-    Select unique random questions.
-    """
-    if count < MIN_QUESTION_COUNT:
-        count = MIN_QUESTION_COUNT
-    if count > MAX_QUESTION_COUNT:
-        count = MAX_QUESTION_COUNT
-    pool = get_random_question_pool()
-    if not pool:
-        return []
-    count = min(
-        count,
-        len(pool),
-    )
-    return random.sample(
-        pool,
-        count,
-    )
-# ==========================================================
-# Display question
-# ==========================================================
-async def _show_current_question(
-    update: Update,
-    telegram_id: int,
-) -> None:
-    """
-    Display the current question from the central engine.
-    """
-    query = update.callback_query
-    if query is None:
-        return
-    session = (
-        global_quiz_engine.get_active_session(
-            telegram_id
-        )
-    )
-    if session is None:
-        await query.edit_message_text(
-            "⚠️ آزمون فعالی برای شما پیدا نشد.",
-            reply_markup=random_quiz_start_keyboard(),
-        )
-        return
-    question = (
-        global_quiz_engine.get_current_question(
-            telegram_id
-        )
-    )
-    if question is None:
-        await finish_random_quiz(
-            update,
-            telegram_id,
-        )
-        return
-    question_number = (
-        session.current_index + 1
-    )
-    total_questions = (
-        session.total_questions()
-    )
-    keyboard: list[
-        list[InlineKeyboardButton]
-    ] = []
-    for index, option in enumerate(
-        question.options
-    ):
-        keyboard.append(
-            [
-                InlineKeyboardButton(
-                    str(option),
-                    callback_data=(
-                        "random_quiz:answer:"
-                        f"{index}"
-                    ),
-                )
-            ]
-        )
+“””
+Select random questions from the question bank.
+“””
+
+if not RANDOM_QUESTIONS:
+    return []
+normalized_count = _safe_question_count(
+    count
+)
+return random.sample(
+    RANDOM_QUESTIONS,
+    k=normalized_count,
+)
+
+def _main_menu_keyboard() -> InlineKeyboardMarkup:
+“””
+Keyboard for Random Quiz main menu.
+“””
+
+keyboard = [
+    [
+        InlineKeyboardButton(
+            "🎯 شروع آزمون",
+            callback_data="random_quiz_start",
+        ),
+    ],
+    [
+        InlineKeyboardButton(
+            "🔟 آزمون ۱۰ سوالی",
+            callback_data="random_quiz_count:10",
+        ),
+    ],
+    [
+        InlineKeyboardButton(
+            "5️⃣ آزمون ۵ سوالی",
+            callback_data="random_quiz_count:5",
+        ),
+    ],
+    [
+        InlineKeyboardButton(
+            "↩️ بازگشت",
+            callback_data="main_menu",
+        ),
+    ],
+]
+return InlineKeyboardMarkup(
+    keyboard
+)
+
+def _quiz_keyboard(
+options: tuple[str, …],
+) -> InlineKeyboardMarkup:
+“””
+Build answer buttons.
+
+The answer index is used instead of placing the
+complete answer text inside callback_data.
+"""
+keyboard: list[
+    list[InlineKeyboardButton]
+] = []
+for index, option in enumerate(
+    options
+):
     keyboard.append(
         [
             InlineKeyboardButton(
-                "❌ لغو آزمون",
+                f"{index + 1}. {option}",
                 callback_data=(
-                    "random_quiz:cancel"
+                    f"random_quiz_answer:{index}"
                 ),
             )
         ]
     )
-    text = (
-        "🎲 <b>آزمون سوالات تصادفی</b>\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        f"❓ سوال <b>{question_number}</b> "
-        f"از <b>{total_questions}</b>\n\n"
-        f"<b>{question.question}</b>\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "پاسخ خود را انتخاب کنید:"
+keyboard.append(
+    [
+        InlineKeyboardButton(
+            "❌ لغو آزمون",
+            callback_data="random_quiz_cancel",
+        )
+    ]
+)
+return InlineKeyboardMarkup(
+    keyboard
+)
+
+def _result_keyboard() -> InlineKeyboardMarkup:
+“””
+Keyboard shown after quiz completion.
+“””
+
+return InlineKeyboardMarkup(
+    [
+        [
+            InlineKeyboardButton(
+                "🎲 آزمون جدید",
+                callback_data="random_quiz_start",
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                "↩️ بازگشت",
+                callback_data="main_menu",
+            ),
+        ],
+    ]
+)
+
+async def _edit_or_reply(
+update: Update,
+text: str,
+reply_markup: InlineKeyboardMarkup | None = None,
+) -> None:
+“””
+Edit callback message when possible.
+Otherwise send a new message.
+“””
+
+query = update.callback_query
+if query is not None:
+    try:
+        await query.edit_message_text(
+            text=text,
+            reply_markup=reply_markup,
+        )
+        return
+    except Exception:
+        pass
+if update.message is not None:
+    await update.message.reply_text(
+        text=text,
+        reply_markup=reply_markup,
     )
-    await query.edit_message_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(
-            keyboard
+
+==========================================================
+
+Module Menu
+
+==========================================================
+
+async def show_random_quiz_menu(
+update: Update,
+context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+“””
+Display Random Quiz module menu.
+“””
+
+query = update.callback_query
+if query is not None:
+    await query.answer()
+text = (
+    f"{MODULE_TITLE}\n\n"
+    f"{MODULE_DESCRIPTION}\n\n"
+    "📌 در این بخش، سوالات به‌صورت تصادفی "
+    "از بانک سوالات اندیشکده انتخاب می‌شوند.\n\n"
+    f"🔢 تعداد پیش‌فرض: {DEFAULT_QUESTION_COUNT} سوال\n"
+    f"📊 حداقل: {MINIMUM_QUESTION_COUNT} سوال\n"
+    f"📊 حداکثر: {MAXIMUM_QUESTION_COUNT} سوال\n\n"
+    "یکی از گزینه‌های زیر را انتخاب کنید:"
+)
+await _edit_or_reply(
+    update,
+    text,
+    _main_menu_keyboard(),
+)
+
+==========================================================
+
+Start Quiz
+
+==========================================================
+
+async def start_random_quiz(
+update: Update,
+context: ContextTypes.DEFAULT_TYPE,
+question_count: int | None = None,
+) -> None:
+“””
+Start a new Random Quiz session.
+“””
+
+user = update.effective_user
+if user is None:
+    return
+query = update.callback_query
+if query is not None:
+    await query.answer()
+count = _safe_question_count(
+    question_count
+)
+existing = quiz_engine.get_active_session(
+    user.id
+)
+if existing is not None:
+    await _edit_or_reply(
+        update,
+        (
+            "⚠️ شما در حال حاضر یک آزمون فعال دارید.\n\n"
+            f"📊 پیشرفت: "
+            f"{existing.answered_questions()}/"
+            f"{existing.total_questions()}\n\n"
+            "ابتدا آزمون فعلی را لغو کنید."
+        ),
+        InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "❌ لغو آزمون فعلی",
+                        callback_data=(
+                            "random_quiz_cancel"
+                        ),
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "↩️ بازگشت",
+                        callback_data="main_menu",
+                    )
+                ],
+            ]
         ),
     )
-# ==========================================================
-# Start quiz
-# ==========================================================
-async def start_random_quiz(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    """
-    Start a new Random Quiz using the central QuizEngine.
-    """
-    query = update.callback_query
-    if query is None:
-        return
-    await query.answer()
-    user = update.effective_user
-    if user is None:
-        return
-    telegram_id = user.id
-    # ------------------------------------------------------
-    # Select random questions
-    # ------------------------------------------------------
-    questions = select_random_questions()
-    if not questions:
-        await query.edit_message_text(
-            "❌ در حال حاضر سوال معتبری برای "
-            "آزمون تصادفی ثبت نشده است.",
-            reply_markup=random_quiz_start_keyboard(),
-        )
-        return
-    # ------------------------------------------------------
-    # Start central engine session
-    # ------------------------------------------------------
-    try:
-        session = (
-            global_quiz_engine.start_quiz(
-                telegram_id=telegram_id,
-                module_id=RANDOM_QUIZ_MODULE_ID,
-                chapter_id=RANDOM_QUIZ_CHAPTER_ID,
-                lesson_id=RANDOM_QUIZ_LESSON_ID,
-                questions=questions,
-                replace_existing=True,
-            )
-        )
-    except Exception:
-        logger.exception(
-            "Failed to start Random Quiz: telegram_id=%s",
-            telegram_id,
-        )
-        await query.edit_message_text(
-            "❌ خطایی هنگام شروع آزمون رخ داد.\n"
-            "لطفاً دوباره تلاش کنید.",
-            reply_markup=random_quiz_start_keyboard(),
-        )
-        return
-    logger.info(
-        "Random Quiz started: telegram_id=%s questions=%s",
-        telegram_id,
-        session.total_questions(),
-    )
-    await _show_current_question(
+    return
+questions = _get_random_questions(
+    count
+)
+if not questions:
+    await _edit_or_reply(
         update,
-        telegram_id,
+        (
+            "❌ بانک سوالات تصادفی خالی است.\n\n"
+            "لطفاً بعداً دوباره تلاش کنید."
+        ),
     )
-# ==========================================================
-# Answer quiz
-# ==========================================================
-async def answer_random_quiz(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    return
+try:
+    session = quiz_engine.start_quiz(
+        telegram_id=user.id,
+        module_id=MODULE_ID,
+        chapter_id="random",
+        lesson_id="random_quiz",
+        questions=questions,
+        replace_existing=False,
+    )
+except Exception as exc:
+    await _edit_or_reply(
+        update,
+        (
+            "❌ شروع آزمون با خطا مواجه شد.\n\n"
+            f"جزئیات: {exc}"
+        ),
+    )
+    return
+await _show_current_question(
+    update,
+    session,
+)
+
+==========================================================
+
+Current Question
+
+==========================================================
+
+async def _show_current_question(
+update: Update,
+session: Any,
 ) -> None:
-    """
-    Process one Random Quiz answer through central QuizEngine.
-    """
-    query = update.callback_query
-    if query is None:
-        return
-    user = update.effective_user
-    if user is None:
-        return
-    telegram_id = user.id
-    await query.answer()
-    # ------------------------------------------------------
-    # Validate active session
-    # ------------------------------------------------------
-    session = (
-        global_quiz_engine.get_active_session(
-            telegram_id
-        )
-    )
-    if session is None:
-        await query.edit_message_text(
-            "⚠️ آزمون فعالی برای شما پیدا نشد.",
-            reply_markup=random_quiz_start_keyboard(),
-        )
-        return
-    # ------------------------------------------------------
-    # Parse callback
-    # ------------------------------------------------------
-    data = query.data or ""
-    try:
-        parts = data.split(":")
-        if len(parts) != 3:
-            raise ValueError
-        answer_index = int(
-            parts[2]
-        )
-    except (
-        ValueError,
-        IndexError,
-    ):
-        await query.answer(
-            "❌ پاسخ نامعتبر است.",
-            show_alert=True,
-        )
-        return
-    # ------------------------------------------------------
-    # Current question
-    # ------------------------------------------------------
-    current_question = (
-        global_quiz_engine.get_current_question(
-            telegram_id
-        )
-    )
-    if current_question is None:
-        await query.answer(
-            "⚠️ این آزمون دیگر فعال نیست.",
-            show_alert=True,
-        )
-        return
-    options = list(
-        current_question.options
-    )
-    if (
-        answer_index < 0
-        or answer_index >= len(options)
-    ):
-        await query.answer(
-            "❌ گزینه نامعتبر است.",
-            show_alert=True,
-        )
-        return
-    selected_answer = str(
-        options[answer_index]
-    )
-    # ------------------------------------------------------
-    # Submit answer
-    # ------------------------------------------------------
-    try:
-        result = (
-            global_quiz_engine.submit_answer(
-                telegram_id=telegram_id,
-                answer=selected_answer,
-            )
-        )
-    except ValueError:
-        await query.answer(
-            "❌ پاسخ انتخاب‌شده معتبر نیست.",
-            show_alert=True,
-        )
-        return
-    except Exception:
-        logger.exception(
-            "Failed to submit Random Quiz answer: "
-            "telegram_id=%s",
-            telegram_id,
-        )
-        await query.answer(
-            "❌ خطایی هنگام ثبت پاسخ رخ داد.",
-            show_alert=True,
-        )
-        return
-    # ------------------------------------------------------
-    # Answer feedback
-    # ------------------------------------------------------
-    if result.get("is_correct"):
-        feedback = "✅ پاسخ شما صحیح بود."
-    else:
-        feedback = (
-            "❌ پاسخ شما اشتباه بود.\n"
-            f"پاسخ صحیح: "
-            f"<b>{result.get('correct_answer')}</b>"
-        )
-    explanation = result.get(
-        "explanation"
-    )
-    if explanation:
-        feedback += (
-            f"\n\n💡 <b>توضیح:</b>\n"
-            f"{explanation}"
-        )
-    # ------------------------------------------------------
-    # Finished
-    # ------------------------------------------------------
-    if result.get("finished"):
-        await query.answer(
-            feedback.replace(
-                "<b>",
-                "",
-            ).replace(
-                "</b>",
-                "",
-            )[:200],
-            show_alert=True,
-        )
-        await finish_random_quiz(
-            update,
-            telegram_id,
-        )
-        return
-    # ------------------------------------------------------
-    # Next question
-    # ------------------------------------------------------
+“””
+Display current question.
+“””
+
+question = session.current_question()
+if question is None:
+    return
+question_number = (
+    session.current_index + 1
+)
+total = session.total_questions()
+text = (
+    f"{MODULE_TITLE}\n\n"
+    f"❓ سوال {question_number} از {total}\n\n"
+    f"{question.question}\n\n"
+    "👇 پاسخ صحیح را انتخاب کنید:"
+)
+await _edit_or_reply(
+    update,
+    text,
+    _quiz_keyboard(
+        question.options
+    ),
+)
+
+==========================================================
+
+Answer
+
+==========================================================
+
+async def answer_random_quiz(
+update: Update,
+context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+“””
+Handle an answer callback.
+
+Callback format:
+    random_quiz_answer:<index>
+"""
+query = update.callback_query
+if query is None:
+    return
+user = update.effective_user
+if user is None:
     await query.answer(
-        feedback.replace(
-            "<b>",
-            "",
-        ).replace(
-            "</b>",
-            "",
-        )[:200],
+        "کاربر شناسایی نشد.",
         show_alert=True,
     )
-    await _show_current_question(
-        update,
-        telegram_id,
+    return
+data = query.data or ""
+try:
+    _, index_text = data.split(
+        ":",
+        1,
     )
-# ==========================================================
-# Finish quiz
-# ==========================================================
-async def finish_random_quiz(
-    update: Update,
-    telegram_id: int,
-) -> None:
-    """
-    Complete quiz and persist Statistics + Progress.
-    """
-    query = update.callback_query
-    if query is None:
-        return
-    result = (
-        global_quiz_engine.get_result(
-            telegram_id
-        )
+    option_index = int(
+        index_text
     )
-    if result is None:
-        await query.edit_message_text(
-            "⚠️ نتیجه آزمون پیدا نشد.",
-            reply_markup=random_quiz_start_keyboard(),
-        )
-        return
-    total_questions = (
-        result.total_questions
-    )
-    correct_answers = (
-        result.correct_answers
-    )
-    score = result.score
-    # ------------------------------------------------------
-    # Statistics
-    # ------------------------------------------------------
-    if result.status == "completed":
-        try:
-            record_quiz_result(
-                telegram_id=telegram_id,
-                module_id=RANDOM_QUIZ_MODULE_ID,
-                chapter_id=RANDOM_QUIZ_CHAPTER_ID,
-                lesson_id=RANDOM_QUIZ_LESSON_ID,
-                total_questions=total_questions,
-                correct_answers=correct_answers,
-                score=score,
-            )
-        except Exception:
-            logger.exception(
-                "Failed to record Random Quiz statistics: "
-                "telegram_id=%s",
-                telegram_id,
-            )
-        # --------------------------------------------------
-        # Progress
-        # --------------------------------------------------
-        try:
-            mark_lesson_completed(
-                telegram_id=telegram_id,
-                module_id=RANDOM_QUIZ_MODULE_ID,
-                chapter_id=RANDOM_QUIZ_CHAPTER_ID,
-                lesson_id=RANDOM_QUIZ_LESSON_ID,
-            )
-        except Exception:
-            logger.exception(
-                "Failed to record Random Quiz progress: "
-                "telegram_id=%s",
-                telegram_id,
-            )
-    # ------------------------------------------------------
-    # Level
-    # ------------------------------------------------------
-    if score >= 90:
-        level = "🏆 عالی"
-    elif score >= 75:
-        level = "🟢 خیلی خوب"
-    elif score >= 50:
-        level = "🟡 قابل قبول"
-    else:
-        level = "🔴 نیاز به مرور"
-    wrong_answers = (
-        result.wrong_answers
-    )
-    # ------------------------------------------------------
-    # Result message
-    # ------------------------------------------------------
-    text = (
-        "🎲 <b>آزمون تصادفی به پایان رسید</b>\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        f"📝 تعداد سوالات: "
-        f"<b>{total_questions}</b>\n"
-        f"✅ پاسخ صحیح: "
-        f"<b>{correct_answers}</b>\n"
-        f"❌ پاسخ غلط: "
-        f"<b>{wrong_answers}</b>\n"
-        f"📊 نمره: "
-        f"<b>{score:.2f}%</b>\n"
-        f"🎯 وضعیت: "
-        f"<b>{level}</b>\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "نتیجه آزمون در Statistics ثبت شد "
-        "و Progress نیز به‌روزرسانی شد."
-    )
-    await query.edit_message_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=random_quiz_result_keyboard(),
-    )
-    logger.info(
-        "Random Quiz completed: telegram_id=%s "
-        "score=%.2f correct=%s total=%s",
-        telegram_id,
-        score,
-        correct_answers,
-        total_questions,
-    )
-    # ------------------------------------------------------
-    # Remove completed runtime session
-    # ------------------------------------------------------
-    global_quiz_engine.remove_session(
-        telegram_id
-    )
-# ==========================================================
-# Cancel quiz
-# ==========================================================
-async def cancel_random_quiz(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    """
-    Cancel the active Random Quiz.
-    Cancelled quizzes are not recorded as completed
-    attempts and do not mark the lesson completed.
-    """
-    query = update.callback_query
-    if query is None:
-        return
-    user = update.effective_user
-    if user is None:
-        return
-    telegram_id = user.id
+except (
+    ValueError,
+    TypeError,
+):
     await query.answer(
-        "آزمون لغو شد.",
-        show_alert=False,
+        "❌ پاسخ نامعتبر است.",
+        show_alert=True,
     )
-    session = (
-        global_quiz_engine.get_active_session(
-            telegram_id
-        )
+    return
+session = quiz_engine.get_active_session(
+    user.id
+)
+if session is None:
+    await query.answer(
+        "⚠️ آزمون فعالی برای شما وجود ندارد.",
+        show_alert=True,
     )
-    if session is not None:
-        try:
-            global_quiz_engine.cancel_quiz(
-                telegram_id
-            )
-        except Exception:
-            logger.exception(
-                "Failed to cancel Random Quiz: "
-                "telegram_id=%s",
-                telegram_id,
-            )
-    global_quiz_engine.remove_session(
-        telegram_id
+    return
+question = session.current_question()
+if question is None:
+    await query.answer(
+        "⚠️ سوال فعلی پیدا نشد.",
+        show_alert=True,
     )
-    await query.edit_message_text(
-        "❌ <b>آزمون تصادفی لغو شد.</b>\n\n"
-        "هیچ نتیجه‌ای برای این آزمون در "
-        "Statistics ثبت نشد.",
-        parse_mode="HTML",
-        reply_markup=random_quiz_start_keyboard(),
+    return
+if (
+    option_index < 0
+    or option_index >= len(
+        question.options
     )
-# ==========================================================
-# Callback router
-# ==========================================================
-async def route_random_quiz_callback(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+):
+    await query.answer(
+        "❌ گزینه نامعتبر است.",
+        show_alert=True,
+    )
+    return
+selected_answer = question.options[
+    option_index
+]
+try:
+    result = quiz_engine.submit_answer(
+        telegram_id=user.id,
+        answer=selected_answer,
+    )
+except Exception as exc:
+    await query.answer(
+        f"❌ خطا: {exc}",
+        show_alert=True,
+    )
+    return
+is_correct = bool(
+    result.get(
+        "is_correct",
+        False,
+    )
+)
+correct_answer = result.get(
+    "correct_answer",
+    "",
+)
+explanation = result.get(
+    "explanation",
+    "",
+)
+finished = bool(
+    result.get(
+        "finished",
+        False,
+    )
+)
+await query.answer(
+    "✅ پاسخ صحیح بود!"
+    if is_correct
+    else "❌ پاسخ اشتباه بود.",
+)
+if finished:
+    await _show_final_result(
+        update,
+        result,
+    )
+    return
+feedback = (
+    "✅ پاسخ شما صحیح بود."
+    if is_correct
+    else (
+        "❌ پاسخ شما اشتباه بود.\n"
+        f"✅ پاسخ صحیح: {correct_answer}"
+    )
+)
+if explanation:
+    feedback += (
+        f"\n\n💡 توضیح:\n{explanation}"
+    )
+next_session = quiz_engine.get_active_session(
+    user.id
+)
+if next_session is None:
+    return
+question = next_session.current_question()
+if question is None:
+    return
+question_number = (
+    next_session.current_index + 1
+)
+total = next_session.total_questions()
+text = (
+    f"{MODULE_TITLE}\n\n"
+    f"{feedback}\n\n"
+    "━━━━━━━━━━━━━━\n\n"
+    f"❓ سوال {question_number} از {total}\n\n"
+    f"{question.question}\n\n"
+    "👇 پاسخ صحیح را انتخاب کنید:"
+)
+await _edit_or_reply(
+    update,
+    text,
+    _quiz_keyboard(
+        question.options
+    ),
+)
+
+==========================================================
+
+Final Result
+
+==========================================================
+
+async def _show_final_result(
+update: Update,
+answer_result: dict[str, Any],
 ) -> None:
-    """
-    Route Random Quiz callbacks.
-    """
-    query = update.callback_query
-    if query is None:
-        return
-    data = query.data or ""
-    if data == "random_quiz:start":
-        await start_random_quiz(
-            update,
-            context,
-        )
-        return
-    if data.startswith(
-        "random_quiz:answer:"
-    ):
-        await answer_random_quiz(
-            update,
-            context,
-        )
-        return
-    if data == "random_quiz:cancel":
-        await cancel_random_quiz(
-            update,
-            context,
-        )
-        return
-# ==========================================================
-# Random Quiz entry menu
-# ==========================================================
-async def show_random_quiz_menu(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+“””
+Show final quiz result.
+“””
+
+user = update.effective_user
+if user is None:
+    return
+result = quiz_engine.get_result(
+    user.id
+)
+if result is None:
+    return
+total = result.total_questions
+correct = result.correct_answers
+wrong = result.wrong_answers
+score = result.score
+if score >= 90:
+    level = "🏆 عالی"
+    message = "عملکرد فوق‌العاده‌ای داشتی."
+elif score >= 70:
+    level = "🥇 خوب"
+    message = "عملکرد خوبی داشتی."
+elif score >= 50:
+    level = "🥈 متوسط"
+    message = "بد نبود، ولی هنوز جا برای پیشرفت هست."
+else:
+    level = "📚 نیازمند مرور"
+    message = "چند دور مرور درس‌ها بد نیست. مغز هم گاهی نیاز به تعمیرات دارد."
+text = (
+    f"{MODULE_TITLE}\n\n"
+    "🎉 آزمون به پایان رسید!\n\n"
+    "━━━━━━━━━━━━━━\n"
+    f"📊 تعداد سوالات: {total}\n"
+    f"✅ پاسخ صحیح: {correct}\n"
+    f"❌ پاسخ غلط: {wrong}\n"
+    f"📈 درصد موفقیت: {score:.2f}%\n"
+    f"🏅 نتیجه: {level}\n"
+    "━━━━━━━━━━━━━━\n\n"
+    f"{message}\n\n"
+    "آزمون دیگری را می‌توانید از همین بخش شروع کنید."
+)
+await _edit_or_reply(
+    update,
+    text,
+    _result_keyboard(),
+)
+
+==========================================================
+
+Cancel
+
+==========================================================
+
+async def cancel_random_quiz(
+update: Update,
+context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    """
-    Show Random Quiz introduction menu.
-    """
-    query = update.callback_query
-    if query is None:
-        return
+“””
+Cancel current Random Quiz.
+“””
+
+query = update.callback_query
+if query is not None:
     await query.answer()
-    pool_size = len(
-        get_random_question_pool()
+user = update.effective_user
+if user is None:
+    return
+session = quiz_engine.get_active_session(
+    user.id
+)
+if session is None:
+    await _edit_or_reply(
+        update,
+        (
+            "ℹ️ در حال حاضر آزمون فعالی ندارید."
+        ),
+        _main_menu_keyboard(),
     )
-    text = (
-        "🎲 <b>سوالات تصادفی</b>\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "در این بخش سوالات به‌صورت تصادفی "
-        "از بانک سوالات انتخاب می‌شوند.\n\n"
-        f"📚 تعداد سوالات موجود: "
-        f"<b>{pool_size}</b>\n"
-        f"📝 تعداد سوالات آزمون: "
-        f"<b>{DEFAULT_QUESTION_COUNT}</b>\n\n"
-        "نتیجه آزمون در Statistics ذخیره می‌شود "
-        "و وضعیت Progress نیز ثبت خواهد شد.\n"
-        "━━━━━━━━━━━━━━━━━━"
+    return
+try:
+    result = quiz_engine.cancel_quiz(
+        user.id
     )
-    await query.edit_message_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=random_quiz_start_keyboard(),
+except Exception as exc:
+    await _edit_or_reply(
+        update,
+        (
+            "❌ لغو آزمون با خطا مواجه شد.\n\n"
+            f"جزئیات: {exc}"
+        ),
     )
-# ==========================================================
-# Health check
-# ==========================================================
+    return
+text = (
+    f"{MODULE_TITLE}\n\n"
+    "❌ آزمون لغو شد.\n\n"
+    f"📊 تعداد پاسخ داده‌شده: "
+    f"{result.answered_questions}/"
+    f"{result.total_questions}\n"
+    f"✅ صحیح: {result.correct_answers}\n"
+    f"❌ غلط: {result.wrong_answers}\n\n"
+    "برای شروع آزمون جدید می‌توانید دوباره اقدام کنید."
+)
+await _edit_or_reply(
+    update,
+    text,
+    _main_menu_keyboard(),
+)
+
+==========================================================
+
+Count Selection
+
+==========================================================
+
+async def handle_random_quiz_count(
+update: Update,
+context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+“””
+Start quiz with selected question count.
+
+Callback format:
+    random_quiz_count:<count>
+"""
+query = update.callback_query
+if query is None:
+    return
+data = query.data or ""
+try:
+    _, count_text = data.split(
+        ":",
+        1,
+    )
+    count = int(
+        count_text
+    )
+except (
+    ValueError,
+    TypeError,
+):
+    await query.answer(
+        "❌ تعداد سوالات نامعتبر است.",
+        show_alert=True,
+    )
+    return
+await start_random_quiz(
+    update,
+    context,
+    question_count=count,
+)
+
+==========================================================
+
+Main Callback Router
+
+==========================================================
+
+async def route_random_quiz_callback(
+update: Update,
+context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+“””
+Route all Random Quiz callbacks.
+
+Supported callbacks:
+- menu_random_quiz
+- random_quiz
+- random_quiz_start
+- random_quiz_count:<n>
+- random_quiz_answer:<index>
+- random_quiz_cancel
+"""
+query = update.callback_query
+if query is None:
+    return
+data = query.data or ""
+if data in {
+    "menu_random_quiz",
+    "random_quiz",
+}:
+    await show_random_quiz_menu(
+        update,
+        context,
+    )
+    return
+if data == "random_quiz_start":
+    await start_random_quiz(
+        update,
+        context,
+    )
+    return
+if data.startswith(
+    "random_quiz_count:"
+):
+    await handle_random_quiz_count(
+        update,
+        context,
+    )
+    return
+if data.startswith(
+    "random_quiz_answer:"
+):
+    await answer_random_quiz(
+        update,
+        context,
+    )
+    return
+if data == "random_quiz_cancel":
+    await cancel_random_quiz(
+        update,
+        context,
+    )
+    return
+await query.answer(
+    "❌ دستور ناشناخته است.",
+    show_alert=True,
+)
+
+==========================================================
+
+Health Check
+
+==========================================================
+
 def random_quiz_handlers_health_check() -> bool:
-    """
-    Basic health check for Random Quiz handlers.
-    """
-    try:
-        pool = get_random_question_pool()
-        if not isinstance(
-            pool,
-            list,
-        ):
-            return False
-        if not pool:
-            return False
-        if not global_quiz_engine.health_check():
-            return False
-        return True
-    except Exception:
-        logger.exception(
-            "Random Quiz handlers health check failed."
-        )
+“””
+Check Random Quiz handlers and dependencies.
+“””
+
+try:
+    if not data_health_check():
         return False
+    if not MODULE_ID:
+        return False
+    if not MODULE_TITLE:
+        return False
+    if not isinstance(
+        DEFAULT_QUESTION_COUNT,
+        int,
+    ):
+        return False
+    if DEFAULT_QUESTION_COUNT < 1:
+        return False
+    if MINIMUM_QUESTION_COUNT < 1:
+        return False
+    if MAXIMUM_QUESTION_COUNT < MINIMUM_QUESTION_COUNT:
+        return False
+    if not RANDOM_QUESTIONS:
+        return False
+    # Verify that the central engine is available.
+    if not isinstance(
+        quiz_engine,
+        QuizEngine,
+    ):
+        return False
+    # Verify that the engine can normalize
+    # the Random Quiz question bank.
+    normalized = (
+        quiz_engine.normalize_questions(
+            RANDOM_QUESTIONS
+        )
+    )
+    if not normalized:
+        return False
+    return True
+except Exception:
+    return False
+
+==========================================================
+
+Module Information
+
+==========================================================
+
+def get_random_quiz_module_info() -> dict[str, Any]:
+“””
+Return public module information.
+“””
+
+return {
+    "module_id": MODULE_ID,
+    "title": MODULE_TITLE,
+    "description": MODULE_DESCRIPTION,
+    "default_question_count": (
+        DEFAULT_QUESTION_COUNT
+    ),
+    "minimum_question_count": (
+        MINIMUM_QUESTION_COUNT
+    ),
+    "maximum_question_count": (
+        MAXIMUM_QUESTION_COUNT
+    ),
+    "question_count": len(
+        RANDOM_QUESTIONS
+    ),
+    "health": (
+        random_quiz_handlers_health_check()
+    ),
+}
+
+==========================================================
+
+Compatibility Aliases
+
+==========================================================
+
+show_random_quiz = show_random_quiz_menu
+start_quiz = start_random_quiz
+answer_quiz = answer_random_quiz
+cancel_quiz = cancel_random_quiz
+random_quiz_health_check = (
+random_quiz_handlers_health_check
+)
