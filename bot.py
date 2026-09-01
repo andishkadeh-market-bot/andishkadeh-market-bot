@@ -1536,47 +1536,30 @@ async def error_handler(
 
 # ==========================================================
 # Application Factory
-# ==========================================================
-
-def build_application() -> Application:
+# ==========================================================def build_application() -> Application:
     """
     Create and configure Telegram application.
-
     Handler groups:
     Group -1:
         Auto User Registry.
-
     Group 0:
         Commands and module-specific callback routers.
-
     Group 1:
         Generic central menu router.
     """
-
     if not BOT_TOKEN:
         raise RuntimeError(
             "BOT_TOKEN is not configured."
         )
-
     initialize_core()
-
     application = (
         Application.builder()
         .token(BOT_TOKEN)
         .build()
     )
-
     # ======================================================
     # Callback Auto User Registry
     # ======================================================
-    #
-    # This handler only registers callback users.
-    # It does NOT route callbacks.
-    #
-    # It is placed in group -1 so registration happens
-    # before the actual callback processing.
-    # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             callback_user_registry,
@@ -1584,11 +1567,9 @@ def build_application() -> Application:
         ),
         group=-1,
     )
-
     # ======================================================
     # Commands
     # ======================================================
-
     application.add_handler(
         CommandHandler(
             "start",
@@ -1596,7 +1577,6 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     application.add_handler(
         CommandHandler(
             "menu",
@@ -1604,7 +1584,6 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     application.add_handler(
         CommandHandler(
             "admin",
@@ -1612,20 +1591,16 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ======================================================
     # Membership callbacks
     # ======================================================
-
     application.add_handlers(
         membership_handlers,
         group=0,
     )
-
     # ======================================================
     # Admin callbacks
     # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             route_admin_callback,
@@ -1642,11 +1617,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ======================================================
     # General Exam callbacks
     # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             route_exam_callback,
@@ -1660,11 +1633,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ======================================================
     # International Trade callbacks
     # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             route_international_trade_callback,
@@ -1684,11 +1655,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ======================================================
     # Psychology & Social Work callbacks
     # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             route_psychology_callback,
@@ -1706,11 +1675,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ======================================================
     # Management callbacks
     # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             show_management_menu,
@@ -1718,7 +1685,6 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     application.add_handler(
         CallbackQueryHandler(
             show_management_chapter,
@@ -1726,7 +1692,6 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     application.add_handler(
         CallbackQueryHandler(
             show_management_lesson,
@@ -1734,11 +1699,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ------------------------------------------------------
     # Management Quiz Start
     # ------------------------------------------------------
-
     application.add_handler(
         CallbackQueryHandler(
             start_management_quiz,
@@ -1751,11 +1714,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ------------------------------------------------------
     # Management Quiz Answers
     # ------------------------------------------------------
-
     application.add_handler(
         CallbackQueryHandler(
             answer_management_quiz,
@@ -1768,11 +1729,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ------------------------------------------------------
     # Management Quiz Cancellation
     # ------------------------------------------------------
-
     application.add_handler(
         CallbackQueryHandler(
             cancel_management_quiz,
@@ -1785,11 +1744,9 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
     # ======================================================
     # Banking callbacks
     # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             route_banking_callback,
@@ -1808,7 +1765,16 @@ def build_application() -> Application:
         ),
         group=0,
     )
-
+    # ======================================================
+    # Random Quiz callbacks
+    # ======================================================
+    application.add_handler(
+        CallbackQueryHandler(
+            route_random_quiz_callback,
+            pattern=r"^random_quiz",
+        ),
+        group=0,
+    )
     # ======================================================
     # Generic Central Menu Router
     # ======================================================
@@ -1822,7 +1788,6 @@ def build_application() -> Application:
     #
     # Membership check is still enforced here.
     # ======================================================
-
     application.add_handler(
         CallbackQueryHandler(
             guarded_menu_callback,
@@ -1830,21 +1795,16 @@ def build_application() -> Application:
         ),
         group=1,
     )
-
     # ======================================================
     # Global Error Handler
     # ======================================================
-
     application.add_error_handler(
         error_handler
     )
-
     logger.info(
         "Telegram application configured successfully."
     )
-
     return application
-
 
 # ==========================================================
 # Integration Health Check
@@ -1891,7 +1851,6 @@ def integration_health_check() -> bool:
             "Integration health check failed."
         )
         return False
-
 
 # ==========================================================
 # Main Async Runner
@@ -1974,7 +1933,6 @@ async def run_bot() -> None:
             "Application shutdown complete."
         )
 
-
 # ==========================================================
 # Main
 # ==========================================================
@@ -2014,7 +1972,6 @@ def main() -> None:
             "Fatal application error."
         )
         raise
-
 
 # ==========================================================
 # Entry Point
