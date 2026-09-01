@@ -1494,14 +1494,16 @@ def build_application() -> Application:
     ),
     group=1,
 )
-    # ======================================================
-    # Callback Auto User Registry
-    #
-    # Separate group.
-    # ======================================================
-    application.add_handler(
+  # ======================================================
+# Callback Auto User Registry
+#
+# Separate group.
+# This handler only registers callback users and must
+# NOT route the callback a second time.
+# ======================================================
+application.add_handler(
     CallbackQueryHandler(
-        guarded_menu_callback,
+        callback_user_registry,
         pattern=r"^(?!check_membership$).*",
     ),
     group=-1,
