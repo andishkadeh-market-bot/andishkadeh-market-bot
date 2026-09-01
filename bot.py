@@ -1234,9 +1234,9 @@ def initialize_core() -> None:
         "SQLite database initialized successfully."
     )
 
-    # ------------------------------------------------------
-    # Registry
-    # ------------------------------------------------------
+# ------------------------------------------------------
+# Registry
+# ------------------------------------------------------
 
     logger.info(
         "Initializing complete Auto Registry..."
@@ -1256,9 +1256,9 @@ def initialize_core() -> None:
         registry_result["lessons"],
     )
 
-    # ------------------------------------------------------
-    # Progress
-    # ------------------------------------------------------
+# ------------------------------------------------------
+# Progress
+# ------------------------------------------------------
 
     logger.info(
         "Initializing Progress system..."
@@ -1270,9 +1270,9 @@ def initialize_core() -> None:
         "Progress system initialized successfully."
     )
 
-    # ------------------------------------------------------
-    # Statistics
-    # ------------------------------------------------------
+# ------------------------------------------------------
+# Statistics
+# ------------------------------------------------------
 
     logger.info(
         "Initializing Statistics system..."
@@ -1284,9 +1284,9 @@ def initialize_core() -> None:
         "Statistics system initialized successfully."
     )
 
-    # ------------------------------------------------------
-    # Health Checks
-    # ------------------------------------------------------
+# ------------------------------------------------------
+# Health Checks
+# ------------------------------------------------------
 
     if not run_core_health_checks():
         raise RuntimeError(
@@ -1537,6 +1537,10 @@ async def error_handler(
 # ==========================================================
 # Application Factory
 # ==========================================================def build_application() -> Application:
+# ==========================================================
+# Application Factory
+# ==========================================================
+def build_application() -> Application:
     """
     Create and configure Telegram application.
     Handler groups:
@@ -1777,16 +1781,6 @@ async def error_handler(
     )
     # ======================================================
     # Generic Central Menu Router
-    # ======================================================
-    #
-    # IMPORTANT:
-    # This is group 1.
-    #
-    # Module-specific handlers are processed in group 0.
-    # The generic router is therefore only reached when
-    # a group-0 handler has not already consumed the update.
-    #
-    # Membership check is still enforced here.
     # ======================================================
     application.add_handler(
         CallbackQueryHandler(
