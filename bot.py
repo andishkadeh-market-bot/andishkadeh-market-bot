@@ -186,7 +186,14 @@ except ImportError:
     def banking_handlers_health_check() -> bool:
         return False
 
+# ==========================================================
+# Random Quiz
+# ==========================================================
 
+from modules.random_quiz.handlers import (
+    route_random_quiz_callback,
+    random_quiz_handlers_health_check,
+)
 # ==========================================================
 # Logging
 # ==========================================================
