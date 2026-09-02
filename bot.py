@@ -760,10 +760,9 @@ def register_finance_content() -> dict[str, int]:
         chapter_id = lesson.get(
             "chapter_id"
         )
-        lesson_id = lesson.get(
-            "id"
-        ) or lesson.get(
-            "lesson_id"
+        lesson_id = (
+            lesson.get("id")
+            or lesson.get("lesson_id")
         )
         if not chapter_id or not lesson_id:
             continue
@@ -1972,7 +1971,8 @@ def build_application() -> Application:
             route_finance_callback,
             pattern=(
                 r"^("
-                r"finance_menu"
+                r"menu_finance"
+                r"|finance_menu"
                 r"|finance_back"
                 r"|finance_chapter:.+"
                 r"|finance_lesson:.+"
