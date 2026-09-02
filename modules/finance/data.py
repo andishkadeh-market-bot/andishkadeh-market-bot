@@ -6,7 +6,9 @@ It is designed to work with the central registry and content initializer.
 """
 
 MODULE_ID = "finance"
+
 MODULE_TITLE = "مدیریت مالی"
+
 MODULE_DESCRIPTION = (
     "آموزش جامع مدیریت مالی، تحلیل مالی، بودجه‌بندی، "
     "سرمایه‌گذاری، تأمین مالی، سرمایه در گردش و مدیریت ریسک."
@@ -409,17 +411,128 @@ def get_curriculum_statistics() -> dict:
     }
 
 
-def data_health_check() -> dict:
-    """Validate the internal Finance curriculum structure."""
-    chapter_ids = {chapter["id"] for chapter in CHAPTERS}
+def validate_curriculum() -> dict:
+    """
+    Validate the internal Finance curriculum structure.
 
-    missing_chapter_ids = [
-        lesson["id"]
-        for lesson in LESSONS
-        if lesson.get("chapter_id") not in chapter_ids
-    ]
+    Returns a detailed validation result containing:
+    - status
+    - module information
+    - chapter count
+    - lesson count
+    - validation errors
+    """
+    errors = []
 
-    lesson_ids = [lesson["id"] for lesson in LESSONS]
+    # ---------------------------------------------------------
+    # Basic module validation
+    # ---------------------------------------------------------
+
+    if not isinstance(MODULE_ID, str) or not MODULE_ID.strip():
+        errors.append("MODULE_ID is empty or invalid.")
+
+    if not isinstance(MODULE_TITLE, str) or not MODULE_TITLE.strip():
+        errors.append("MODULE_TITLE is empty or invalid.")
+
+    if not isinstance(MODULE_DESCRIPTION, str) or not MODULE_DESCRIPTION.strip():
+        errors.append("MODULE_DESCRIPTION is empty or invalid.")
+
+    # ---------------------------------------------------------
+    # Chapter validation
+    # ---------------------------------------------------------
+
+    if not isinstance(CHAPTERS, list) or not CHAPTERS:
+        errors.append("No chapters found.")
+        chapters = []
+    else:
+        chapters = CHAPTERS
+
+    chapter_ids = []
+
+    for index, chapter in enumerate(chapters, start=1):
+        if not isinstance(chapter, dict):
+            errors.append(
+                f"Chapter #{index} is not a dictionary."
+            )
+            continue
+
+        chapter_id = chapter.get("id")
+        chapter_title = chapter.get("title")
+
+        if not chapter_id:
+            errors.append(
+                f"Chapter #{index} has no ID."
+            )
+        else:
+            chapter_ids.append(chapter_id)
+
+        if not chapter_title:
+            errors.append(
+                f"Chapter #{index} has no title."
+            )
+
+    duplicate_chapter_ids = sorted(
+        {
+            chapter_id
+            for chapter_id in chapter_ids
+            if chapter_ids.count(chapter_id) > 1
+        }
+    )
+
+    if duplicate_chapter_ids:
+        errors.append(
+            f"Duplicate chapter IDs: {duplicate_chapter_ids}"
+        )
+
+    # ---------------------------------------------------------
+    # Lesson validation
+    # ---------------------------------------------------------
+
+    if not isinstance(LESSONS, list) or not LESSONS:
+        errors.append("No lessons found.")
+        lessons = []
+    else:
+        lessons = LESSONS
+
+    lesson_ids = []
+    lessons_per_chapter = {}
+
+    for index, lesson in enumerate(lessons, start=1):
+        if not isinstance(lesson, dict):
+            errors.append(
+                f"Lesson #{index} is not a dictionary."
+            )
+            continue
+
+        lesson_id = lesson.get("id")
+        chapter_id = lesson.get("chapter_id")
+        lesson_title = lesson.get("title")
+
+        if not lesson_id:
+            errors.append(
+                f"Lesson #{index} has no ID."
+            )
+        else:
+            lesson_ids.append(lesson_id)
+
+        if not chapter_id:
+            errors.append(
+                f"Lesson #{index} has no chapter_id."
+            )
+        elif chapter_id not in chapter_ids:
+            errors.append(
+                f"Lesson '{lesson_id}' references unknown chapter "
+                f"'{chapter_id}'."
+            )
+        else:
+            lessons_per_chapter.setdefault(chapter_id, 0)
+            lessons_per_chapter[chapter_id] += 1
+
+        if not lesson_title:
+            errors.append(
+                f"Lesson '{lesson_id}' has no title."
+            )
+
     duplicate_lesson_ids = sorted(
         {
             lesson_id
@@ -428,51 +541,107 @@ def data_health_check() -> dict:
         }
     )
 
-    chapter_id_list = [chapter["id"] for chapter in CHAPTERS]
-    duplicate_chapter_ids = sorted(
-        {
-            chapter_id
-            for chapter_id in chapter_id_list
-            if chapter_id_list.count(chapter_id) > 1
-        }
-    )
-
-    errors = []
-
-    if not MODULE_ID:
-        errors.append("MODULE_ID is empty.")
-
-    if not MODULE_TITLE:
-        errors.append("MODULE_TITLE is empty.")
-
-    if not CHAPTERS:
-        errors.append("No chapters found.")
-
-    if not LESSONS:
-        errors.append("No lessons found.")
-
-    if missing_chapter_ids:
-        errors.append(
-            f"Lessons reference unknown chapters: {missing_chapter_ids}"
-        )
-
     if duplicate_lesson_ids:
         errors.append(
             f"Duplicate lesson IDs: {duplicate_lesson_ids}"
         )
 
-    if duplicate_chapter_ids:
+    # ---------------------------------------------------------
+    # Expected curriculum validation
+    # ---------------------------------------------------------
+
+    if len(chapters) != 12:
         errors.append(
-            f"Duplicate chapter IDs: {duplicate_chapter_ids}"
+            f"Expected 12 chapters, found {len(chapters)}."
+        )
+
+    if len(lessons) != 48:
+        errors.append(
+            f"Expected 48 lessons, found {len(lessons)}."
+        )
+
+    for chapter_id in chapter_ids:
+        count = lessons_per_chapter.get(chapter_id, 0)
+
+        if count != 4:
+            errors.append(
+                f"Chapter '{chapter_id}' should contain 4 lessons, "
+                f"found {count}."
+            )
+
+    # ---------------------------------------------------------
+    # Sequential ID validation
+    # ---------------------------------------------------------
+
+    expected_chapter_ids = {
+        f"finance_ch{number}"
+        for number in range(1, 13)
+    }
+
+    actual_chapter_ids = set(chapter_ids)
+
+    missing_chapter_ids = sorted(
+        expected_chapter_ids - actual_chapter_ids
+    )
+
+    unexpected_chapter_ids = sorted(
+        actual_chapter_ids - expected_chapter_ids
+    )
+
+    if missing_chapter_ids:
+        errors.append(
+            f"Missing expected chapter IDs: {missing_chapter_ids}"
+        )
+
+    if unexpected_chapter_ids:
+        errors.append(
+            f"Unexpected chapter IDs: {unexpected_chapter_ids}"
+        )
+
+    expected_lesson_ids = {
+        f"finance_l{number}"
+        for number in range(1, 49)
+    }
+
+    actual_lesson_ids = set(lesson_ids)
+
+    missing_lesson_ids = sorted(
+        expected_lesson_ids - actual_lesson_ids
+    )
+
+    unexpected_lesson_ids = sorted(
+        actual_lesson_ids - expected_lesson_ids
+    )
+
+    if missing_lesson_ids:
+        errors.append(
+            f"Missing expected lesson IDs: {missing_lesson_ids}"
+        )
+
+    if unexpected_lesson_ids:
+        errors.append(
+            f"Unexpected lesson IDs: {unexpected_lesson_ids}"
         )
 
     return {
         "module": MODULE_ID,
         "status": "ok" if not errors else "error",
-        "chapters": len(CHAPTERS),
-        "lessons": len(LESSONS),
+        "chapters": len(chapters),
+        "lessons": len(lessons),
+        "lessons_per_chapter": lessons_per_chapter,
         "errors": errors,
     }
+
+
+def data_health_check() -> bool:
+    """
+    Return True when the Finance curriculum is valid.
+
+    This function intentionally returns a boolean because it is
+    consumed directly by the central bot health-check system.
+    """
+    result = validate_curriculum()
+    return result["status"] == "ok"
 
 
 __all__ = [
@@ -485,10 +654,41 @@ __all__ = [
     "get_chapters",
     "get_lessons",
     "get_curriculum_statistics",
+    "validate_curriculum",
     "data_health_check",
 ]
 
 
 if __name__ == "__main__":
+    print("Finance Curriculum Statistics")
+    print("=" * 40)
+
     print(get_curriculum_statistics())
-    print(data_health_check())
+
+    print("\nDetailed Validation")
+    print("=" * 40)
+
+    validation_result = validate_curriculum()
+
+    print(
+        f"Status: {validation_result['status']}"
+    )
+
+    print(
+        f"Chapters: {validation_result['chapters']}"
+    )
+
+    print(
+        f"Lessons: {validation_result['lessons']}"
+    )
+
+    print(
+        f"Data Health Check: {data_health_check()}"
+    )
+
+    if validation_result["errors"]:
+        print("\nErrors:")
+        for error in validation_result["errors"]:
+            print(f"- {error}")
+    else:
+        print("\nNo curriculum errors found.")
