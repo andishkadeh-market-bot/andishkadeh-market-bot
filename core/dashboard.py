@@ -594,6 +594,41 @@ def _module_icon(
     )
 
 
+def _clean_module_title(
+    title: str,
+) -> str:
+    """
+    Remove a leading known emoji from module titles.
+
+    Some registered module titles already contain an icon.
+    The dashboard adds its own standardized icon, so the
+    original leading icon must not be displayed twice.
+    """
+
+    if not title:
+        return title
+
+    known_icons = (
+        "📚",
+        "🏦",
+        "🌍",
+        "🧠",
+        "💳",
+        "📝",
+        "📘",
+    )
+
+    cleaned = title.strip()
+
+    while cleaned.startswith(
+        known_icons
+    ):
+
+        cleaned = cleaned[1:].strip()
+
+    return cleaned
+
+
 # ==========================================================
 # Dashboard formatter
 # ==========================================================
@@ -772,9 +807,13 @@ def format_dashboard(
             )
         )
 
+        clean_title = _clean_module_title(
+            raw_title
+        )
+
         title = _safe_text(
             _module_short_title(
-                raw_title
+                clean_title
             )
         )
 
