@@ -34,6 +34,7 @@ MAIN_MENU_CALLBACK = "menu_main"
 
 def _get_chapters() -> list:
     """Return all Finance chapters."""
+
     try:
         return get_chapters()
     except Exception:
@@ -42,17 +43,37 @@ def _get_chapters() -> list:
 
 def _get_lessons() -> list:
     """Return all Finance lessons."""
+
     try:
         return get_lessons()
     except Exception:
         return []
 
 
+def _get_id(item: dict) -> str | None:
+    """
+    Return the identifier of a chapter or lesson.
+
+    Finance data uses the key 'id'.
+    This helper also supports chapter_id / lesson_id
+    for compatibility with normalized registry data.
+    """
+
+    if not isinstance(item, dict):
+        return None
+
+    return (
+        item.get("id")
+        or item.get("chapter_id")
+        or item.get("lesson_id")
+    )
+
+
 def _find_chapter(chapter_id: str):
     """Find a Finance chapter by ID."""
 
     for chapter in _get_chapters():
-        if chapter.get("chapter_id") == chapter_id:
+        if _get_id(chapter) == chapter_id:
             return chapter
 
     return None
@@ -62,20 +83,26 @@ def _find_lesson(lesson_id: str):
     """Find a Finance lesson by ID."""
 
     for lesson in _get_lessons():
-        if lesson.get("lesson_id") == lesson_id:
+        if _get_id(lesson) == lesson_id:
             return lesson
 
     return None
 
 
 def _get_chapter_lessons(chapter_id: str) -> list:
-    """Return lessons belonging to a chapter."""
+    """Return lessons belonging to a specific chapter."""
 
-    return [
-        lesson
-        for lesson in _get_lessons()
-        if lesson.get("chapter_id") == chapter_id
-    ]
+    result = []
+
+    for lesson in _get_lessons():
+        lesson_chapter_id = lesson.get(
+            "chapter_id"
+        )
+
+        if lesson_chapter_id == chapter_id:
+            result.append(lesson)
+
+    return result
 
 
 # =========================================================
@@ -109,7 +136,8 @@ def _finance_chapters_keyboard() -> InlineKeyboardMarkup:
     rows = []
 
     for chapter in _get_chapters():
-        chapter_id = chapter.get("chapter_id")
+        chapter_id = _get_id(chapter)
+
         title = chapter.get(
             "title",
             "فصل بدون عنوان",
@@ -148,8 +176,11 @@ def _finance_chapter_keyboard(
 
     rows = []
 
-    for lesson in _get_chapter_lessons(chapter_id):
-        lesson_id = lesson.get("lesson_id")
+    for lesson in _get_chapter_lessons(
+        chapter_id
+    ):
+        lesson_id = _get_id(lesson)
+
         title = lesson.get(
             "title",
             "درس بدون عنوان",
@@ -448,8 +479,11 @@ async def show_finance_chapters(
 
     query = update.callback_query
 
+    chapters = _get_chapters()
+
     text = (
         "📚 <b>فصل‌های مدیریت مالی</b>\n\n"
+        f"تعداد فصل‌ها: <b>{len(chapters)}</b>\n\n"
         "فصل موردنظر خود را انتخاب کنید:"
     )
 
@@ -481,7 +515,9 @@ async def show_finance_chapter(
 
     query = update.callback_query
 
-    chapter = _find_chapter(chapter_id)
+    chapter = _find_chapter(
+        chapter_id
+    )
 
     if chapter is None:
         if query:
@@ -519,7 +555,9 @@ async def show_finance_chapter(
         "درس موردنظر را انتخاب کنید:"
     )
 
-    text = "\n".join(text_parts)
+    text = "\n".join(
+        text_parts
+    )
 
     if query:
         await query.answer()
@@ -549,13 +587,13 @@ async def show_finance_lesson(
     context: ContextTypes.DEFAULT_TYPE,
     lesson_id: str,
 ) -> None:
-    """
-    Show the complete educational content of a Finance lesson.
-    """
+    """Show complete educational content of a Finance lesson."""
 
     query = update.callback_query
 
-    lesson = _find_lesson(lesson_id)
+    lesson = _find_lesson(
+        lesson_id
+    )
 
     if lesson is None:
         if query:
@@ -629,10 +667,16 @@ async def route_finance_callback(
     # Finance menu
     # -----------------------------------------------------
 
+    if callback_data == "menu_finance":
+        await show_finance_menu(
+            update,
+            context,
+        )
+        return
+
     if callback_data in {
         FINANCE_MENU_CALLBACK,
         FINANCE_BACK_CALLBACK,
-        "menu_finance",
     }:
         await show_finance_chapters(
             update,
@@ -692,11 +736,7 @@ async def route_finance_callback(
 
 def finance_handlers_health_check() -> bool:
     """
-    Lightweight health check.
-
-    This check intentionally verifies only the handler
-    integration itself. Content validation is handled by
-    the content module and should not prevent startup here.
+    Lightweight health check for Finance handlers.
     """
 
     try:
