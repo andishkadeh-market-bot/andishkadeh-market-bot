@@ -10,6 +10,7 @@ Connected modules:
 - Economy & Market
 - Accounting
 - Psychology & Social Work
+- Finance
 - Random Quiz
 
 Architecture:
@@ -51,7 +52,7 @@ logger = logging.getLogger(__name__)
 MAIN_MENU_TEXT = (
     "🏛️ <b>اندیشکده مدیریت و بازار</b>\n\n"
     "مرکز آموزش تخصصی مدیریت، اقتصاد، تجارت، "
-    "بازاریابی، حسابداری و توسعه حرفه‌ای.\n\n"
+    "بازاریابی، حسابداری، مدیریت مالی و توسعه حرفه‌ای.\n\n"
     "📚 لطفاً بخش موردنظر خود را انتخاب کنید:"
 )
 
@@ -1165,6 +1166,106 @@ async def _route_psychology(
 
 
 # ==========================================================
+# Finance
+# ==========================================================
+
+async def _route_finance(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    data: str,
+) -> bool:
+    """
+    Route Finance module callbacks.
+
+    Supported main-menu callbacks:
+        menu_finance
+        finance_menu
+
+    Supported Finance callbacks:
+        finance_back
+        finance_chapter:<id>
+        finance_lesson:<id>
+    """
+
+    module_path = (
+        "modules.finance.handlers"
+    )
+
+    # ------------------------------------------------------
+    # Finance main menu
+    # ------------------------------------------------------
+
+    if data in {
+        "menu_finance",
+        "finance_menu",
+    }:
+
+        return await _call_handler(
+            update,
+            context,
+            module_path,
+            (
+                "show_finance_menu",
+                "show_finance",
+            ),
+        )
+
+    # ------------------------------------------------------
+    # Finance back
+    # ------------------------------------------------------
+
+    if data == "finance_back":
+
+        return await _call_handler(
+            update,
+            context,
+            module_path,
+            (
+                "show_finance_menu",
+                "show_finance",
+            ),
+        )
+
+    # ------------------------------------------------------
+    # Finance chapter
+    # ------------------------------------------------------
+
+    if data.startswith(
+        "finance_chapter:"
+    ):
+
+        return await _call_handler(
+            update,
+            context,
+            module_path,
+            (
+                "show_finance_chapter",
+                "show_finance_chapter_menu",
+            ),
+        )
+
+    # ------------------------------------------------------
+    # Finance lesson
+    # ------------------------------------------------------
+
+    if data.startswith(
+        "finance_lesson:"
+    ):
+
+        return await _call_handler(
+            update,
+            context,
+            module_path,
+            (
+                "show_finance_lesson",
+                "show_finance_lesson_content",
+            ),
+        )
+
+    return False
+
+
+# ==========================================================
 # Random Quiz
 # ==========================================================
 
@@ -1254,6 +1355,19 @@ async def route_menu_callback(
     # ------------------------------------------------------
 
     handled = await _route_random_quiz(
+        update,
+        context,
+        data,
+    )
+
+    if handled:
+        return
+
+    # ------------------------------------------------------
+    # Finance
+    # ------------------------------------------------------
+
+    handled = await _route_finance(
         update,
         context,
         data,
@@ -1375,8 +1489,13 @@ def menu_health_check() -> bool:
     Therefore a problem in one module cannot prevent
     the central menu router from loading.
 
-    Also verifies that the Random Quiz entry point
-    is present in the main keyboard.
+    Verifies:
+    - Main menu availability
+    - International Trade entry point
+    - Random Quiz entry point
+    - Finance entry point
+    - Random Quiz handler
+    - Finance handler
     """
 
     try:
@@ -1413,6 +1532,12 @@ def menu_health_check() -> bool:
 
         random_quiz_found = False
 
+        # --------------------------------------------------
+        # Verify Finance
+        # --------------------------------------------------
+
+        finance_found = False
+
         for row in keyboard.inline_keyboard:
 
             for button in row:
@@ -1433,9 +1558,16 @@ def menu_health_check() -> bool:
                 }:
                     random_quiz_found = True
 
+                if callback_data in {
+                    "menu_finance",
+                    "finance_menu",
+                }:
+                    finance_found = True
+
             if (
                 trade_found
                 and random_quiz_found
+                and finance_found
             ):
                 break
 
@@ -1448,6 +1580,12 @@ def menu_health_check() -> bool:
         if not random_quiz_found:
             logger.error(
                 "Main menu is missing Random Quiz button."
+            )
+            return False
+
+        if not finance_found:
+            logger.error(
+                "Main menu is missing Finance button."
             )
             return False
 
@@ -1468,6 +1606,26 @@ def menu_health_check() -> bool:
         if random_quiz_handler is None:
             logger.error(
                 "Random Quiz main-menu handler is unavailable."
+            )
+            return False
+
+        # --------------------------------------------------
+        # Verify Finance handler
+        # --------------------------------------------------
+
+        finance_module = _load_module(
+            "modules.finance.handlers"
+        )
+
+        finance_handler = _get_function(
+            finance_module,
+            "show_finance_menu",
+            "show_finance",
+        )
+
+        if finance_handler is None:
+            logger.error(
+                "Finance main-menu handler is unavailable."
             )
             return False
 
