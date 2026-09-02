@@ -33,6 +33,7 @@ CONTENT_PACKAGES = (
     "modules.banking",
     "modules.international_trade",
     "modules.psychology",
+    "modules.finance",
 )
 
 CONTENT_MODULE_IDS = {
@@ -40,6 +41,7 @@ CONTENT_MODULE_IDS = {
     "modules.banking": "banking",
     "modules.international_trade": "international_trade",
     "modules.psychology": "psychology_socialwork",
+    "modules.finance": "finance",
 }
 
 
@@ -102,7 +104,11 @@ def _as_dict(value: Any) -> dict[str, Any]:
     return {}
 
 
-def _first_value(data: dict[str, Any], keys: Iterable[str], default: Any = None) -> Any:
+def _first_value(
+    data: dict[str, Any],
+    keys: Iterable[str],
+    default: Any = None,
+) -> Any:
     for key in keys:
         if key in data and data[key] is not None:
             return data[key]
@@ -291,7 +297,11 @@ def _collect_public_values(module: Any) -> list[Any]:
         except Exception:
             continue
 
-        if inspect.ismodule(value) or inspect.isfunction(value) or inspect.isclass(value):
+        if (
+            inspect.ismodule(value)
+            or inspect.isfunction(value)
+            or inspect.isclass(value)
+        ):
             continue
 
         values.append(value)
@@ -468,7 +478,10 @@ def _extract_chapters_from_module(
             else:
                 lesson_candidates = [lessons_data]
 
-            for index, lesson_value in enumerate(lesson_candidates, start=1):
+            for index, lesson_value in enumerate(
+                lesson_candidates,
+                start=1,
+            ):
                 lesson_data = _as_dict(lesson_value)
 
                 if not lesson_data:
@@ -579,7 +592,10 @@ def _extract_management_curriculum(
             else:
                 items = [chapter_values]
 
-            for chapter_index, chapter_value in enumerate(items, start=1):
+            for chapter_index, chapter_value in enumerate(
+                items,
+                start=1,
+            ):
                 chapter_data = _as_dict(chapter_value)
 
                 if not chapter_data:
