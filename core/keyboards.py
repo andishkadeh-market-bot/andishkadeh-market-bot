@@ -1,5 +1,6 @@
 """
 Telegram keyboards for Andishkadeh Management & Market.
+
 Connected modules:
 - Management
 - General Exam
@@ -16,20 +17,27 @@ Connected modules:
 - Profile
 - About
 """
+
 from __future__ import annotations
+
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
 )
+
+
 # ==========================================================
 # Main Menu
 # ==========================================================
+
 def main_menu_keyboard() -> InlineKeyboardMarkup:
     """
     Return the main bot menu.
+
     Every callback_data value must match the central
     menu router or the dedicated module router.
     """
+
     keyboard = [
         # --------------------------------------------------
         # Management / Exam
@@ -44,6 +52,7 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
                 callback_data="menu_exam",
             ),
         ],
+
         # --------------------------------------------------
         # Banking / Accounting
         # --------------------------------------------------
@@ -57,6 +66,7 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
                 callback_data="menu_accounting",
             ),
         ],
+
         # --------------------------------------------------
         # Finance / International Trade
         # --------------------------------------------------
@@ -70,6 +80,7 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
                 callback_data="menu_international_trade",
             ),
         ],
+
         # --------------------------------------------------
         # Marketing / Economics
         # --------------------------------------------------
@@ -83,6 +94,7 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
                 callback_data="menu_economics",
             ),
         ],
+
         # --------------------------------------------------
         # Psychology / Random Quiz
         # --------------------------------------------------
@@ -96,6 +108,7 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
                 callback_data="menu_random",
             ),
         ],
+
         # --------------------------------------------------
         # Resources / Social
         # --------------------------------------------------
@@ -109,6 +122,7 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
                 callback_data="menu_social",
             ),
         ],
+
         # --------------------------------------------------
         # Profile / About
         # --------------------------------------------------
@@ -123,14 +137,19 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
             ),
         ],
     ]
+
     return InlineKeyboardMarkup(keyboard)
+
+
 # ==========================================================
 # Back Button
 # ==========================================================
+
 def back_button() -> InlineKeyboardMarkup:
     """
     Return a simple back button to the main menu.
     """
+
     return InlineKeyboardMarkup(
         [
             [
@@ -141,34 +160,75 @@ def back_button() -> InlineKeyboardMarkup:
             ]
         ]
     )
+
+
 # ==========================================================
 # Health Check
 # ==========================================================
+
 def keyboards_health_check() -> bool:
     """
     Basic health check for keyboard configuration.
+
+    Verifies the presence of important main-menu
+    entry points, including Finance.
     """
+
     try:
+
         keyboard = main_menu_keyboard()
+
         if keyboard is None:
             return False
+
         if not keyboard.inline_keyboard:
             return False
-        # Verify that International Trade is exposed
-        # through the expected callback.
+
+        # --------------------------------------------------
+        # Verify International Trade
+        # --------------------------------------------------
+
         trade_found = False
+
+        # --------------------------------------------------
+        # Verify Finance
+        # --------------------------------------------------
+
+        finance_found = False
+
         for row in keyboard.inline_keyboard:
+
             for button in row:
-                if (
+
+                callback_data = (
                     button.callback_data
+                )
+
+                if (
+                    callback_data
                     == "menu_international_trade"
                 ):
                     trade_found = True
-                    break
-            if trade_found:
+
+                if (
+                    callback_data
+                    == "menu_finance"
+                ):
+                    finance_found = True
+
+            if (
+                trade_found
+                and finance_found
+            ):
                 break
+
         if not trade_found:
             return False
+
+        if not finance_found:
+            return False
+
         return True
+
     except Exception:
         return False
