@@ -24,6 +24,7 @@ Those events are handled by the Progress and Statistics layers.
 
 from __future__ import annotations
 
+from html import escape
 from typing import Any
 
 from core.database import (
@@ -445,7 +446,10 @@ def _format_percentage(
     if value is None:
         return "0٪"
 
-    numeric = float(value)
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return "0٪"
 
     if numeric.is_integer():
         return f"{int(numeric)}٪"
@@ -497,6 +501,99 @@ def _format_user_name(
     return "کاربر"
 
 
+def _progress_bar(
+    percentage: float | int | None,
+    width: int = 10,
+) -> str:
+    """Create a compact text progress bar."""
+
+    try:
+        numeric = max(
+            0.0,
+            min(
+                100.0,
+                float(percentage or 0),
+            ),
+        )
+    except (TypeError, ValueError):
+        numeric = 0.0
+
+    filled = round(
+        numeric / 100 * width
+    )
+
+    empty = width - filled
+
+    return (
+        "█" * filled
+        + "░" * empty
+    )
+
+
+def _safe_text(
+    value: Any,
+    default: str = "-",
+) -> str:
+    """Escape dynamic text for Telegram HTML."""
+
+    if value is None:
+        return default
+
+    text = str(value).strip()
+
+    if not text:
+        return default
+
+    return escape(
+        text,
+        quote=False,
+    )
+
+
+def _module_short_title(
+    title: str,
+) -> str:
+    """
+    Return a compact module title suitable for
+    two-column Telegram dashboard rows.
+    """
+
+    replacements = {
+        "آموزش مدیریت": "مدیریت",
+        "بانکداری تخصصی": "بانکداری",
+        "تجارت بین‌الملل": "تجارت",
+        "روانشناسی و مددکاری": "روانشناسی",
+        "مدیریت مالی": "مدیریت مالی",
+        "آزمون عمومی": "آزمون عمومی",
+    }
+
+    return replacements.get(
+        title,
+        title,
+    )
+
+
+def _module_icon(
+    module_id: str,
+) -> str:
+    """Return a consistent icon for each module."""
+
+    icons = {
+        "management": "📚",
+        "banking": "🏦",
+        "international_trade": "🌍",
+        "psychology_socialwork": "🧠",
+        "finance": "💳",
+        "exam": "📝",
+        "general_exam": "📝",
+    }
+
+    return icons.get(
+        module_id,
+        "📘",
+    )
+
+
 # ==========================================================
 # Dashboard formatter
 # ==========================================================
@@ -505,11 +602,15 @@ def format_dashboard(
     dashboard: dict[str, Any],
 ) -> str:
     """
-    Convert dashboard data into Telegram-compatible HTML.
+    Convert dashboard data into a modern,
+    compact and Telegram-compatible HTML layout.
     """
 
-    user_name = _format_user_name(
-        dashboard.get("user")
+    user_name = _safe_text(
+        _format_user_name(
+            dashboard.get("user")
+        ),
+        "کاربر",
     )
 
     progress = dashboard.get(
@@ -526,156 +627,310 @@ def format_dashboard(
         "last_completed_lesson"
     )
 
-    lines = [
-        "<b>👤 داشبورد آموزشی</b>",
-        "",
-        f"سلام <b>{user_name}</b>",
-        "",
-        "━━━━━━━━━━━━━━",
-        "📚 <b>پیشرفت آموزشی</b>",
-        "",
-        (
-            f"📖 کل درس‌ها: "
-            f"{progress.get('total_lessons', 0)}"
-        ),
-        (
-            f"▶️ شروع‌شده: "
-            f"{progress.get('started_lessons', 0)}"
-        ),
-        (
-            f"✅ تکمیل‌شده: "
-            f"{progress.get('completed_lessons', 0)}"
-        ),
-        (
-            f"⏳ باقی‌مانده: "
-            f"{progress.get('remaining_lessons', 0)}"
-        ),
-        (
-            f"📊 درصد پیشرفت: "
-            f"{_format_percentage(progress.get('percentage', 0))}"
-        ),
-        "",
-        "━━━━━━━━━━━━━━",
-        "📝 <b>آمار آزمون‌ها</b>",
-        "",
-        (
-            f"🎯 تعداد آزمون: "
-            f"{statistics.get('attempts', 0)}"
-        ),
-        (
-            f"📌 تعداد سوال: "
-            f"{statistics.get('total_questions', 0)}"
-        ),
-        (
-            f"✅ پاسخ صحیح: "
-            f"{statistics.get('correct_answers', 0)}"
-        ),
-        (
-            f"❌ پاسخ غلط: "
-            f"{statistics.get('wrong_answers', 0)}"
-        ),
-        (
-            f"📈 دقت: "
-            f"{_format_percentage(statistics.get('accuracy', 0))}"
-        ),
-        (
-            f"📊 میانگین نمره: "
-            f"{_format_percentage(statistics.get('average_score', 0))}"
-        ),
-        (
-            f"🏆 بهترین نمره: "
-            f"{_format_percentage(statistics.get('best_score', 0))}"
-        ),
-        "",
-    ]
-
-    if last_completed:
-
-        lines.extend(
-            [
-                "━━━━━━━━━━━━━━",
-                "📖 <b>آخرین درس تکمیل‌شده</b>",
-                "",
-                (
-                    f"📚 ماژول: "
-                    f"{last_completed.get('module_id', '-')}"
-                ),
-                (
-                    f"📑 فصل: "
-                    f"{last_completed.get('chapter_id', '-')}"
-                ),
-                (
-                    f"📘 درس: "
-                    f"{last_completed.get('lesson_id', '-')}"
-                ),
-                "",
-            ]
-        )
-
-    else:
-
-        lines.extend(
-            [
-                "━━━━━━━━━━━━━━",
-                "📖 <b>آخرین درس تکمیل‌شده</b>",
-                "",
-                "هنوز درسی تکمیل نشده است.",
-                "",
-            ]
-        )
-
     modules = dashboard.get(
         "modules",
         [],
     )
 
-    if modules:
+    total_lessons = int(
+        progress.get(
+            "total_lessons",
+            0,
+        )
+        or 0
+    )
 
-        lines.extend(
-            [
-                "━━━━━━━━━━━━━━",
-                "📚 <b>پیشرفت ماژول‌ها</b>",
-                "",
-            ]
+    started_lessons = int(
+        progress.get(
+            "started_lessons",
+            0,
+        )
+        or 0
+    )
+
+    completed_lessons = int(
+        progress.get(
+            "completed_lessons",
+            0,
+        )
+        or 0
+    )
+
+    remaining_lessons = int(
+        progress.get(
+            "remaining_lessons",
+            0,
+        )
+        or 0
+    )
+
+    percentage = float(
+        progress.get(
+            "percentage",
+            0,
+        )
+        or 0
+    )
+
+    attempts = int(
+        statistics.get(
+            "attempts",
+            0,
+        )
+        or 0
+    )
+
+    total_questions = int(
+        statistics.get(
+            "total_questions",
+            0,
+        )
+        or 0
+    )
+
+    correct_answers = int(
+        statistics.get(
+            "correct_answers",
+            0,
+        )
+        or 0
+    )
+
+    wrong_answers = int(
+        statistics.get(
+            "wrong_answers",
+            0,
+        )
+        or 0
+    )
+
+    accuracy = statistics.get(
+        "accuracy",
+        0,
+    )
+
+    average_score = statistics.get(
+        "average_score",
+        0,
+    )
+
+    best_score = statistics.get(
+        "best_score",
+        0,
+    )
+
+    lines = [
+        "<b>👤 داشبورد آموزشی</b>",
+        f"سلام <b>{user_name}</b> 👋",
+        "",
+        "━━━━━━━━━━━━━━━━━━━━",
+        "<b>📊 وضعیت کلی</b>",
+        "",
+        (
+            f"📚 <b>{total_lessons}</b> درس"
+            f"    ▶️ <b>{started_lessons}</b> شروع‌شده"
+        ),
+        (
+            f"✅ <b>{completed_lessons}</b> تکمیل‌شده"
+            f"    ⏳ <b>{remaining_lessons}</b> باقی‌مانده"
+        ),
+        "",
+        (
+            f"{_progress_bar(percentage)}  "
+            f"<b>{_format_percentage(percentage)}</b>"
+        ),
+        "",
+        "━━━━━━━━━━━━━━━━━━━━",
+        "<b>📚 ماژول‌های آموزشی</b>",
+        "",
+    ]
+
+    # ------------------------------------------------------
+    # Modules: two columns
+    # ------------------------------------------------------
+
+    module_rows: list[str] = []
+
+    for item in modules:
+
+        item_progress = item.get(
+            "progress",
+            {},
         )
 
-        for item in modules:
-
-            item_progress = item.get(
-                "progress",
-                {},
+        module_id = str(
+            item.get(
+                "module_id",
+                "",
             )
+        )
 
-            title = item.get(
+        raw_title = str(
+            item.get(
                 "module_title",
-                item.get(
-                    "module_id",
-                    "-",
-                ),
+                module_id or "-",
             )
+        )
 
-            percentage = item_progress.get(
-                "percentage",
-                0,
+        title = _safe_text(
+            _module_short_title(
+                raw_title
             )
+        )
 
-            completed = item_progress.get(
+        module_percentage = item_progress.get(
+            "percentage",
+            0,
+        )
+
+        completed = int(
+            item_progress.get(
                 "completed_lessons",
                 0,
             )
+            or 0
+        )
 
-            total = item_progress.get(
+        total = int(
+            item_progress.get(
                 "total_lessons",
                 0,
             )
+            or 0
+        )
+
+        icon = _module_icon(
+            module_id
+        )
+
+        module_rows.append(
+            (
+                f"{icon} <b>{title}</b> "
+                f"{_format_percentage(module_percentage)} "
+                f"({completed}/{total})"
+            )
+        )
+
+    for index in range(
+        0,
+        len(module_rows),
+        2,
+    ):
+
+        first = module_rows[index]
+
+        second = (
+            module_rows[index + 1]
+            if index + 1 < len(module_rows)
+            else ""
+        )
+
+        if second:
 
             lines.append(
-                (
-                    f"• {title}: "
-                    f"{_format_percentage(percentage)} "
-                    f"({completed}/{total})"
-                )
+                f"{first}    {second}"
             )
+
+        else:
+
+            lines.append(
+                first
+            )
+
+    # ------------------------------------------------------
+    # Quiz statistics
+    # ------------------------------------------------------
+
+    lines.extend(
+        [
+            "",
+            "━━━━━━━━━━━━━━━━━━━━",
+            "<b>📝 عملکرد آزمون‌ها</b>",
+            "",
+            (
+                f"🎯 آزمون‌ها: <b>{attempts}</b>"
+                f"    📖 سوالات: <b>{total_questions}</b>"
+            ),
+            (
+                f"✅ صحیح: <b>{correct_answers}</b>"
+                f"    ❌ غلط: <b>{wrong_answers}</b>"
+            ),
+            (
+                f"📈 دقت: <b>{_format_percentage(accuracy)}</b>"
+                f"    📊 میانگین: <b>{_format_percentage(average_score)}</b>"
+            ),
+            (
+                f"🏆 بهترین نمره: "
+                f"<b>{_format_percentage(best_score)}</b>"
+            ),
+        ]
+    )
+
+    # ------------------------------------------------------
+    # Latest completed lesson
+    # ------------------------------------------------------
+
+    lines.extend(
+        [
+            "",
+            "━━━━━━━━━━━━━━━━━━━━",
+            "<b>📌 آخرین فعالیت آموزشی</b>",
+            "",
+        ]
+    )
+
+    if last_completed:
+
+        module_id = last_completed.get(
+            "module_id"
+        )
+
+        chapter_id = last_completed.get(
+            "chapter_id"
+        )
+
+        lesson_id = last_completed.get(
+            "lesson_id"
+        )
+
+        module_title = (
+            get_module_title(
+                str(module_id)
+            )
+            if module_id
+            else "-"
+        )
+
+        lines.extend(
+            [
+                (
+                    f"📚 ماژول: "
+                    f"<b>{_safe_text(module_title)}</b>"
+                ),
+                (
+                    f"📑 فصل: "
+                    f"<b>{_safe_text(chapter_id)}</b>"
+                ),
+                (
+                    f"📘 درس: "
+                    f"<b>{_safe_text(lesson_id)}</b>"
+                ),
+            ]
+        )
+
+    else:
+
+        lines.append(
+            "هنوز فعالیت آموزشی تکمیل‌شده‌ای ثبت نشده است."
+        )
+
+    lines.extend(
+        [
+            "",
+            "━━━━━━━━━━━━━━━━━━━━",
+            "<i>اندیشکده مدیریت و بازار</i>",
+        ]
+    )
 
     return "\n".join(
         lines
