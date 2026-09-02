@@ -66,10 +66,6 @@ def _load_module(
 ) -> Any | None:
     """
     Safely import an optional module.
-
-    If a module has a problem, the central menu
-    must remain available and the whole bot must
-    not crash.
     """
 
     try:
@@ -1175,92 +1171,43 @@ async def _route_finance(
     data: str,
 ) -> bool:
     """
-    Route Finance module callbacks.
+    Finance routing is intentionally disabled here.
 
-    Supported main-menu callbacks:
+    Finance callbacks are already handled directly by
+    modules.finance.handlers in bot.py.
+
+    Keeping Finance callbacks inside this central router
+    would cause the same callback to be processed twice:
+        1. Finance module handler
+        2. Central menu router
+
+    That double processing causes the Finance lesson/chapter
+    screen to immediately jump back to the previous screen.
+
+    Finance callbacks handled directly by the module:
         menu_finance
         finance_menu
-
-    Supported Finance callbacks:
         finance_back
         finance_chapter:<id>
         finance_lesson:<id>
     """
 
-    module_path = (
-        "modules.finance.handlers"
+    finance_callbacks = (
+        data == "menu_finance"
+        or data == "finance_menu"
+        or data == "finance_back"
+        or data.startswith("finance_chapter:")
+        or data.startswith("finance_lesson:")
     )
 
-    # ------------------------------------------------------
-    # Finance main menu
-    # ------------------------------------------------------
-
-    if data in {
-        "menu_finance",
-        "finance_menu",
-    }:
-
-        return await _call_handler(
-            update,
-            context,
-            module_path,
-            (
-                "show_finance_menu",
-                "show_finance",
-            ),
+    if finance_callbacks:
+        logger.debug(
+            "Finance callback already handled by "
+            "modules.finance.handlers: %s",
+            data,
         )
 
-    # ------------------------------------------------------
-    # Finance back
-    # ------------------------------------------------------
-
-    if data == "finance_back":
-
-        return await _call_handler(
-            update,
-            context,
-            module_path,
-            (
-                "show_finance_menu",
-                "show_finance",
-            ),
-        )
-
-    # ------------------------------------------------------
-    # Finance chapter
-    # ------------------------------------------------------
-
-    if data.startswith(
-        "finance_chapter:"
-    ):
-
-        return await _call_handler(
-            update,
-            context,
-            module_path,
-            (
-                "show_finance_chapter",
-                "show_finance_chapter_menu",
-            ),
-        )
-
-    # ------------------------------------------------------
-    # Finance lesson
-    # ------------------------------------------------------
-
-    if data.startswith(
-        "finance_lesson:"
-    ):
-
-        return await _call_handler(
-            update,
-            context,
-            module_path,
-            (
-                "show_finance_lesson",
-                "show_finance_lesson_content",
-            ),
-        )
+        return True
 
     return False
 
@@ -1276,16 +1223,6 @@ async def _route_random_quiz(
 ) -> bool:
     """
     Route Random Quiz main-menu callbacks.
-
-    The main keyboard currently uses:
-        menu_random
-
-    The Random Quiz module itself uses callbacks beginning with:
-        random_quiz
-
-    bot.py already handles random_quiz* callbacks directly.
-    Therefore this central router only needs to bridge
-    the main-menu entry point to the Random Quiz module.
     """
 
     if data in {
@@ -1316,10 +1253,6 @@ async def route_menu_callback(
 ) -> None:
     """
     Central callback router.
-
-    The router only decides which module receives
-    the callback. Module business logic remains inside
-    the corresponding handlers.py files.
     """
 
     query = update.callback_query
@@ -1351,23 +1284,35 @@ async def route_menu_callback(
         return
 
     # ------------------------------------------------------
+    # Finance
+    #
+    # Finance callbacks are handled directly by
+    # modules.finance.handlers.
+    #
+    # Returning here prevents the central router from
+    # modifying the Finance screen a second time.
+    # ------------------------------------------------------
+
+    if (
+        data == "menu_finance"
+        or data == "finance_menu"
+        or data == "finance_back"
+        or data.startswith("finance_chapter:")
+        or data.startswith("finance_lesson:")
+    ):
+
+        logger.debug(
+            "Skipping central Finance routing: %s",
+            data,
+        )
+
+        return
+
+    # ------------------------------------------------------
     # Random Quiz
     # ------------------------------------------------------
 
     handled = await _route_random_quiz(
-        update,
-        context,
-        data,
-    )
-
-    if handled:
-        return
-
-    # ------------------------------------------------------
-    # Finance
-    # ------------------------------------------------------
-
-    handled = await _route_finance(
         update,
         context,
         data,
@@ -1484,18 +1429,6 @@ async def route_menu_callback(
 def menu_health_check() -> bool:
     """
     Basic health check for the central menu.
-
-    Optional modules are deliberately not imported here.
-    Therefore a problem in one module cannot prevent
-    the central menu router from loading.
-
-    Verifies:
-    - Main menu availability
-    - International Trade entry point
-    - Random Quiz entry point
-    - Finance entry point
-    - Random Quiz handler
-    - Finance handler
     """
 
     try:
@@ -1520,22 +1453,8 @@ def menu_health_check() -> bool:
         if not keyboard.inline_keyboard:
             return False
 
-        # --------------------------------------------------
-        # Verify International Trade
-        # --------------------------------------------------
-
         trade_found = False
-
-        # --------------------------------------------------
-        # Verify Random Quiz
-        # --------------------------------------------------
-
         random_quiz_found = False
-
-        # --------------------------------------------------
-        # Verify Finance
-        # --------------------------------------------------
-
         finance_found = False
 
         for row in keyboard.inline_keyboard:
@@ -1572,21 +1491,27 @@ def menu_health_check() -> bool:
                 break
 
         if not trade_found:
+
             logger.error(
                 "Main menu is missing International Trade button."
             )
+
             return False
 
         if not random_quiz_found:
+
             logger.error(
                 "Main menu is missing Random Quiz button."
             )
+
             return False
 
         if not finance_found:
+
             logger.error(
                 "Main menu is missing Finance button."
             )
+
             return False
 
         # --------------------------------------------------
@@ -1604,9 +1529,11 @@ def menu_health_check() -> bool:
         )
 
         if random_quiz_handler is None:
+
             logger.error(
                 "Random Quiz main-menu handler is unavailable."
             )
+
             return False
 
         # --------------------------------------------------
@@ -1624,9 +1551,11 @@ def menu_health_check() -> bool:
         )
 
         if finance_handler is None:
+
             logger.error(
                 "Finance main-menu handler is unavailable."
             )
+
             return False
 
         return True
