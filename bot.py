@@ -30,7 +30,7 @@ import os
 from contextlib import suppress
 
 from aiohttp import web
-from telegram import Update
+from telegram import MenuButtonCommands, Update
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -861,10 +861,6 @@ def register_all_content() -> dict[str, int]:
         "Starting complete Content Initialization..."
     )
 
-    # ------------------------------------------------------
-    # Primary content initializer
-    # ------------------------------------------------------
-
     try:
         initializer_result = (
             initialize_all_content()
@@ -882,6 +878,13 @@ def register_all_content() -> dict[str, int]:
                 initializer_result,
             )
             initializer_result = {}
+
+        if initializer_result.get(
+            "status"
+        ) == "error":
+            raise RuntimeError(
+                "Content Initializer returned an error."
+            )
 
         logger.info(
             (
@@ -908,10 +911,6 @@ def register_all_content() -> dict[str, int]:
         )
         raise
 
-    # ------------------------------------------------------
-    # General Exam
-    # ------------------------------------------------------
-
     try:
         register_general_exam_content()
 
@@ -920,10 +919,6 @@ def register_all_content() -> dict[str, int]:
             "General Exam content registration failed."
         )
         raise
-
-    # ------------------------------------------------------
-    # Final Registry Statistics
-    # ------------------------------------------------------
 
     statistics = registry.statistics()
 
@@ -1509,10 +1504,6 @@ def initialize_core() -> None:
         "SQLite database initialized successfully."
     )
 
-    # ------------------------------------------------------
-    # Content / Registry
-    # ------------------------------------------------------
-
     logger.info(
         "Initializing complete educational content..."
     )
@@ -1531,10 +1522,6 @@ def initialize_core() -> None:
         registry_result["lessons"],
     )
 
-    # ------------------------------------------------------
-    # Progress
-    # ------------------------------------------------------
-
     logger.info(
         "Initializing Progress system..."
     )
@@ -1545,10 +1532,6 @@ def initialize_core() -> None:
         "Progress system initialized successfully."
     )
 
-    # ------------------------------------------------------
-    # Statistics
-    # ------------------------------------------------------
-
     logger.info(
         "Initializing Statistics system..."
     )
@@ -1558,10 +1541,6 @@ def initialize_core() -> None:
     logger.info(
         "Statistics system initialized successfully."
     )
-
-    # ------------------------------------------------------
-    # Health Checks
-    # ------------------------------------------------------
 
     if not run_core_health_checks():
         raise RuntimeError(
@@ -1686,7 +1665,7 @@ async def start(
 
     if not registered:
         await update.message.reply_text(
-            "❌ خطایی در ثبت اطلاعات شما رخ داد.\n\n"
+            "❌ در ثبت اطلاعات شما مشکلی پیش آمد.\n\n"
             "لطفاً چند لحظه بعد دوباره /start را ارسال کنید."
         )
         return
@@ -1727,7 +1706,7 @@ async def menu_command(
 
     if not registered:
         await update.message.reply_text(
-            "❌ خطایی در ثبت اطلاعات شما رخ داد."
+            "❌ در ثبت اطلاعات شما مشکلی پیش آمد."
         )
         return
 
@@ -2053,9 +2032,9 @@ def build_application() -> Application:
         group=0,
     )
 
-    # ------------------------------------------------------
+    # ======================================================
     # Management Quiz Start
-    # ------------------------------------------------------
+    # ======================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -2070,9 +2049,9 @@ def build_application() -> Application:
         group=0,
     )
 
-    # ------------------------------------------------------
+    # ======================================================
     # Management Quiz Answers
-    # ------------------------------------------------------
+    # ======================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -2087,9 +2066,9 @@ def build_application() -> Application:
         group=0,
     )
 
-    # ------------------------------------------------------
+    # ======================================================
     # Management Quiz Cancellation
-    # ------------------------------------------------------
+    # ======================================================
 
     application.add_handler(
         CallbackQueryHandler(
@@ -2240,8 +2219,16 @@ async def run_bot() -> None:
 
         await application.initialize()
 
+        # ==================================================
+        # Telegram Menu Button
+        # ==================================================
+
+        await application.bot.set_chat_menu_button(
+            menu_button=MenuButtonCommands()
+        )
+
         logger.info(
-            "Telegram application initialized successfully."
+            "Telegram Menu Button configured successfully."
         )
 
         await application.start()
@@ -2266,10 +2253,6 @@ async def run_bot() -> None:
         logger.info(
             "Andishkadeh Management & Market is running."
         )
-
-        # --------------------------------------------------
-        # Keep both services alive.
-        # --------------------------------------------------
 
         await asyncio.Event().wait()
 
