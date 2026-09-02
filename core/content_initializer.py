@@ -120,7 +120,10 @@ def _normalize_identifier(
     value: Any,
     fallback: str,
 ) -> str:
-    text = _clean_text(value, fallback)
+    text = _clean_text(
+        value,
+        fallback,
+    )
 
     replacements = {
         " ": "_",
@@ -129,7 +132,10 @@ def _normalize_identifier(
     }
 
     for old, new in replacements.items():
-        text = text.replace(old, new)
+        text = text.replace(
+            old,
+            new,
+        )
 
     return text.strip("_") or fallback
 
@@ -143,7 +149,6 @@ def _looks_like_lesson(
         "lesson_number",
         "lesson_no",
         "lesson_title",
-        "title",
         "content",
         "text",
         "body",
@@ -180,7 +185,10 @@ def _extract_module_metadata(
     module: Any,
     module_id: str,
 ) -> tuple[str, dict[str, Any]]:
-    data = _as_dict(module)
+
+    data = _as_dict(
+        module
+    )
 
     title = _first_value(
         data,
@@ -212,10 +220,14 @@ def _extract_module_metadata(
 def _import_optional(
     name: str,
 ) -> Any | None:
+
     try:
-        return importlib.import_module(name)
+        return importlib.import_module(
+            name
+        )
 
     except Exception as exc:
+
         logger.warning(
             "Could not import content package/module %s: %s",
             name,
@@ -228,6 +240,7 @@ def _import_optional(
 def _iter_package_modules(
     package_name: str,
 ) -> list[Any]:
+
     package = _import_optional(
         package_name
     )
@@ -246,11 +259,14 @@ def _iter_package_modules(
     )
 
     if package_path:
+
         try:
+
             for item in pkgutil.walk_packages(
                 package_path,
                 package.__name__ + ".",
             ):
+
                 imported = _import_optional(
                     item.name
                 )
@@ -261,6 +277,7 @@ def _iter_package_modules(
                     )
 
         except Exception as exc:
+
             logger.warning(
                 "Could not scan package %s: %s",
                 package_name,
@@ -273,6 +290,7 @@ def _iter_package_modules(
 def _find_data_modules(
     package_name: str,
 ) -> list[Any]:
+
     modules = _iter_package_modules(
         package_name
     )
@@ -280,6 +298,7 @@ def _find_data_modules(
     result: list[Any] = []
 
     for module in modules:
+
         module_name = getattr(
             module,
             "__name__",
@@ -293,7 +312,9 @@ def _find_data_modules(
             or module_name.endswith(".curriculum")
             or module_name == package_name
         ):
-            result.append(module)
+            result.append(
+                module
+            )
 
     return result or modules
 
@@ -305,7 +326,9 @@ def _find_data_modules(
 def _iter_dicts(
     value: Any,
 ) -> Iterable[dict[str, Any]]:
+
     if isinstance(value, dict):
+
         yield value
 
         for nested in value.values():
@@ -317,16 +340,23 @@ def _iter_dicts(
         value,
         (list, tuple, set),
     ):
+
         for item in value:
             yield from _iter_dicts(
                 item
             )
 
-    elif hasattr(value, "__dict__"):
+    elif hasattr(
+        value,
+        "__dict__",
+    ):
+
         try:
+
             yield from _iter_dicts(
                 vars(value)
             )
+
         except Exception:
             return
 
@@ -334,6 +364,7 @@ def _iter_dicts(
 def _collect_public_values(
     module: Any,
 ) -> list[Any]:
+
     values: list[Any] = []
 
     try:
@@ -343,6 +374,7 @@ def _collect_public_values(
         return values
 
     for name in names:
+
         if name.startswith("_"):
             continue
 
@@ -362,9 +394,227 @@ def _collect_public_values(
         ):
             continue
 
-        values.append(value)
+        values.append(
+            value
+        )
 
     return values
+
+
+# ---------------------------------------------------------------------------
+# Finance curriculum support
+# ---------------------------------------------------------------------------
+
+def _extract_finance_curriculum(
+    module_id: str = "finance",
+) -> list[DiscoveredChapter]:
+    """
+    Extract Finance curriculum from the dedicated structure used by
+    modules.finance.data.
+
+    Finance data.py keeps CHAPTERS and LESSONS as separate lists:
+
+        CHAPTERS = [
+            {"id": "...", "title": "..."},
+            ...
+        ]
+
+        LESSONS = [
+            {"id": "...", "chapter_id": "...", "title": "..."},
+            ...
+        ]
+
+    This helper connects lessons to their parent chapters before
+    registering them in the central registry.
+    """
+
+    chapters: list[
+        DiscoveredChapter
+    ] = []
+
+    package_name = "modules.finance"
+
+    data_modules = _find_data_modules(
+        package_name
+    )
+
+    for module in data_modules:
+
+        raw_chapters = getattr(
+            module,
+            "CHAPTERS",
+            None,
+        )
+
+        raw_lessons = getattr(
+            module,
+            "LESSONS",
+            None,
+        )
+
+        if not isinstance(
+            raw_chapters,
+            (list, tuple),
+        ):
+            continue
+
+        if not isinstance(
+            raw_lessons,
+            (list, tuple),
+        ):
+            raw_lessons = []
+
+        lessons_by_chapter: dict[
+            str,
+            list[DiscoveredLesson],
+        ] = {}
+
+        for index, lesson_value in enumerate(
+            raw_lessons,
+            start=1,
+        ):
+
+            lesson_data = _as_dict(
+                lesson_value
+            )
+
+            if not lesson_data:
+                continue
+
+            lesson_id_value = _first_value(
+                lesson_data,
+                (
+                    "lesson_id",
+                    "id",
+                    "lesson_number",
+                    "lesson_no",
+                    "number",
+                ),
+                index,
+            )
+
+            chapter_id_value = _first_value(
+                lesson_data,
+                (
+                    "chapter_id",
+                    "chapter",
+                    "chapter_number",
+                    "chapter_no",
+                ),
+            )
+
+            if chapter_id_value is None:
+                continue
+
+            chapter_id = _normalize_identifier(
+                chapter_id_value,
+                f"chapter_{index}",
+            )
+
+            lesson_title_value = _first_value(
+                lesson_data,
+                (
+                    "lesson_title",
+                    "title",
+                    "name",
+                    "subject",
+                ),
+                lesson_id_value,
+            )
+
+            lesson_id = _normalize_identifier(
+                lesson_id_value,
+                f"lesson_{index}",
+            )
+
+            lesson = DiscoveredLesson(
+                module_id=module_id,
+                chapter_id=chapter_id,
+                lesson_id=lesson_id,
+                title=_clean_text(
+                    lesson_title_value,
+                    lesson_id,
+                ),
+                description=_clean_text(
+                    _first_value(
+                        lesson_data,
+                        (
+                            "description",
+                            "summary",
+                            "intro",
+                        ),
+                        "",
+                    ),
+                ),
+                data=lesson_data,
+            )
+
+            lessons_by_chapter.setdefault(
+                chapter_id,
+                [],
+            ).append(
+                lesson
+            )
+
+        for index, chapter_value in enumerate(
+            raw_chapters,
+            start=1,
+        ):
+
+            chapter_data = _as_dict(
+                chapter_value
+            )
+
+            if not chapter_data:
+                continue
+
+            chapter_id_value = _first_value(
+                chapter_data,
+                (
+                    "chapter_id",
+                    "id",
+                    "chapter_number",
+                    "chapter_no",
+                    "number",
+                ),
+                index,
+            )
+
+            chapter_id = _normalize_identifier(
+                chapter_id_value,
+                f"chapter_{index}",
+            )
+
+            chapter_title_value = _first_value(
+                chapter_data,
+                (
+                    "chapter_title",
+                    "title",
+                    "name",
+                    "subject",
+                ),
+                f"فصل {index}",
+            )
+
+            chapter = DiscoveredChapter(
+                module_id=module_id,
+                chapter_id=chapter_id,
+                title=_clean_text(
+                    chapter_title_value,
+                    chapter_id,
+                ),
+                lessons=lessons_by_chapter.get(
+                    chapter_id,
+                    [],
+                ),
+                data=chapter_data,
+            )
+
+            chapters.append(
+                chapter
+            )
+
+    return chapters
 
 
 # ---------------------------------------------------------------------------
@@ -376,7 +626,10 @@ def _extract_lessons_from_module(
     module_id: str,
     chapter_id: str,
 ) -> list[DiscoveredLesson]:
-    lessons: list[DiscoveredLesson] = []
+
+    lessons: list[
+        DiscoveredLesson
+    ] = []
 
     public_values = _collect_public_values(
         module
@@ -390,7 +643,9 @@ def _extract_lessons_from_module(
             value,
             (list, tuple, set),
         ):
-            candidates = list(value)
+            candidates = list(
+                value
+            )
 
         elif isinstance(
             value,
@@ -401,7 +656,9 @@ def _extract_lessons_from_module(
             )
 
         else:
-            candidates = [value]
+            candidates = [
+                value
+            ]
 
         for candidate in candidates:
 
@@ -479,7 +736,10 @@ def _extract_chapters_from_module(
     module: Any,
     module_id: str,
 ) -> list[DiscoveredChapter]:
-    chapters: list[DiscoveredChapter] = []
+
+    chapters: list[
+        DiscoveredChapter
+    ] = []
 
     public_values = _collect_public_values(
         module
@@ -489,7 +749,10 @@ def _extract_chapters_from_module(
 
         candidates: list[Any]
 
-        if isinstance(value, dict):
+        if isinstance(
+            value,
+            dict,
+        ):
             candidates = list(
                 value.values()
             )
@@ -498,10 +761,14 @@ def _extract_chapters_from_module(
             value,
             (list, tuple, set),
         ):
-            candidates = list(value)
+            candidates = list(
+                value
+            )
 
         else:
-            candidates = [value]
+            candidates = [
+                value
+            ]
 
         for candidate in candidates:
 
@@ -669,6 +936,7 @@ def _extract_chapters_from_module(
 def _extract_management_curriculum(
     module_id: str = "management",
 ) -> list[DiscoveredChapter]:
+
     chapters: list[
         DiscoveredChapter
     ] = []
@@ -889,24 +1157,30 @@ def _register_module(
     module_id: str,
     title: str,
 ) -> None:
+
     try:
+
         registry.register_module(
             module_id=module_id,
             title=title,
         )
 
     except TypeError:
+
         try:
+
             registry.register_module(
                 module_id,
                 title,
             )
 
         except Exception:
+
             logger.exception(
                 "Could not register module %s",
                 module_id,
             )
+
             raise
 
 
@@ -915,7 +1189,9 @@ def _register_chapter(
     chapter_id: str,
     title: str,
 ) -> None:
+
     try:
+
         registry.register_chapter(
             module_id=module_id,
             chapter_id=chapter_id,
@@ -923,7 +1199,9 @@ def _register_chapter(
         )
 
     except TypeError:
+
         try:
+
             registry.register_chapter(
                 module_id,
                 chapter_id,
@@ -931,11 +1209,13 @@ def _register_chapter(
             )
 
         except Exception:
+
             logger.exception(
                 "Could not register chapter %s/%s",
                 module_id,
                 chapter_id,
             )
+
             raise
 
 
@@ -945,7 +1225,9 @@ def _register_lesson(
     lesson_id: str,
     title: str,
 ) -> None:
+
     try:
+
         registry.register_lesson(
             module_id=module_id,
             chapter_id=chapter_id,
@@ -954,7 +1236,9 @@ def _register_lesson(
         )
 
     except TypeError:
+
         try:
+
             registry.register_lesson(
                 module_id,
                 chapter_id,
@@ -963,12 +1247,14 @@ def _register_lesson(
             )
 
         except Exception:
+
             logger.exception(
                 "Could not register lesson %s/%s/%s",
                 module_id,
                 chapter_id,
                 lesson_id,
             )
+
             raise
 
 
@@ -1024,12 +1310,29 @@ def initialize_content() -> dict[str, Any]:
             DiscoveredChapter
         ] = []
 
+        # ------------------------------------------------------
+        # Special curriculum handlers
+        # ------------------------------------------------------
+
         if module_id == "management":
+
             chapters.extend(
                 _extract_management_curriculum(
                     module_id
                 )
             )
+
+        elif module_id == "finance":
+
+            chapters.extend(
+                _extract_finance_curriculum(
+                    module_id
+                )
+            )
+
+        # ------------------------------------------------------
+        # Generic curriculum extraction
+        # ------------------------------------------------------
 
         for data_module in data_modules:
 
@@ -1049,6 +1352,7 @@ def initialize_content() -> dict[str, Any]:
                 )
 
                 if not duplicate:
+
                     chapters.append(
                         chapter
                     )
@@ -1117,9 +1421,11 @@ def initialize_all_content() -> dict[str, Any]:
     """
 
     try:
+
         return initialize_content()
 
     except Exception as exc:
+
         logger.exception(
             "Content initialization failed."
         )
@@ -1150,6 +1456,7 @@ def content_initializer_health_check() -> dict[str, Any]:
     }
 
     try:
+
         init_database()
 
         statistics = registry.statistics()
@@ -1175,6 +1482,7 @@ def get_content_statistics() -> dict[str, Any]:
     """
 
     try:
+
         statistics = registry.statistics()
 
         if isinstance(
