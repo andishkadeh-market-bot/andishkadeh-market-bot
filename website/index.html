@@ -4,234 +4,387 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta
-        name="description"
-        content="اندیشکده مدیریت و بازار؛ مرجع آموزش مدیریت، بانکداری، تجارت بین‌الملل و مدیریت مالی"
-    >
-
     <title>اندیشکده مدیریت و بازار</title>
 
-    <link rel="stylesheet" href="css/style.css">
+    <meta
+        name="description"
+        content="اندیشکده مدیریت و بازار؛ مرجع آموزش مدیریت، بانکداری، تجارت بین‌الملل، مالی و آمادگی آزمون‌های استخدامی"
+    >
+
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<header class="site-header">
+<header class="header">
+
     <div class="container nav">
 
-        <a href="index.html" class="brand">
-            <span class="brand-logo">ا</span>
-            <span>اندیشکده مدیریت و بازار</span>
+        <a href="#" class="brand" onclick="showHome(); return false;">
+            <div class="brand-logo">ا</div>
+
+            <div class="brand-text">
+                <strong>اندیشکده مدیریت و بازار</strong>
+                <span>آموزش، تحلیل و توسعه تخصصی</span>
+            </div>
         </a>
 
-        <button id="menuBtn" class="menu-btn">☰</button>
-
-        <nav id="mainNav">
-            <a href="index.html" class="active">خانه</a>
-            <a href="modules.html">آموزش‌ها</a>
-            <a href="search.html">جست‌وجو</a>
+        <nav class="desktop-menu">
+            <a href="#courses">دوره‌ها</a>
+            <a href="#about">درباره اندیشکده</a>
+            <a href="#statistics">آمار</a>
         </nav>
 
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+            ☰
+        </button>
+
     </div>
+
+    <div id="mobileMenu" class="mobile-menu">
+        <a href="#courses" onclick="closeMobileMenu()">دوره‌ها</a>
+        <a href="#about" onclick="closeMobileMenu()">درباره اندیشکده</a>
+        <a href="#statistics" onclick="closeMobileMenu()">آمار</a>
+    </div>
+
 </header>
 
 
 <main>
 
-<section class="hero">
+    <!-- HOME -->
 
-    <div class="container hero-grid">
+    <section id="homePage">
 
-        <div class="hero-content">
+        <section class="hero">
 
-            <span class="eyebrow">
-                آموزش تخصصی و کاربردی
-            </span>
+            <div class="container hero-grid">
 
-            <h1>
-                دانش مدیریت، بازار و تجارت را
-                <strong>یکجا</strong>
-                یاد بگیر.
-            </h1>
+                <div class="hero-content">
 
-            <p>
-                محتوای آموزشی اندیشکده به‌صورت مرکزی مدیریت می‌شود
-                و این سایت اطلاعات را مستقیماً از API دریافت می‌کند.
-            </p>
+                    <div class="hero-badge">
+                        🚀 آموزش تخصصی و کاربردی
+                    </div>
 
-            <div class="hero-actions">
+                    <h1>
+                        یادگیری حرفه‌ای
+                        <span>مدیریت و بازار</span>
+                        از یک نقطه شروع می‌شود.
+                    </h1>
 
-                <a href="modules.html" class="btn primary">
-                    شروع یادگیری
-                </a>
+                    <p>
+                        اندیشکده مدیریت و بازار یک بستر آموزشی برای یادگیری
+                        مدیریت، بانکداری، تجارت بین‌الملل، مدیریت مالی و
+                        آمادگی آزمون‌های استخدامی است.
+                    </p>
 
-                <a href="search.html" class="btn secondary">
-                    جست‌وجوی درس
-                </a>
+                    <div class="hero-buttons">
+                        <a href="#courses" class="btn btn-primary">
+                            شروع یادگیری
+                        </a>
 
-            </div>
+                        <a href="#about" class="btn btn-secondary">
+                            درباره اندیشکده
+                        </a>
+                    </div>
 
-        </div>
-
-
-        <div class="hero-card">
-
-            <div class="hero-card-header">
-
-                <span>
-                    مرکز محتوای اندیشکده
-                </span>
-
-                <span class="online">
-                    ● آنلاین
-                </span>
-
-            </div>
-
-            <div class="big-number" id="lessonCount">
-                —
-            </div>
-
-            <div class="hero-card-label">
-                درس آموزشی
-            </div>
-
-            <div class="hero-stats">
-
-                <div>
-                    <strong id="moduleCount">—</strong>
-                    <span>ماژول</span>
                 </div>
 
-                <div>
-                    <strong id="chapterCount">—</strong>
-                    <span>فصل</span>
+                <div class="hero-card">
+
+                    <div class="hero-card-top">
+                        <span>📊</span>
+                        <small>Central Learning System</small>
+                    </div>
+
+                    <div class="hero-stat-main">
+                        <strong id="heroLessonCount">...</strong>
+                        <span>درس آموزشی</span>
+                    </div>
+
+                    <div class="hero-card-stats">
+
+                        <div>
+                            <strong id="heroModuleCount">...</strong>
+                            <span>ماژول</span>
+                        </div>
+
+                        <div>
+                            <strong id="heroChapterCount">...</strong>
+                            <span>فصل</span>
+                        </div>
+
+                    </div>
+
                 </div>
 
             </div>
 
+        </section>
+
+
+        <!-- STATISTICS -->
+
+        <section id="statistics" class="stats-section">
+
+            <div class="container">
+
+                <div class="section-title">
+                    <span>سیستم آموزشی</span>
+                    <h2>اندیشکده در یک نگاه</h2>
+                </div>
+
+                <div class="stats-grid">
+
+                    <div class="stat-card">
+                        <div class="stat-icon">📚</div>
+                        <strong id="statModules">...</strong>
+                        <span>ماژول آموزشی</span>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">📖</div>
+                        <strong id="statChapters">...</strong>
+                        <span>فصل آموزشی</span>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">🎓</div>
+                        <strong id="statLessons">...</strong>
+                        <span>درس آموزشی</span>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <strong>24/7</strong>
+                        <span>دسترسی آموزشی</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- COURSES -->
+
+        <section id="courses" class="courses-section">
+
+            <div class="container">
+
+                <div class="section-title">
+
+                    <span>مسیرهای آموزشی</span>
+
+                    <h2>
+                        آموزش را از حوزه مورد علاقه‌ات شروع کن
+                    </h2>
+
+                    <p>
+                        محتوای آموزشی مستقیماً از سیستم مرکزی اندیشکده دریافت می‌شود.
+                    </p>
+
+                </div>
+
+                <div id="modulesContainer" class="modules-grid">
+
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>در حال دریافت محتوای آموزشی...</p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ABOUT -->
+
+        <section id="about" class="about-section">
+
+            <div class="container about-grid">
+
+                <div>
+
+                    <div class="section-title align-right">
+
+                        <span>درباره ما</span>
+
+                        <h2>
+                            اندیشکده مدیریت و بازار
+                        </h2>
+
+                    </div>
+
+                    <p class="about-text">
+
+                        اندیشکده مدیریت و بازار با هدف ایجاد یک مرجع آموزشی
+                        منسجم در حوزه‌های مدیریت، بانکداری، تجارت، اقتصاد و
+                        بازار شکل گرفته است.
+
+                    </p>
+
+                    <p class="about-text">
+
+                        ساختار آموزشی اندیشکده به صورت ماژولار طراحی شده تا
+                        هر موضوع به فصل‌ها و درس‌های تخصصی تقسیم شود و
+                        کاربر بتواند مسیر یادگیری خود را مرحله‌به‌مرحله دنبال کند.
+
+                    </p>
+
+                </div>
+
+                <div class="about-box">
+
+                    <div class="about-box-icon">
+                        🎯
+                    </div>
+
+                    <h3>
+                        هدف اندیشکده
+                    </h3>
+
+                    <p>
+                        تبدیل آموزش تئوری به دانش کاربردی برای دانشگاه،
+                        بازار کار و آزمون‌های تخصصی.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </section>
+
+
+    <!-- MODULE PAGE -->
+
+    <section id="modulePage" class="inner-page hidden">
+
+        <div class="container">
+
+            <button class="back-button" onclick="showHome()">
+                ← بازگشت به آموزش‌ها
+            </button>
+
+            <div id="moduleHeader" class="module-header"></div>
+
+            <div id="chaptersContainer" class="chapters-container">
+
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>در حال دریافت فصل‌ها...</p>
+                </div>
+
+            </div>
+
         </div>
 
-    </div>
-
-</section>
+    </section>
 
 
-<section class="section">
+    <!-- CHAPTER PAGE -->
 
-    <div class="container">
+    <section id="chapterPage" class="inner-page hidden">
 
-        <div class="section-header">
+        <div class="container">
 
-            <div>
-                <span class="eyebrow">
-                    مسیرهای آموزشی
-                </span>
+            <button class="back-button" onclick="goBackToModule()">
+                ← بازگشت به فصل‌ها
+            </button>
 
-                <h2>
-                    آموزش‌ها
-                </h2>
-            </div>
+            <div id="chapterHeader" class="chapter-header"></div>
 
-            <a href="modules.html">
-                مشاهده همه ←
-            </a>
+            <div id="lessonsContainer" class="lessons-container">
 
-        </div>
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>در حال دریافت درس‌ها...</p>
+                </div>
 
-        <div id="featuredModules" class="card-grid">
-
-            <div class="loading">
-                در حال دریافت اطلاعات...
             </div>
 
         </div>
 
-    </div>
-
-</section>
+    </section>
 
 
-<section class="section soft">
+    <!-- LESSON PAGE -->
 
-    <div class="container features-grid">
+    <section id="lessonPage" class="inner-page hidden">
 
-        <article class="feature-card">
+        <div class="container">
 
-            <div class="feature-icon">
-                📚
-            </div>
+            <button class="back-button" onclick="goBackToChapter()">
+                ← بازگشت به درس‌ها
+            </button>
 
-            <h3>
-                یادگیری ساختاریافته
-            </h3>
+            <article id="lessonContent" class="lesson-content">
 
-            <p>
-                مطالب در قالب ماژول، فصل و درس سازمان‌دهی شده‌اند.
-            </p>
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>در حال دریافت درس...</p>
+                </div>
 
-        </article>
+            </article>
 
+        </div>
 
-        <article class="feature-card">
-
-            <div class="feature-icon">
-                🎯
-            </div>
-
-            <h3>
-                نکات آزمونی
-            </h3>
-
-            <p>
-                نکات تخصصی و آزمونی در کنار محتوای آموزشی قرار می‌گیرند.
-            </p>
-
-        </article>
-
-
-        <article class="feature-card">
-
-            <div class="feature-icon">
-                🧠
-            </div>
-
-            <h3>
-                آزمون و تمرین
-            </h3>
-
-            <p>
-                سؤالات چهارگزینه‌ای هر درس در همان صفحه قابل حل هستند.
-            </p>
-
-        </article>
-
-    </div>
-
-</section>
+    </section>
 
 </main>
 
 
-<footer>
+<footer class="footer">
 
-    <div class="container footer-content">
+    <div class="container footer-grid">
 
-        <span>
-            © اندیشکده مدیریت و بازار
-        </span>
+        <div>
+            <div class="footer-brand">
+                <div class="brand-logo">ا</div>
+                <strong>اندیشکده مدیریت و بازار</strong>
+            </div>
 
-        <span>
-            مرکز آموزش مدیریت و بازار
-        </span>
+            <p>
+                آموزش تخصصی مدیریت، بازار، بانکداری و تجارت.
+            </p>
+        </div>
 
+        <div>
+            <h4>دسترسی سریع</h4>
+            <a href="#courses">آموزش‌ها</a>
+            <a href="#about">درباره ما</a>
+            <a href="#statistics">آمار</a>
+        </div>
+
+        <div>
+            <h4>سیستم مرکزی</h4>
+            <a
+                href="https://andishkadeh-market-bot-2tdu.onrender.com/api"
+                target="_blank"
+                rel="noopener"
+            >
+                API اندیشکده
+            </a>
+        </div>
+
+    </div>
+
+    <div class="footer-bottom">
+        © 2026 اندیشکده مدیریت و بازار
     </div>
 
 </footer>
 
 
-<script src="js/api.js"></script>
-<script src="js/app.js"></script>
+<div id="toast" class="toast"></div>
+
+
+<script src="app.js"></script>
 
 </body>
 </html>
