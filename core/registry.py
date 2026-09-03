@@ -36,7 +36,6 @@ from core.database import (
 # Data Models
 # ==========================================================
 
-
 @dataclass
 class LessonRecord:
     """Registered lesson."""
@@ -61,10 +60,7 @@ class ChapterRecord:
 
     description: str = ""
 
-    lessons: dict[
-        str,
-        LessonRecord,
-    ] = field(
+    lessons: dict[str, LessonRecord] = field(
         default_factory=dict
     )
 
@@ -78,10 +74,7 @@ class ModuleRecord:
 
     description: str = ""
 
-    chapters: dict[
-        str,
-        ChapterRecord,
-    ] = field(
+    chapters: dict[str, ChapterRecord] = field(
         default_factory=dict
     )
 
@@ -89,7 +82,6 @@ class ModuleRecord:
 # ==========================================================
 # Registry
 # ==========================================================
-
 
 class Registry:
     """
@@ -130,7 +122,6 @@ class Registry:
         value: str,
         field_name: str,
     ) -> None:
-        """Validate a registry identifier."""
 
         if not isinstance(value, str):
             raise TypeError(
@@ -147,7 +138,6 @@ class Registry:
         title: str,
         field_name: str,
     ) -> None:
-        """Validate a registry title."""
 
         if not isinstance(title, str):
             raise TypeError(
@@ -163,7 +153,6 @@ class Registry:
     def _normalize_description(
         description: Any,
     ) -> str:
-        """Normalize optional description text."""
 
         if description is None:
             return ""
@@ -173,8 +162,22 @@ class Registry:
 
         return description.strip()
 
+    @staticmethod
+    def _normalize_lesson_data(
+        data: Any,
+    ) -> dict[str, Any]:
+
+        if data is None:
+            return {}
+
+        if not isinstance(data, dict):
+            raise TypeError(
+                "lesson data must be a dictionary."
+            )
+
+        return dict(data)
+
     def _ensure_database(self) -> None:
-        """Ensure the SQLite database exists."""
 
         if self.auto_initialize_database:
             init_database()
@@ -189,13 +192,6 @@ class Registry:
         title: str,
         description: str = "",
     ) -> ModuleRecord:
-        """
-        Register or update a module.
-
-        The module is stored in memory and SQLite.
-
-        description is optional for backward compatibility.
-        """
 
         self._validate_identifier(
             module_id,
@@ -236,10 +232,6 @@ class Registry:
 
         self._ensure_database()
 
-        # --------------------------------------------------
-        # Database compatibility
-        # --------------------------------------------------
-
         try:
 
             upsert_module(
@@ -250,8 +242,6 @@ class Registry:
 
         except TypeError:
 
-            # Older database implementation
-            # may not support description.
             upsert_module(
                 module_id=module_id,
                 title=title,
@@ -270,14 +260,6 @@ class Registry:
         title: str,
         description: str = "",
     ) -> ChapterRecord:
-        """
-        Register or update a chapter.
-
-        If the module does not exist, it is created
-        automatically.
-
-        description is optional for backward compatibility.
-        """
 
         self._validate_identifier(
             module_id,
@@ -335,10 +317,6 @@ class Registry:
 
         self._ensure_database()
 
-        # --------------------------------------------------
-        # Database synchronization
-        # --------------------------------------------------
-
         upsert_chapter(
             module_id=module_id,
             chapter_id=chapter_id,
@@ -359,16 +337,6 @@ class Registry:
         title: str,
         data: dict[str, Any] | None = None,
     ) -> LessonRecord:
-        """
-        Register or update a lesson.
-
-        The parent module and chapter are created
-        automatically when necessary.
-
-        IMPORTANT:
-        If the chapter already exists, its existing title
-        and description are preserved.
-        """
 
         self._validate_identifier(
             module_id,
@@ -390,20 +358,12 @@ class Registry:
             "lesson title",
         )
 
-        if data is not None and not isinstance(
-            data,
-            dict,
-        ):
-            raise TypeError(
-                "lesson data must be a dictionary."
-            )
+        normalized_data = (
+            self._normalize_lesson_data(data)
+        )
 
         # --------------------------------------------------
-        # Find existing chapter first.
-        #
-        # Do NOT call register_chapter with
-        # title=chapter_id because that would overwrite
-        # the real chapter title.
+        # Preserve existing chapter information.
         # --------------------------------------------------
 
         chapter = self.get_chapter(
@@ -419,6 +379,10 @@ class Registry:
                 title=chapter_id,
             )
 
+        # --------------------------------------------------
+        # Register or update lesson.
+        # --------------------------------------------------
+
         lesson = chapter.lessons.get(
             lesson_id
         )
@@ -430,11 +394,7 @@ class Registry:
                 title=title,
                 module_id=module_id,
                 chapter_id=chapter_id,
-                data=(
-                    dict(data)
-                    if data is not None
-                    else {}
-                ),
+                data=normalized_data,
             )
 
             chapter.lessons[
@@ -445,8 +405,11 @@ class Registry:
 
             lesson.title = title
 
+            # IMPORTANT:
+            # Never erase existing lesson data when
+            # a caller does not provide new data.
             if data is not None:
-                lesson.data = dict(data)
+                lesson.data = normalized_data
 
         self._ensure_database()
 
@@ -467,20 +430,8 @@ class Registry:
         self,
         module_id: str,
         chapter_id: str,
-        lessons: list[
-            dict[str, Any]
-        ],
+        lessons: list[dict[str, Any]],
     ) -> list[LessonRecord]:
-        """
-        Register multiple lessons.
-
-        Required lesson fields:
-            lesson_id
-            title
-
-        Optional:
-            data
-        """
 
         if not isinstance(
             lessons,
@@ -550,7 +501,6 @@ class Registry:
         self,
         module_id: str,
     ) -> ModuleRecord | None:
-        """Return a registered module."""
 
         return self.modules.get(
             module_id
@@ -561,7 +511,6 @@ class Registry:
         module_id: str,
         chapter_id: str,
     ) -> ChapterRecord | None:
-        """Return a registered chapter."""
 
         module = self.get_module(
             module_id
@@ -580,7 +529,6 @@ class Registry:
         chapter_id: str,
         lesson_id: str,
     ) -> LessonRecord | None:
-        """Return a registered lesson."""
 
         chapter = self.get_chapter(
             module_id=module_id,
@@ -602,7 +550,6 @@ class Registry:
         self,
         module_id: str,
     ) -> bool:
-        """Return whether a module exists."""
 
         return module_id in self.modules
 
@@ -611,7 +558,6 @@ class Registry:
         module_id: str,
         chapter_id: str,
     ) -> bool:
-        """Return whether a chapter exists."""
 
         return (
             self.get_chapter(
@@ -627,7 +573,6 @@ class Registry:
         chapter_id: str,
         lesson_id: str,
     ) -> bool:
-        """Return whether a lesson exists."""
 
         return (
             self.get_lesson(
@@ -643,7 +588,6 @@ class Registry:
     # ======================================================
 
     def module_count(self) -> int:
-        """Return the number of modules."""
 
         return len(
             self.modules
@@ -653,7 +597,6 @@ class Registry:
         self,
         module_id: str,
     ) -> int:
-        """Return the number of chapters in a module."""
 
         module = self.get_module(
             module_id
@@ -671,12 +614,6 @@ class Registry:
         module_id: str,
         chapter_id: str | None = None,
     ) -> int:
-        """
-        Return lesson count.
-
-        If chapter_id is provided, only that chapter
-        is counted.
-        """
 
         module = self.get_module(
             module_id
@@ -711,7 +648,6 @@ class Registry:
     def list_modules(
         self,
     ) -> list[ModuleRecord]:
-        """Return all registered modules."""
 
         return list(
             self.modules.values()
@@ -721,7 +657,6 @@ class Registry:
         self,
         module_id: str,
     ) -> list[ChapterRecord]:
-        """Return all chapters of a module."""
 
         module = self.get_module(
             module_id
@@ -739,7 +674,6 @@ class Registry:
         module_id: str,
         chapter_id: str,
     ) -> list[LessonRecord]:
-        """Return all lessons of a chapter."""
 
         chapter = self.get_chapter(
             module_id=module_id,
@@ -760,7 +694,6 @@ class Registry:
     def statistics(
         self,
     ) -> dict[str, int]:
-        """Return basic registry statistics."""
 
         modules = self.module_count()
 
@@ -791,12 +724,6 @@ class Registry:
     def export(
         self,
     ) -> dict[str, Any]:
-        """
-        Export the complete in-memory registry.
-
-        Returned data is independent from the internal
-        registry objects.
-        """
 
         result: dict[
             str,
@@ -856,11 +783,6 @@ class Registry:
     def clear_memory(
         self,
     ) -> None:
-        """
-        Clear only the in-memory registry.
-
-        SQLite data remains untouched.
-        """
 
         self.modules.clear()
 
