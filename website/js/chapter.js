@@ -8,13 +8,13 @@ document.addEventListener(
         const chapterId =
             getQueryParam("chapter");
 
+
         /*
          * حالت اول:
          *
          * chapter.html?module=banking
          *
-         * یعنی کاربر هنوز فصل خاصی را انتخاب نکرده
-         * و باید لیست فصل‌های ماژول نمایش داده شود.
+         * نمایش فصل‌های ماژول
          */
 
         if (moduleId && !chapterId) {
@@ -30,14 +30,18 @@ document.addEventListener(
          *
          * chapter.html?module=banking&chapter=...
          *
-         * یعنی یک فصل انتخاب شده و باید درس‌های آن
-         * فصل نمایش داده شوند.
+         * نمایش درس‌های فصل
          */
 
         if (!moduleId || !chapterId) {
 
+            const list =
+                document.getElementById(
+                    "lessonsList"
+                );
+
             showError(
-                document.getElementById("lessonsList"),
+                list,
                 "شناسه ماژول یا فصل مشخص نشده است."
             );
 
@@ -54,11 +58,9 @@ document.addEventListener(
 );
 
 
-/*
- * =========================================================
- * نمایش فصل‌های یک ماژول
- * =========================================================
- */
+/* =========================================================
+   نمایش فصل‌های یک ماژول
+========================================================= */
 
 async function loadModuleChapters(moduleId) {
 
@@ -82,6 +84,12 @@ async function loadModuleChapters(moduleId) {
             "chapterModuleTitle"
         );
 
+    const countElement =
+        document.getElementById(
+            "lessonCount"
+        );
+
+
     try {
 
         /*
@@ -93,92 +101,44 @@ async function loadModuleChapters(moduleId) {
 
 
         /*
-         * بعضی APIها اطلاعات فصل‌ها را مستقیماً
-         * داخل data.chapters می‌دهند.
-         */
-
-        let chapters =
-            Array.isArray(moduleData?.chapters)
-                ? moduleData.chapters
-                : [];
-
-
-        /*
-         * اگر getModule فصل‌ها را برنگرداند،
-         * مستقیماً endpoint فصل‌ها را صدا می‌زنیم.
+         * دریافت فصل‌ها
          *
-         * این قسمت برای سازگاری بیشتر با API فعلی اضافه شده.
+         * تمام درخواست‌ها از api.js عبور می‌کنند.
          */
 
-        if (!chapters.length) {
-
-            try {
-
-                const response =
-                    await fetch(
-                        `/api/modules/${encodeURIComponent(moduleId)}/chapters`,
-                        {
-                            method: "GET",
-                            headers: {
-                                "Accept": "application/json"
-                            }
-                        }
-                    );
+        const chaptersResponse =
+            await getModuleChapters(moduleId);
 
 
-                if (!response.ok) {
-
-                    throw new Error(
-                        `HTTP ${response.status}`
-                    );
-                }
+        let chapters = [];
 
 
-                const chaptersData =
-                    await response.json();
+        if (
+            Array.isArray(
+                chaptersResponse?.chapters
+            )
+        ) {
 
+            chapters =
+                chaptersResponse.chapters;
 
-                /*
-                 * پشتیبانی از چند ساختار احتمالی API
-                 */
+        } else if (
+            Array.isArray(
+                chaptersResponse
+            )
+        ) {
 
-                if (
-                    Array.isArray(
-                        chaptersData
-                    )
-                ) {
+            chapters =
+                chaptersResponse;
 
-                    chapters =
-                        chaptersData;
+        } else if (
+            Array.isArray(
+                chaptersResponse?.data
+            )
+        ) {
 
-                } else if (
-                    Array.isArray(
-                        chaptersData.chapters
-                    )
-                ) {
-
-                    chapters =
-                        chaptersData.chapters;
-
-                } else if (
-                    Array.isArray(
-                        chaptersData.data
-                    )
-                ) {
-
-                    chapters =
-                        chaptersData.data;
-
-                }
-
-            } catch (apiError) {
-
-                console.error(
-                    "Direct chapters API error:",
-                    apiError
-                );
-
-            }
+            chapters =
+                chaptersResponse.data;
 
         }
 
@@ -192,21 +152,33 @@ async function loadModuleChapters(moduleId) {
             moduleId;
 
 
-        moduleTitle.textContent =
-            moduleName;
+        if (moduleTitle) {
+
+            moduleTitle.textContent =
+                moduleName;
+
+        }
 
 
-        title.textContent =
-            moduleName;
+        if (title) {
+
+            title.textContent =
+                moduleName;
+
+        }
 
 
-        description.textContent =
-            moduleData?.description ||
-            "فصل‌های آموزشی این ماژول";
+        if (description) {
+
+            description.textContent =
+                moduleData?.description ||
+                "فصل‌های آموزشی این ماژول";
+
+        }
 
 
         /*
-         * تغییر عنوان بخش
+         * تغییر عنوان لیست
          */
 
         const listHeader =
@@ -227,12 +199,6 @@ async function loadModuleChapters(moduleId) {
          * تعداد فصل‌ها
          */
 
-        const countElement =
-            document.getElementById(
-                "lessonCount"
-            );
-
-
         if (countElement) {
 
             countElement.textContent =
@@ -242,7 +208,7 @@ async function loadModuleChapters(moduleId) {
 
 
         /*
-         * اگر فصلی وجود نداشت
+         * اگر فصل وجود نداشت
          */
 
         if (!chapters.length) {
@@ -281,6 +247,14 @@ async function loadModuleChapters(moduleId) {
         );
 
 
+        if (countElement) {
+
+            countElement.textContent =
+                "خطا";
+
+        }
+
+
         showError(
             list,
             "امکان دریافت فصل‌ها وجود ندارد."
@@ -291,11 +265,9 @@ async function loadModuleChapters(moduleId) {
 }
 
 
-/*
- * =========================================================
- * ساخت کارت فصل
- * =========================================================
- */
+/* =========================================================
+   ساخت کارت فصل
+========================================================= */
 
 function createChapterItem(
     chapter,
@@ -319,7 +291,6 @@ function createChapterItem(
 
 
     return `
-
         <a
             class="lesson-item"
             href="chapter.html?module=${encodeURIComponent(moduleId)}&chapter=${encodeURIComponent(chapterId)}"
@@ -346,23 +317,19 @@ function createChapterItem(
 
             </div>
 
-
             <div class="lesson-arrow">
                 ←
             </div>
 
         </a>
-
     `;
 
 }
 
 
-/*
- * =========================================================
- * نمایش درس‌های یک فصل
- * =========================================================
- */
+/* =========================================================
+   نمایش درس‌های یک فصل
+========================================================= */
 
 async function loadChapter(
     moduleId,
@@ -382,6 +349,16 @@ async function loadChapter(
     const list =
         document.getElementById(
             "lessonsList"
+        );
+
+    const moduleTitle =
+        document.getElementById(
+            "chapterModuleTitle"
+        );
+
+    const countElement =
+        document.getElementById(
+            "lessonCount"
         );
 
 
@@ -409,43 +386,67 @@ async function loadChapter(
             );
 
 
-        const lessons =
+        let lessons = [];
+
+
+        if (
             Array.isArray(
                 lessonsResponse?.lessons
             )
-                ? lessonsResponse.lessons
-                : (
-                    Array.isArray(
-                        lessonsResponse
-                    )
-                        ? lessonsResponse
-                        : []
-                );
+        ) {
+
+            lessons =
+                lessonsResponse.lessons;
+
+        } else if (
+            Array.isArray(
+                lessonsResponse
+            )
+        ) {
+
+            lessons =
+                lessonsResponse;
+
+        } else if (
+            Array.isArray(
+                lessonsResponse?.data
+            )
+        ) {
+
+            lessons =
+                lessonsResponse.data;
+
+        }
 
 
         /*
          * عنوان فصل
          */
 
-        title.textContent =
-            chapter?.title ||
-            chapterId;
+        if (title) {
+
+            title.textContent =
+                chapter?.title ||
+                chapterId;
+
+        }
 
 
         /*
          * توضیحات فصل
          */
 
-        description.textContent =
-            chapter?.description ||
-            "درس‌های این فصل";
+        if (description) {
+
+            description.textContent =
+                chapter?.description ||
+                "درس‌های این فصل";
+
+        }
 
 
         /*
-         * عنوان ماژول
-         *
-         * ابتدا تلاش می‌کنیم نام واقعی ماژول را
-         * دریافت کنیم.
+         * دریافت عنوان ماژول
          */
 
         try {
@@ -454,18 +455,28 @@ async function loadChapter(
                 await getModule(moduleId);
 
 
-            document.getElementById(
-                "chapterModuleTitle"
-            ).textContent =
-                moduleData?.title ||
-                moduleId;
+            if (moduleTitle) {
 
-        } catch {
+                moduleTitle.textContent =
+                    moduleData?.title ||
+                    moduleId;
 
-            document.getElementById(
-                "chapterModuleTitle"
-            ).textContent =
-                moduleId;
+            }
+
+        } catch (moduleError) {
+
+            console.error(
+                "Load module title error:",
+                moduleError
+            );
+
+
+            if (moduleTitle) {
+
+                moduleTitle.textContent =
+                    moduleId;
+
+            }
 
         }
 
@@ -474,10 +485,12 @@ async function loadChapter(
          * تعداد درس‌ها
          */
 
-        document.getElementById(
-            "lessonCount"
-        ).textContent =
-            `${lessons.length} درس`;
+        if (countElement) {
+
+            countElement.textContent =
+                `${lessons.length} درس`;
+
+        }
 
 
         /*
@@ -521,6 +534,14 @@ async function loadChapter(
         );
 
 
+        if (countElement) {
+
+            countElement.textContent =
+                "خطا";
+
+        }
+
+
         showError(
             list,
             "امکان دریافت درس‌ها وجود ندارد."
@@ -531,11 +552,9 @@ async function loadChapter(
 }
 
 
-/*
- * =========================================================
- * ساخت کارت درس
- * =========================================================
- */
+/* =========================================================
+   ساخت کارت درس
+========================================================= */
 
 function createLessonItem(
     lesson,
@@ -554,7 +573,6 @@ function createLessonItem(
 
 
     return `
-
         <a
             class="lesson-item"
             href="lesson.html?module=${encodeURIComponent(moduleId)}&chapter=${encodeURIComponent(chapterId)}&lesson=${encodeURIComponent(lessonId)}"
@@ -580,13 +598,11 @@ function createLessonItem(
 
             </div>
 
-
             <div class="lesson-arrow">
                 ←
             </div>
 
         </a>
-
     `;
 
 }
