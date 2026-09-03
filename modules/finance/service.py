@@ -13,6 +13,7 @@ Andishkadeh Management & Market
 - مدیریت آزمون‌ها
 - محاسبه نتیجه آزمون
 - ثبت Attempt آزمون
+- بازیابی سوابق آزمون
 - جست‌وجوی محتوای مدیریت مالی
 - محاسبه آمار دوره
 - اعتبارسنجی ساختار آموزشی
@@ -27,12 +28,19 @@ from typing import Any, Dict, List, Optional
 from . import data
 from . import content
 
+
+# ============================================================
+# Database
+# ============================================================
+
 try:
     from core.database import (
         save_quiz_attempt as db_save_quiz_attempt,
+        get_quiz_attempts as db_get_quiz_attempts,
     )
 except Exception:
     db_save_quiz_attempt = None
+    db_get_quiz_attempts = None
 
 
 # ============================================================
@@ -56,13 +64,20 @@ def _safe_call(
     """
     اجرای امن تابع از data.py.
     """
-    function = getattr(data, function_name, None)
+    function = getattr(
+        data,
+        function_name,
+        None,
+    )
 
     if not callable(function):
         return default
 
     try:
-        return function(*args, **kwargs)
+        return function(
+            *args,
+            **kwargs,
+        )
 
     except Exception:
         return default
@@ -77,13 +92,20 @@ def _safe_content_call(
     """
     اجرای امن تابع از content.py.
     """
-    function = getattr(content, function_name, None)
+    function = getattr(
+        content,
+        function_name,
+        None,
+    )
 
     if not callable(function):
         return default
 
     try:
-        return function(*args, **kwargs)
+        return function(
+            *args,
+            **kwargs,
+        )
 
     except Exception:
         return default
@@ -111,23 +133,37 @@ def _normalize_list(
     if value is None:
         return []
 
-    if isinstance(value, list):
+    if isinstance(
+        value,
+        list,
+    ):
         return value
 
-    if isinstance(value, tuple):
+    if isinstance(
+        value,
+        tuple,
+    ):
         return list(value)
 
-    if isinstance(value, set):
+    if isinstance(
+        value,
+        set,
+    ):
         return list(value)
 
     return [value]
 
 
-def _get_id(item: Any) -> str:
+def _get_id(
+    item: Any,
+) -> str:
     """
     دریافت شناسه از dict/object.
     """
-    if isinstance(item, dict):
+    if isinstance(
+        item,
+        dict,
+    ):
 
         return _normalize_text(
             item.get("id")
@@ -137,17 +173,34 @@ def _get_id(item: Any) -> str:
         )
 
     return _normalize_text(
-        getattr(item, "id", None)
-        or getattr(item, "chapter_id", None)
-        or getattr(item, "lesson_id", None)
+        getattr(
+            item,
+            "id",
+            None,
+        )
+        or getattr(
+            item,
+            "chapter_id",
+            None,
+        )
+        or getattr(
+            item,
+            "lesson_id",
+            None,
+        )
     )
 
 
-def _get_title(item: Any) -> str:
+def _get_title(
+    item: Any,
+) -> str:
     """
     دریافت عنوان از dict/object.
     """
-    if isinstance(item, dict):
+    if isinstance(
+        item,
+        dict,
+    ):
 
         return _normalize_text(
             item.get("title")
@@ -157,8 +210,16 @@ def _get_title(item: Any) -> str:
         )
 
     return _normalize_text(
-        getattr(item, "title", None)
-        or getattr(item, "name", None)
+        getattr(
+            item,
+            "title",
+            None,
+        )
+        or getattr(
+            item,
+            "name",
+            None,
+        )
     )
 
 
@@ -168,15 +229,11 @@ def _get_quiz_correct_index(
     """
     دریافت index پاسخ صحیح سؤال.
 
-    پشتیبانی از چند نام رایج:
+    پشتیبانی از:
     - correct_index
     - answer_index
     - correct_answer
     - answer
-
-    خروجی:
-        عدد معتبر بین گزینه‌ها
-        یا None
     """
     if not isinstance(
         question,
@@ -200,6 +257,7 @@ def _get_quiz_correct_index(
             )
 
             if value is not None:
+
                 raw_value = value
                 break
 
@@ -207,6 +265,7 @@ def _get_quiz_correct_index(
         return None
 
     try:
+
         return int(
             raw_value
         )
@@ -215,6 +274,7 @@ def _get_quiz_correct_index(
         TypeError,
         ValueError,
     ):
+
         return None
 
 
@@ -274,7 +334,9 @@ def get_module_info() -> Dict[str, Any]:
         None,
     )
 
-    if callable(raw_info):
+    if callable(
+        raw_info
+    ):
 
         try:
 
@@ -351,10 +413,6 @@ def get_module_info() -> Dict[str, Any]:
 def get_finance_chapters() -> List[Dict[str, Any]]:
     """
     دریافت تمام فصل‌های مدیریت مالی.
-
-    data.py فعلی:
-        get_chapters()
-    بدون آرگومان است.
     """
     chapters = None
 
@@ -372,11 +430,10 @@ def get_finance_chapters() -> List[Dict[str, Any]]:
 
             chapters = raw_get_chapters()
 
-        except TypeError:
-
-            chapters = None
-
-        except Exception:
+        except (
+            TypeError,
+            Exception,
+        ):
 
             chapters = None
 
@@ -543,11 +600,10 @@ def _get_all_finance_lessons_from_data() -> List[Dict[str, Any]]:
 
             lessons = raw_get_lessons()
 
-        except TypeError:
-
-            lessons = None
-
-        except Exception:
+        except (
+            TypeError,
+            Exception,
+        ):
 
             lessons = None
 
@@ -771,10 +827,11 @@ def get_finance_lesson(
 
                 return result
 
-        except TypeError:
-            pass
+        except (
+            TypeError,
+            Exception,
+        ):
 
-        except Exception:
             pass
 
     for lesson in get_finance_lessons(
@@ -885,8 +942,7 @@ def get_complete_lesson(
     lesson_id: str,
 ) -> Dict[str, Any]:
     """
-    ترکیب اطلاعات Data و Content
-    برای ساخت یک درس کامل.
+    ترکیب اطلاعات Data و Content.
     """
     lesson = get_finance_lesson(
         chapter_id,
@@ -1358,7 +1414,7 @@ def get_finance_chapter_quiz(
 
 
 # ============================================================
-# Quiz Result / Attempt
+# Quiz Result
 # ============================================================
 
 def calculate_quiz_score(
@@ -1367,9 +1423,6 @@ def calculate_quiz_score(
 ) -> float:
     """
     محاسبه درصد آزمون.
-
-    مثال:
-        8 پاسخ صحیح از 10 سؤال = 80.0
     """
     try:
 
@@ -1415,18 +1468,6 @@ def calculate_quiz_result(
 ) -> Dict[str, Any]:
     """
     محاسبه نتیجه کامل آزمون.
-
-    answers:
-        لیست index گزینه‌های انتخاب‌شده.
-
-    خروجی:
-        total_questions
-        answered_questions
-        correct_answers
-        wrong_answers
-        unanswered_questions
-        score
-        results
     """
     questions = _normalize_list(
         quiz
@@ -1549,6 +1590,10 @@ def calculate_quiz_result(
     }
 
 
+# ============================================================
+# Quiz Attempts
+# ============================================================
+
 def start_quiz_attempt(
     telegram_id: int,
     module_id: str,
@@ -1558,11 +1603,6 @@ def start_quiz_attempt(
 ) -> Dict[str, Any]:
     """
     ایجاد وضعیت اولیه Attempt آزمون.
-
-    این تابع Attempt را به‌عنوان آزمون
-    تکمیل‌شده در دیتابیس ذخیره نمی‌کند.
-
-    وضعیت موقت برای Handler برمی‌گرداند.
     """
     try:
 
@@ -1624,9 +1664,6 @@ def save_quiz_attempt(
 ) -> Optional[int]:
     """
     ثبت Attempt تکمیل‌شده در دیتابیس.
-
-    Handler نباید مستقیماً با database.py
-    کار کند؛ این تابع مرز Service Layer است.
     """
     if db_save_quiz_attempt is None:
         return None
@@ -1720,6 +1757,275 @@ def save_quiz_attempt(
         return None
 
 
+def get_finance_quiz_attempts(
+    telegram_id: int,
+) -> List[Dict[str, Any]]:
+    """
+    دریافت تمام سوابق آزمون‌های مدیریت مالی
+    برای یک کاربر.
+
+    خروجی شامل رکوردهای ذخیره‌شده در:
+        quiz_attempts
+
+    است.
+    """
+    if db_get_quiz_attempts is None:
+        return []
+
+    try:
+
+        telegram_id = int(
+            telegram_id
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+
+        return []
+
+    if telegram_id <= 0:
+        return []
+
+    try:
+
+        attempts = db_get_quiz_attempts(
+            telegram_id=telegram_id,
+            module_id=MODULE_ID,
+        )
+
+    except TypeError:
+
+        try:
+
+            attempts = db_get_quiz_attempts(
+                telegram_id,
+                MODULE_ID,
+            )
+
+        except Exception:
+
+            return []
+
+    except Exception:
+
+        return []
+
+    attempts = _normalize_list(
+        attempts
+    )
+
+    normalized: List[Dict[str, Any]] = []
+
+    for attempt in attempts:
+
+        if isinstance(
+            attempt,
+            dict,
+        ):
+
+            item = dict(
+                attempt
+            )
+
+        else:
+
+            item = {
+                "id": getattr(
+                    attempt,
+                    "id",
+                    None,
+                ),
+            }
+
+        item.setdefault(
+            "module_id",
+            MODULE_ID,
+        )
+
+        normalized.append(
+            item
+        )
+
+    return normalized
+
+
+def get_finance_quiz_attempt(
+    telegram_id: int,
+    attempt_id: int,
+) -> Optional[Dict[str, Any]]:
+    """
+    دریافت یک سابقه آزمون مشخص.
+    """
+    try:
+
+        attempt_id = int(
+            attempt_id
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+
+        return None
+
+    if attempt_id <= 0:
+        return None
+
+    attempts = get_finance_quiz_attempts(
+        telegram_id
+    )
+
+    for attempt in attempts:
+
+        try:
+
+            current_id = int(
+                attempt.get(
+                    "id",
+                    0,
+                )
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            continue
+
+        if current_id == attempt_id:
+
+            return dict(
+                attempt
+            )
+
+    return None
+
+
+def get_finance_attempt_statistics(
+    telegram_id: int,
+) -> Dict[str, Any]:
+    """
+    محاسبه آمار سوابق آزمون‌های مدیریت مالی.
+    """
+    attempts = get_finance_quiz_attempts(
+        telegram_id
+    )
+
+    total_attempts = len(
+        attempts
+    )
+
+    total_questions = 0
+    total_correct = 0
+    total_score = 0.0
+
+    best_score = 0.0
+
+    for attempt in attempts:
+
+        try:
+
+            questions = int(
+                attempt.get(
+                    "total_questions",
+                    0,
+                )
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            questions = 0
+
+        try:
+
+            correct = int(
+                attempt.get(
+                    "correct_answers",
+                    0,
+                )
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            correct = 0
+
+        try:
+
+            score = float(
+                attempt.get(
+                    "score",
+                    0,
+                )
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            score = 0.0
+
+        total_questions += max(
+            0,
+            questions,
+        )
+
+        total_correct += max(
+            0,
+            correct,
+        )
+
+        total_score += score
+
+        best_score = max(
+            best_score,
+            score,
+        )
+
+    average_score = (
+        round(
+            total_score
+            / total_attempts,
+            2,
+        )
+        if total_attempts
+        else 0.0
+    )
+
+    overall_score = (
+        round(
+            (
+                total_correct
+                / total_questions
+            )
+            * 100,
+            2,
+        )
+        if total_questions
+        else 0.0
+    )
+
+    return {
+        "module_id": MODULE_ID,
+        "total_attempts": total_attempts,
+        "total_questions": total_questions,
+        "total_correct_answers": total_correct,
+        "average_score": average_score,
+        "best_score": best_score,
+        "overall_score": overall_score,
+    }
+
+
 def complete_quiz_attempt(
     telegram_id: int,
     module_id: str,
@@ -1730,9 +2036,6 @@ def complete_quiz_attempt(
 ) -> Dict[str, Any]:
     """
     محاسبه نتیجه و ثبت Attempt آزمون.
-
-    این تابع نقطه اصلی Service Layer
-    برای پایان آزمون است.
     """
     result = calculate_quiz_result(
         quiz,
@@ -1763,6 +2066,10 @@ def complete_quiz_attempt(
 
     return result
 
+
+# ============================================================
+# Quiz Question
+# ============================================================
 
 def get_quiz_question(
     quiz: List[Dict[str, Any]],
@@ -2345,6 +2652,10 @@ def finance_health_check() -> Dict[str, Any]:
                 db_save_quiz_attempt
                 is not None
             ),
+            "quiz_history_service": (
+                db_get_quiz_attempts
+                is not None
+            ),
         }
 
     except Exception as exc:
@@ -2361,6 +2672,7 @@ def finance_health_check() -> Dict[str, Any]:
             ],
             "warnings": [],
             "quiz_answer_service": False,
+            "quiz_history_service": False,
         }
 
 
@@ -2377,6 +2689,10 @@ get_all_questions = get_all_quiz_questions
 get_chapter_quiz = get_finance_chapter_quiz
 get_statistics = get_curriculum_stats
 health_check = finance_health_check
+
+get_quiz_attempts = get_finance_quiz_attempts
+get_quiz_attempt = get_finance_quiz_attempt
+get_attempt_statistics = get_finance_attempt_statistics
 
 
 # ============================================================
@@ -2419,6 +2735,9 @@ __all__ = [
     # Quiz attempt
     "start_quiz_attempt",
     "save_quiz_attempt",
+    "get_finance_quiz_attempts",
+    "get_finance_quiz_attempt",
+    "get_finance_attempt_statistics",
     "complete_quiz_attempt",
 
     # Statistics
@@ -2447,4 +2766,9 @@ __all__ = [
     "get_chapter_quiz",
     "get_statistics",
     "health_check",
+
+    # History compatibility
+    "get_quiz_attempts",
+    "get_quiz_attempt",
+    "get_attempt_statistics",
 ]
