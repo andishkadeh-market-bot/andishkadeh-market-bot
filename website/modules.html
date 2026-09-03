@@ -5,7 +5,406 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>آموزش تخصصی | اندیشکده مدیریت و بازار</title>
-
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+    <title>آموزش تخصصی | اندیشکده مدیریت و بازار</title>
+    <meta
+        name="description"
+        content="دوره‌ها و آموزش‌های تخصصی اندیشکده مدیریت و بازار"
+    >
+    <!-- مسیر صحیح CSS -->
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+    <style>
+        .page-header {
+            padding: 70px 20px 30px;
+            text-align: center;
+        }
+        .page-header h1 {
+            margin: 0 0 12px;
+            font-size: 36px;
+            color: var(--navy);
+        }
+        .page-header p {
+            margin: 0 auto;
+            max-width: 720px;
+            color: var(--muted);
+            line-height: 2;
+        }
+        .back-home {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 22px;
+            padding: 10px 18px;
+            border-radius: 10px;
+            background: var(--navy);
+            color: white;
+            transition: .2s;
+        }
+        .back-home:hover {
+            transform: translateY(-2px);
+            background: var(--navy-2);
+        }
+        .stats {
+            width: min(900px, calc(100% - 40px));
+            margin: 20px auto 45px;
+            display: grid;
+            grid-template-columns:
+                repeat(3, minmax(0, 1fr));
+            gap: 18px;
+        }
+        .stat-box {
+            background: white;
+            border: 1px solid var(--gray-2);
+            border-radius: var(--radius);
+            padding: 24px;
+            text-align: center;
+            box-shadow:
+                0 8px 25px rgba(7, 26, 47, .04);
+        }
+        .stat-box strong {
+            display: block;
+            color: var(--navy);
+            font-size: 32px;
+            margin-bottom: 5px;
+        }
+        .stat-box span {
+            color: var(--muted);
+            font-size: 13px;
+        }
+        .modules-container {
+            width: min(1200px, calc(100% - 40px));
+            margin: 0 auto 80px;
+            display: grid;
+            grid-template-columns:
+                repeat(3, minmax(0, 1fr));
+            gap: 22px;
+        }
+        .module-card {
+            position: relative;
+            display: block;
+            min-height: 245px;
+            padding: 28px;
+            background: white;
+            border: 1px solid var(--gray-2);
+            border-radius: var(--radius);
+            color: inherit;
+            text-decoration: none;
+            overflow: hidden;
+            box-shadow:
+                0 8px 25px rgba(7, 26, 47, .04);
+            transition:
+                transform .25s ease,
+                box-shadow .25s ease,
+                border-color .25s ease;
+        }
+        .module-card::after {
+            content: "";
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            left: -45px;
+            bottom: -45px;
+            border-radius: 50%;
+            background:
+                rgba(22, 199, 189, .08);
+            pointer-events: none;
+        }
+        .module-card:hover {
+            transform: translateY(-6px);
+            border-color:
+                rgba(22, 199, 189, .45);
+            box-shadow:
+                0 18px 45px
+                rgba(7, 26, 47, .10);
+        }
+        .module-icon {
+            width: 58px;
+            height: 58px;
+            display: grid;
+            place-items: center;
+            margin-bottom: 18px;
+            border-radius: 16px;
+            background: var(--gray);
+            font-size: 27px;
+        }
+        .module-card h2 {
+            margin: 0 0 10px;
+            color: var(--navy);
+            font-size: 20px;
+        }
+        .module-card p {
+            margin: 0;
+            min-height: 52px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.9;
+        }
+        .module-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 9px;
+            margin-top: 20px;
+        }
+        .module-meta span {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 10px;
+            border-radius: 9px;
+            background: var(--gray);
+            color: var(--muted);
+            font-size: 12px;
+        }
+        .loading,
+        .error,
+        .empty {
+            width: min(800px, calc(100% - 40px));
+            margin: 50px auto;
+            padding: 30px;
+            text-align: center;
+            background: white;
+            border: 1px solid var(--gray-2);
+            border-radius: 18px;
+            box-shadow:
+                0 8px 25px
+                rgba(7, 26, 47, .04);
+        }
+        .loading p,
+        .error p,
+        .empty p {
+            margin: 10px 0 0;
+            color: var(--muted);
+            line-height: 1.9;
+        }
+        .error {
+            border-color:
+                rgba(220, 60, 60, .25);
+        }
+        .error-title {
+            color: #b42318;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .error-details {
+            color: var(--muted);
+            font-size: 13px;
+            direction: ltr;
+            word-break: break-word;
+        }
+        .retry-button {
+            margin-top: 18px;
+            padding: 11px 22px;
+            border: 0;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: inherit;
+            background: var(--turquoise);
+            color: var(--navy);
+            font-weight: 700;
+            transition: .2s;
+        }
+        .retry-button:hover {
+            transform: translateY(-2px);
+        }
+        .spinner {
+            width: 35px;
+            height: 35px;
+            margin: 0 auto 12px;
+            border: 4px solid var(--gray-2);
+            border-top-color:
+                var(--turquoise);
+            border-radius: 50%;
+            animation:
+                modulesSpinner .8s linear infinite;
+        }
+        @keyframes modulesSpinner {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        @media (max-width: 900px) {
+            .modules-container {
+                grid-template-columns:
+                    repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 650px) {
+            .page-header {
+                padding-top: 45px;
+            }
+            .page-header h1 {
+                font-size: 28px;
+            }
+            .stats {
+                grid-template-columns: 1fr;
+                width: min(500px, calc(100% - 25px));
+            }
+            .modules-container {
+                width: min(100% - 25px, 1200px);
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            .module-card {
+                min-height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="header">
+    <div class="container nav">
+        <a
+            href="index.html"
+            class="brand"
+        >
+            <div class="brand-logo">
+                ا
+            </div>
+            <div class="brand-text">
+                <strong>
+                    اندیشکده مدیریت و بازار
+                </strong>
+                <span>
+                    آموزش، تحلیل و توسعه تخصصی
+                </span>
+            </div>
+        </a>
+        <nav class="desktop-menu">
+            <a href="index.html">
+                خانه
+            </a>
+            <a
+                href="modules.html"
+                class="active"
+            >
+                آموزش تخصصی
+            </a>
+        </nav>
+    </div>
+</header>
+<main>
+    <section class="page-header">
+        <h1>
+            📚 آموزش تخصصی
+        </h1>
+        <p>
+            آموزش‌های تخصصی مدیریت، بانکداری،
+            تجارت، اقتصاد و سایر حوزه‌های کاربردی
+            را انتخاب کنید و مسیر یادگیری خود را آغاز کنید.
+        </p>
+        <a
+            href="index.html"
+            class="back-home"
+        >
+            ← بازگشت به صفحه اصلی
+        </a>
+    </section>
+    <section
+        class="stats"
+        id="stats"
+    >
+        <div class="stat-box">
+            <strong id="moduleCount">
+                ...
+            </strong>
+            <span>
+                ماژول آموزشی
+            </span>
+        </div>
+        <div class="stat-box">
+            <strong id="chapterCount">
+                ...
+            </strong>
+            <span>
+                فصل
+            </span>
+        </div>
+        <div class="stat-box">
+            <strong id="lessonCount">
+                ...
+            </strong>
+            <span>
+                درس
+            </span>
+        </div>
+    </section>
+    <div
+        id="loading"
+        class="loading"
+    >
+        <div class="spinner"></div>
+        <p>
+            در حال دریافت دوره‌های آموزشی...
+        </p>
+    </div>
+    <div
+        id="error"
+        class="error"
+        style="display:none;"
+    >
+        <div class="error-title">
+            دریافت اطلاعات با مشکل مواجه شد.
+        </div>
+        <p>
+            ارتباط با سیستم آموزشی برقرار نشد.
+        </p>
+        <div
+            id="errorDetails"
+            class="error-details"
+        ></div>
+        <button
+            id="retryButton"
+            class="retry-button"
+            type="button"
+        >
+            تلاش مجدد
+        </button>
+    </div>
+    <div
+        id="empty"
+        class="empty"
+        style="display:none;"
+    >
+        <div>
+            هنوز ماژول آموزشی‌ای ثبت نشده است.
+        </div>
+        <p>
+            در حال حاضر محتوایی برای نمایش وجود ندارد.
+        </p>
+    </div>
+    <section
+        id="modulesContainer"
+        class="modules-container"
+        style="display:none;"
+    ></section>
+</main>
+<footer class="footer">
+    <div class="container">
+        <p>
+            © 2026 اندیشکده مدیریت و بازار
+        </p>
+    </div>
+</footer>
+<!--
+    ترتیب بارگذاری مهم است:
+    1. api.js
+    2. modules.js
+    api.js توابع ارتباط با API را ایجاد می‌کند.
+    modules.js از همان توابع استفاده می‌کند.
+-->
+<script src="js/api.js"></script>
+<script src="js/modules.js"></script>
+</body>
+</html>
     <meta
         name="description"
         content="دوره‌ها و آموزش‌های تخصصی اندیشکده مدیریت و بازار"
