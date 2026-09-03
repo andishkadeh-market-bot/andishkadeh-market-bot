@@ -184,9 +184,6 @@ def _extract_international_trade_curriculum(
     INTERNATIONAL_TRADE_CURRICULUM
     INTERNATIONAL_TRADE_LESSONS
     INTERNATIONAL_TRADE_QUIZ_QUESTIONS
-
-    This function intentionally handles the exact structure
-    currently used by modules.international_trade.data.
     """
 
     module_id = _get_module_id(
@@ -736,6 +733,187 @@ def _extract_management_curriculum(
 
 
 # ==========================================================
+# Banking Extraction
+# ==========================================================
+
+def _extract_banking_curriculum(
+    data_module: Any,
+) -> DiscoveredModule | None:
+    """
+    Extract Banking content.
+
+    Banking module structure:
+
+    CHAPTERS = [
+        {
+            "id": "...",
+            "title": "...",
+            "description": "...",
+            "lessons": [
+                {
+                    "id": "...",
+                    "title": "...",
+                    "content": "...",
+                    ...
+                }
+            ]
+        }
+    ]
+
+    برخلاف Finance، درس‌های بانکداری داخل خود هر Chapter
+    قرار دارند و LESSONS جداگانه‌ای وجود ندارد.
+    """
+
+    module_id = _get_module_id(
+        data_module,
+        "banking",
+    )
+
+    module_title = _get_module_title(
+        data_module,
+        "🏦 بانکداری تخصصی",
+    )
+
+    module_description = _get_module_description(
+        data_module,
+    )
+
+    chapters_data = getattr(
+        data_module,
+        "CHAPTERS",
+        None,
+    )
+
+    if not isinstance(
+        chapters_data,
+        list,
+    ):
+        return None
+
+    chapters: list[DiscoveredChapter] = []
+
+    for chapter_item in chapters_data:
+
+        if not isinstance(
+            chapter_item,
+            dict,
+        ):
+            continue
+
+        chapter_id = _first_non_empty(
+            chapter_item,
+            (
+                "id",
+                "chapter_id",
+                "original_chapter_id",
+            ),
+        )
+
+        if not chapter_id:
+            continue
+
+        chapter_title = _first_non_empty(
+            chapter_item,
+            (
+                "title",
+                "name",
+            ),
+            f"فصل {chapter_id}",
+        )
+
+        chapter_description = _first_non_empty(
+            chapter_item,
+            (
+                "description",
+                "desc",
+            ),
+        )
+
+        raw_lessons = chapter_item.get(
+            "lessons",
+            [],
+        )
+
+        if not isinstance(
+            raw_lessons,
+            list,
+        ):
+            raw_lessons = []
+
+        lessons: list[DiscoveredLesson] = []
+
+        for lesson_item in raw_lessons:
+
+            if not isinstance(
+                lesson_item,
+                dict,
+            ):
+                continue
+
+            lesson_id = _first_non_empty(
+                lesson_item,
+                (
+                    "id",
+                    "lesson_id",
+                ),
+            )
+
+            if not lesson_id:
+                continue
+
+            lesson_title = _first_non_empty(
+                lesson_item,
+                (
+                    "title",
+                    "name",
+                ),
+                f"درس {lesson_id}",
+            )
+
+            lesson_content = _first_non_empty(
+                lesson_item,
+                (
+                    "content",
+                    "lesson_text",
+                    "text",
+                ),
+            )
+
+            lessons.append(
+                DiscoveredLesson(
+                    lesson_id=lesson_id,
+                    title=lesson_title,
+                    module_id=module_id,
+                    chapter_id=chapter_id,
+                    content=lesson_content,
+                    metadata=dict(
+                        lesson_item
+                    ),
+                )
+            )
+
+        chapters.append(
+            DiscoveredChapter(
+                chapter_id=chapter_id,
+                title=chapter_title,
+                module_id=module_id,
+                description=chapter_description,
+                lessons=lessons,
+            )
+        )
+
+    if not chapters:
+        return None
+
+    return DiscoveredModule(
+        module_id=module_id,
+        title=module_title,
+        description=module_description,
+        chapters=chapters,
+    )
+
+
+# ==========================================================
 # Generic Extraction
 # ==========================================================
 
@@ -826,6 +1004,14 @@ def _extract_generic_curriculum(
             f"فصل {chapter_id}",
         )
 
+        chapter_description = _first_non_empty(
+            chapter_item,
+            (
+                "description",
+                "desc",
+            ),
+        )
+
         raw_lessons = lessons_map.get(
             chapter_id,
             [],
@@ -894,13 +1080,7 @@ def _extract_generic_curriculum(
                 chapter_id=chapter_id,
                 title=chapter_title,
                 module_id=module_id,
-                description=_first_non_empty(
-                    chapter_item,
-                    (
-                        "description",
-                        "desc",
-                    ),
-                ),
+                description=chapter_description,
                 lessons=lessons,
             )
         )
@@ -963,6 +1143,15 @@ def discover_module(
 
     if normalized_module_id == "management":
         return _extract_management_curriculum(
+            data_module
+        )
+
+    # ------------------------------------------------------
+    # Banking
+    # ------------------------------------------------------
+
+    if normalized_module_id == "banking":
+        return _extract_banking_curriculum(
             data_module
         )
 
@@ -1446,112 +1635,3 @@ def get_content_health_report() -> dict[str, Any]:
         "statistics": statistics,
         "modules": module_details,
     }
-
-
-# ==========================================================
-# Public API
-# ==========================================================
-
-__all__ = [
-    "CONTENT_PACKAGES",
-    "CONTENT_MODULE_IDS",
-
-    "DiscoveredLesson",
-    "DiscoveredChapter",
-    "DiscoveredModule",
-
-    "discover_module",
-
-    "initialize_content",
-    "initialize_all_content",
-
-    "get_registry_statistics",
-
-    "content_health_check",
-    "run_content_initializer_health_check",
-
-    "get_content_health_report",
-]
-
-
-# ==========================================================
-# Local Test
-# ==========================================================
-
-if __name__ == "__main__":
-
-    result = initialize_all_content()
-
-    print(
-        "======================================"
-    )
-
-    print(
-        "Content Initializer"
-    )
-
-    print(
-        "======================================"
-    )
-
-    print(
-        f"Success: {result.get('success')}"
-    )
-
-    print(
-        f"Modules: {result.get('modules')}"
-    )
-
-    print(
-        f"Chapters: {result.get('chapters')}"
-    )
-
-    print(
-        f"Lessons: {result.get('lessons')}"
-    )
-
-    print(
-        f"Errors: {result.get('errors')}"
-    )
-
-    print(
-        "--------------------------------------"
-    )
-
-    for module_id, details in (
-        result.get(
-            "details",
-            {},
-        ).items()
-    ):
-
-        print(
-            f"{module_id}: "
-            f"success={details.get('success')} "
-            f"chapters={details.get('chapters')} "
-            f"lessons={details.get('lessons')}"
-        )
-
-    print(
-        "--------------------------------------"
-    )
-
-    print(
-        "Registry:"
-    )
-
-    print(
-        get_registry_statistics()
-    )
-
-    print(
-        "Health:"
-    )
-
-    print(
-        content_health_check()
-    )
-
-    print(
-        "======================================"
-    )
