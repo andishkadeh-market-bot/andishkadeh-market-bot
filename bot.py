@@ -1224,6 +1224,10 @@ async def website_html_handler(
 ) -> web.StreamResponse:
     """
     Serve individual website HTML pages.
+
+    The filename is extracted directly from the request path.
+    This avoids using unsupported kwargs= arguments in aiohttp
+    route registration.
     """
 
     website_dir = os.path.join(
@@ -1233,10 +1237,17 @@ async def website_html_handler(
         "website",
     )
 
-    filename = request.match_info.get(
-        "filename",
-        "",
+    # ------------------------------------------------------
+    # Get filename directly from URL path
+    # ------------------------------------------------------
+
+    filename = os.path.basename(
+        request.path
     )
+
+    # ------------------------------------------------------
+    # Security / allowed files
+    # ------------------------------------------------------
 
     allowed_files = {
         "index.html",
@@ -1253,6 +1264,10 @@ async def website_html_handler(
             status=404,
             content_type="text/plain",
         )
+
+    # ------------------------------------------------------
+    # Build safe file path
+    # ------------------------------------------------------
 
     file_path = os.path.join(
         website_dir,
@@ -1304,9 +1319,6 @@ async def root_handler(
 ) -> web.StreamResponse:
     """
     Serve the website homepage.
-
-    The previous implementation returned plain text here.
-    The new implementation serves website/index.html.
     """
 
     return await website_index_handler(
@@ -1365,6 +1377,11 @@ async def start_health_server() -> web.AppRunner:
 
     # ------------------------------------------------------
     # Website HTML pages
+    #
+    # IMPORTANT:
+    # Do NOT use kwargs= here.
+    # aiohttp does not support kwargs in add_get().
+    # The handler reads the filename from request.path.
     # ------------------------------------------------------
 
     app.router.add_get(
@@ -1375,37 +1392,25 @@ async def start_health_server() -> web.AppRunner:
     app.router.add_get(
         "/modules.html",
         website_html_handler,
-        kwargs={
-            "filename": "modules.html",
-        },
     )
 
     app.router.add_get(
         "/chapter.html",
         website_html_handler,
-        kwargs={
-            "filename": "chapter.html",
-        },
     )
 
     app.router.add_get(
         "/lesson.html",
         website_html_handler,
-        kwargs={
-            "filename": "lesson.html",
-        },
     )
 
     app.router.add_get(
         "/search.html",
         website_html_handler,
-        kwargs={
-            "filename": "search.html",
-        },
     )
 
     # ------------------------------------------------------
-    # Website CSS
+    # Website directory
     # ------------------------------------------------------
 
     website_dir = os.path.join(
@@ -1415,14 +1420,13 @@ async def start_health_server() -> web.AppRunner:
         "website",
     )
 
+    # ------------------------------------------------------
+    # Website CSS
+    # ------------------------------------------------------
+
     css_dir = os.path.join(
         website_dir,
         "css",
-    )
-
-    js_dir = os.path.join(
-        website_dir,
-        "js",
     )
 
     if os.path.isdir(css_dir):
@@ -1448,6 +1452,11 @@ async def start_health_server() -> web.AppRunner:
     # Website JavaScript
     # ------------------------------------------------------
 
+    js_dir = os.path.join(
+        website_dir,
+        "js",
+    )
+
     if os.path.isdir(js_dir):
 
         app.router.add_static(
@@ -1469,10 +1478,6 @@ async def start_health_server() -> web.AppRunner:
 
     # ------------------------------------------------------
     # Website API
-    #
-    # Registered before server starts.
-    # API paths are explicit and therefore remain
-    # completely separate from static website files.
     # ------------------------------------------------------
 
     register_web_api(
@@ -1505,6 +1510,10 @@ async def start_health_server() -> web.AppRunner:
 
     logger.info(
         "Website available at /"
+    )
+
+    logger.info(
+        "Website index page available at /index.html"
     )
 
     logger.info(
