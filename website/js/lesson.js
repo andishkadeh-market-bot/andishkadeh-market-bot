@@ -5,10 +5,8 @@ document.addEventListener(
         const moduleId =
             getQueryParam("module");
 
-
         const chapterId =
             getQueryParam("chapter");
-
 
         const lessonId =
             getQueryParam("lesson");
@@ -42,6 +40,10 @@ document.addEventListener(
 );
 
 
+/* =========================================================
+   LOAD LESSON
+========================================================= */
+
 async function loadLesson(
     moduleId,
     chapterId,
@@ -72,7 +74,10 @@ async function loadLesson(
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Lesson loading error:",
+            error
+        );
 
 
         showError(
@@ -87,11 +92,29 @@ async function loadLesson(
 }
 
 
+/* =========================================================
+   RENDER LESSON
+========================================================= */
+
 function renderLesson(
     lesson,
     moduleId,
     chapterId
 ) {
+
+    if (!lesson) {
+
+        showError(
+            document.getElementById(
+                "lessonContent"
+            ),
+            "اطلاعات این درس یافت نشد."
+        );
+
+        return;
+
+    }
+
 
     const data =
         lesson.data ||
@@ -104,26 +127,52 @@ function renderLesson(
         "درس آموزشی";
 
 
+    const content =
+        data.content ||
+        "محتوای آموزشی برای این درس ثبت نشده است.";
+
+
     document.title =
         `${title} | اندیشکده مدیریت و بازار`;
 
 
-    document.getElementById(
-        "lessonTitle"
-    ).textContent =
-        title;
+    const titleElement =
+        document.getElementById(
+            "lessonTitle"
+        );
+
+    if (titleElement) {
+
+        titleElement.textContent =
+            title;
+
+    }
 
 
-    document.getElementById(
-        "lessonModuleMeta"
-    ).textContent =
-        moduleId;
+    const moduleMeta =
+        document.getElementById(
+            "lessonModuleMeta"
+        );
+
+    if (moduleMeta) {
+
+        moduleMeta.textContent =
+            getModuleTitle(moduleId);
+
+    }
 
 
-    document.getElementById(
-        "lessonChapterMeta"
-    ).textContent =
-        chapterId;
+    const chapterMeta =
+        document.getElementById(
+            "lessonChapterMeta"
+        );
+
+    if (chapterMeta) {
+
+        chapterMeta.textContent =
+            getChapterTitle(chapterId);
+
+    }
 
 
     const chapterLink =
@@ -132,22 +181,35 @@ function renderLesson(
         );
 
 
-    chapterLink.href =
-        `chapter.html?module=${encodeURIComponent(moduleId)}&chapter=${encodeURIComponent(chapterId)}`;
+    if (chapterLink) {
+
+        chapterLink.href =
+            `chapter.html?module=${encodeURIComponent(moduleId)}&chapter=${encodeURIComponent(chapterId)}`;
+
+        chapterLink.textContent =
+            getChapterTitle(chapterId);
+
+    }
 
 
-    chapterLink.textContent =
-        chapterId;
+    const contentElement =
+        document.getElementById(
+            "lessonContent"
+        );
 
 
-    document.getElementById(
-        "lessonContent"
-    ).textContent =
-        data.content ||
-        "محتوای آموزشی برای این درس ثبت نشده است.";
+    if (contentElement) {
+
+        contentElement.textContent =
+            content;
+
+    }
 
 
-    renderExample(data);
+    renderExample(
+        data
+    );
+
 
     renderNotes(
         "specializedNotes",
@@ -170,13 +232,114 @@ function renderLesson(
 }
 
 
-function renderExample(data) {
+/* =========================================================
+   MODULE TITLE
+========================================================= */
+
+function getModuleTitle(
+    moduleId
+) {
+
+    const titles = {
+
+        management:
+            "📚 آموزش مدیریت",
+
+        banking:
+            "🏦 بانکداری تخصصی",
+
+        international_trade:
+            "🌍 تجارت بین‌الملل",
+
+        psychology_socialwork:
+            "🧠 روانشناسی و مددکاری",
+
+        finance:
+            "💰 مالی و اقتصاد",
+
+        general_exam:
+            "📝 آزمون استخدامی"
+
+    };
+
+
+    return (
+        titles[moduleId] ||
+        moduleId
+    );
+
+}
+
+
+/* =========================================================
+   CHAPTER TITLE
+========================================================= */
+
+function getChapterTitle(
+    chapterId
+) {
+
+    const titles = {
+
+        banking_fundamentals:
+            "مبانی و مفاهیم بانکداری",
+
+        banking_deposits:
+            "سپرده‌های بانکی",
+
+        banking_islamic_contracts:
+            "عقود و قراردادهای بانکی",
+
+        banking_facilities:
+            "تسهیلات بانکی",
+
+        banking_risk:
+            "ریسک در بانکداری",
+
+        central_bank_monetary_policy:
+            "بانک مرکزی و سیاست پولی",
+
+        aml_cft:
+            "مبارزه با پولشویی و تأمین مالی تروریسم",
+
+        international_banking:
+            "بانکداری بین‌الملل",
+
+        digital_banking:
+            "بانکداری دیجیتال",
+
+        bank_financial_statements:
+            "صورت‌های مالی بانک",
+
+        bank_management:
+            "مدیریت بانک",
+
+        banking_employment_exam:
+            "آزمون استخدامی بانکداری"
+
+    };
+
+
+    return (
+        titles[chapterId] ||
+        chapterId
+    );
+
+}
+
+
+/* =========================================================
+   EXAMPLE
+========================================================= */
+
+function renderExample(
+    data
+) {
 
     const section =
         document.getElementById(
             "exampleSection"
         );
-
 
     const box =
         document.getElementById(
@@ -185,8 +348,20 @@ function renderExample(data) {
 
 
     if (
+        !section ||
+        !box
+    ) {
+
+        return;
+
+    }
+
+
+    if (
         !data.example ||
-        !String(data.example).trim()
+        !String(
+            data.example
+        ).trim()
     ) {
 
         section.style.display =
@@ -197,11 +372,19 @@ function renderExample(data) {
     }
 
 
+    section.style.display =
+        "";
+
+
     box.textContent =
         data.example;
 
 }
 
+
+/* =========================================================
+   NOTES
+========================================================= */
 
 function renderNotes(
     listId,
@@ -214,11 +397,20 @@ function renderNotes(
             sectionId
         );
 
-
     const list =
         document.getElementById(
             listId
         );
+
+
+    if (
+        !section ||
+        !list
+    ) {
+
+        return;
+
+    }
 
 
     if (
@@ -234,6 +426,10 @@ function renderNotes(
     }
 
 
+    section.style.display =
+        "";
+
+
     list.innerHTML =
         notes
             .map(
@@ -245,6 +441,10 @@ function renderNotes(
 }
 
 
+/* =========================================================
+   QUIZ
+========================================================= */
+
 function renderQuiz(
     questions
 ) {
@@ -254,11 +454,20 @@ function renderQuiz(
             "quizSection"
         );
 
-
     const container =
         document.getElementById(
             "quizContainer"
         );
+
+
+    if (
+        !section ||
+        !container
+    ) {
+
+        return;
+
+    }
 
 
     if (
@@ -274,6 +483,10 @@ function renderQuiz(
     }
 
 
+    section.style.display =
+        "";
+
+
     container.innerHTML =
         questions
             .map(
@@ -287,24 +500,32 @@ function renderQuiz(
 
 
     document
-        .querySelectorAll(".quiz-option")
-        .forEach(button => {
+        .querySelectorAll(
+            ".quiz-option"
+        )
+        .forEach(
+            button => {
 
-            button.addEventListener(
-                "click",
-                () => {
+                button.addEventListener(
+                    "click",
+                    () => {
 
-                    handleQuizAnswer(
-                        button
-                    );
+                        handleQuizAnswer(
+                            button
+                        );
 
-                }
-            );
+                    }
+                );
 
-        });
+            }
+        );
 
 }
 
+
+/* =========================================================
+   CREATE QUESTION
+========================================================= */
 
 function createQuestion(
     question,
@@ -312,46 +533,64 @@ function createQuestion(
 ) {
 
     const options =
-        Array.isArray(question.options)
+        Array.isArray(
+            question.options
+        )
             ? question.options
             : [];
 
 
+    const correctAnswer =
+        question.correct_answer ||
+        question.answer ||
+        "";
+
+
     return `
+
         <div
             class="quiz-question"
             data-question="${index}"
-            data-answer="${escapeHtml(
-                question.correct_answer ||
-                question.answer ||
-                ""
-            )}"
+            data-answer="${escapeHtml(correctAnswer)}"
         >
 
             <h3>
+
                 ${index + 1}.
                 ${escapeHtml(
-                    question.question
+                    question.question ||
+                    "سؤال بدون متن"
                 )}
+
             </h3>
 
 
-            <div>
+            <div class="quiz-options">
 
                 ${options
                     .map(
                         option => `
+
                             <button
                                 type="button"
                                 class="quiz-option"
-                                data-option="${escapeHtml(option.id)}"
+                                data-option="${escapeHtml(
+                                    option.id || ""
+                                )}"
                             >
+
                                 <strong>
-                                    ${escapeHtml(option.id)}.
+                                    ${escapeHtml(
+                                        option.id || ""
+                                    )}.
                                 </strong>
 
-                                ${escapeHtml(option.text)}
+                                ${escapeHtml(
+                                    option.text || ""
+                                )}
+
                             </button>
+
                         `
                     )
                     .join("")}
@@ -365,10 +604,15 @@ function createQuestion(
             ></div>
 
         </div>
+
     `;
 
 }
 
+
+/* =========================================================
+   HANDLE QUIZ ANSWER
+========================================================= */
 
 function handleQuizAnswer(
     button
@@ -378,6 +622,13 @@ function handleQuizAnswer(
         button.closest(
             ".quiz-question"
         );
+
+
+    if (!question) {
+
+        return;
+
+    }
 
 
     const correctAnswer =
@@ -394,15 +645,27 @@ function handleQuizAnswer(
         );
 
 
-    question
-        .querySelectorAll(
+    if (!result) {
+
+        return;
+
+    }
+
+
+    const options =
+        question.querySelectorAll(
             ".quiz-option"
-        )
-        .forEach(option => {
+        );
 
-            option.disabled = true;
 
-        });
+    options.forEach(
+        option => {
+
+            option.disabled =
+                true;
+
+        }
+    );
 
 
     if (
@@ -426,10 +689,24 @@ function handleQuizAnswer(
         );
 
 
-        const correctButton =
-            question.querySelector(
-                `[data-option="${CSS.escape(correctAnswer)}"]`
-            );
+        let correctButton = null;
+
+
+        options.forEach(
+            option => {
+
+                if (
+                    option.dataset.option ===
+                    correctAnswer
+                ) {
+
+                    correctButton =
+                        option;
+
+                }
+
+            }
+        );
 
 
         if (correctButton) {
@@ -442,7 +719,9 @@ function handleQuizAnswer(
 
 
         result.innerHTML =
-            `❌ پاسخ صحیح: ${escapeHtml(correctAnswer)}`;
+            `❌ پاسخ صحیح: ${escapeHtml(
+                correctAnswer
+            )}`;
 
     }
 
