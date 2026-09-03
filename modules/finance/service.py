@@ -11,6 +11,8 @@ Andishkadeh Management & Market
 - دریافت نکات تخصصی و آزمونی
 - دریافت مثال‌های کاربردی
 - مدیریت آزمون‌ها
+- محاسبه نتیجه آزمون
+- ثبت Attempt آزمون
 - جست‌وجوی محتوای مدیریت مالی
 - محاسبه آمار دوره
 - اعتبارسنجی ساختار آموزشی
@@ -24,6 +26,13 @@ from typing import Any, Dict, List, Optional
 
 from . import data
 from . import content
+
+try:
+    from core.database import (
+        save_quiz_attempt as db_save_quiz_attempt,
+    )
+except Exception:
+    db_save_quiz_attempt = None
 
 
 # ============================================================
@@ -91,7 +100,9 @@ def _normalize_text(
     return str(value).strip()
 
 
-def _normalize_list(value: Any) -> List[Any]:
+def _normalize_list(
+    value: Any,
+) -> List[Any]:
     """
     تبدیل خروجی‌های مختلف به لیست.
     """
@@ -155,7 +166,11 @@ def get_module_title() -> str:
     """
     عنوان ماژول مدیریت مالی.
     """
-    title = getattr(data, "MODULE_TITLE", None)
+    title = getattr(
+        data,
+        "MODULE_TITLE",
+        None,
+    )
 
     return _normalize_text(
         title,
@@ -174,7 +189,9 @@ def get_module_description() -> str:
     )
 
     if description:
-        return _normalize_text(description)
+        return _normalize_text(
+            description
+        )
 
     return (
         "دوره تخصصی مدیریت مالی شامل مبانی مالی، "
@@ -202,6 +219,7 @@ def get_module_info() -> Dict[str, Any]:
 
             if isinstance(result, dict):
                 info.update(result)
+
         except Exception:
             pass
 
@@ -269,10 +287,6 @@ def get_finance_chapters() -> List[Dict[str, Any]]:
     """
     chapters = None
 
-    # --------------------------------------------------------
-    # روش اصلی
-    # --------------------------------------------------------
-
     raw_get_chapters = getattr(
         data,
         "get_chapters",
@@ -282,14 +296,12 @@ def get_finance_chapters() -> List[Dict[str, Any]]:
     if callable(raw_get_chapters):
         try:
             chapters = raw_get_chapters()
+
         except TypeError:
             chapters = None
+
         except Exception:
             chapters = None
-
-    # --------------------------------------------------------
-    # Fallback
-    # --------------------------------------------------------
 
     if chapters is None:
         chapters = getattr(
@@ -305,13 +317,17 @@ def get_finance_chapters() -> List[Dict[str, Any]]:
             None,
         )
 
-    chapters = _normalize_list(chapters)
+    chapters = _normalize_list(
+        chapters
+    )
 
     normalized: List[Dict[str, Any]] = []
 
     for chapter in chapters:
+
         if isinstance(chapter, dict):
             item = dict(chapter)
+
         else:
             item = {
                 "id": _get_id(chapter),
@@ -345,7 +361,6 @@ def get_finance_chapter(
     if not chapter_id:
         return None
 
-    # اگر data.py تابع اختصاصی داشت
     raw_get_chapter = getattr(
         data,
         "get_chapter",
@@ -359,8 +374,10 @@ def get_finance_chapter(
             )
 
             if chapter is not None:
+
                 if isinstance(chapter, dict):
                     result = dict(chapter)
+
                 else:
                     result = {
                         "id": _get_id(chapter),
@@ -381,8 +398,8 @@ def get_finance_chapter(
         except Exception:
             pass
 
-    # Fallback استاندارد
     for chapter in get_finance_chapters():
+
         if chapter.get("id") == chapter_id:
             return dict(chapter)
 
@@ -396,10 +413,6 @@ def get_finance_chapter(
 def _get_all_finance_lessons_from_data() -> List[Dict[str, Any]]:
     """
     دریافت تمام درس‌ها از data.py.
-
-    نسخه فعلی data.py دارای:
-        get_lessons()
-    است و این تابع هیچ آرگومانی نمی‌گیرد.
     """
     lessons = None
 
@@ -412,8 +425,10 @@ def _get_all_finance_lessons_from_data() -> List[Dict[str, Any]]:
     if callable(raw_get_lessons):
         try:
             lessons = raw_get_lessons()
+
         except TypeError:
             lessons = None
+
         except Exception:
             lessons = None
 
@@ -431,36 +446,49 @@ def _get_all_finance_lessons_from_data() -> List[Dict[str, Any]]:
             None,
         )
 
-    # --------------------------------------------------------
-    # پشتیبانی از ساختار dict
-    # --------------------------------------------------------
-
     if isinstance(lessons, dict):
+
         flattened: List[Any] = []
 
         for key, value in lessons.items():
-            values = _normalize_list(value)
+
+            values = _normalize_list(
+                value
+            )
 
             for lesson in values:
+
                 if isinstance(lesson, dict):
+
                     item = dict(lesson)
 
-                    if not item.get("chapter_id"):
+                    if not item.get(
+                        "chapter_id"
+                    ):
                         item["chapter_id"] = key
 
-                    flattened.append(item)
+                    flattened.append(
+                        item
+                    )
+
                 else:
-                    flattened.append(lesson)
+                    flattened.append(
+                        lesson
+                    )
 
         lessons = flattened
 
-    lessons = _normalize_list(lessons)
+    lessons = _normalize_list(
+        lessons
+    )
 
     normalized: List[Dict[str, Any]] = []
 
     for lesson in lessons:
+
         if isinstance(lesson, dict):
             item = dict(lesson)
+
         else:
             item = {
                 "id": _get_id(lesson),
@@ -480,7 +508,9 @@ def _get_all_finance_lessons_from_data() -> List[Dict[str, Any]]:
         )
 
         if item["id"]:
-            normalized.append(item)
+            normalized.append(
+                item
+            )
 
     return normalized
 
@@ -490,11 +520,6 @@ def get_finance_lessons(
 ) -> List[Dict[str, Any]]:
     """
     دریافت درس‌های یک فصل.
-
-    نکته مهم:
-    data.py فعلی get_lessons() را بدون آرگومان ارائه می‌کند.
-    بنابراین ابتدا همه درس‌ها دریافت و سپس بر اساس
-    chapter_id فیلتر می‌شوند.
     """
     chapter_id = _normalize_text(
         chapter_id
@@ -503,11 +528,14 @@ def get_finance_lessons(
     if not chapter_id:
         return []
 
-    all_lessons = _get_all_finance_lessons_from_data()
+    all_lessons = (
+        _get_all_finance_lessons_from_data()
+    )
 
     normalized: List[Dict[str, Any]] = []
 
     for lesson in all_lessons:
+
         lesson_chapter_id = _normalize_text(
             lesson.get("chapter_id")
         )
@@ -519,7 +547,9 @@ def get_finance_lessons(
 
         item["chapter_id"] = chapter_id
 
-        normalized.append(item)
+        normalized.append(
+            item
+        )
 
     return normalized
 
@@ -542,10 +572,6 @@ def get_finance_lesson(
     if not chapter_id or not lesson_id:
         return None
 
-    # --------------------------------------------------------
-    # اگر data.py تابع get_lesson داشته باشد
-    # --------------------------------------------------------
-
     raw_get_lesson = getattr(
         data,
         "get_lesson",
@@ -553,6 +579,7 @@ def get_finance_lesson(
     )
 
     if callable(raw_get_lesson):
+
         try:
             lesson = raw_get_lesson(
                 chapter_id,
@@ -560,8 +587,10 @@ def get_finance_lesson(
             )
 
             if lesson is not None:
+
                 if isinstance(lesson, dict):
                     result = dict(lesson)
+
                 else:
                     result = {
                         "id": _get_id(lesson),
@@ -583,16 +612,14 @@ def get_finance_lesson(
 
         except TypeError:
             pass
+
         except Exception:
             pass
-
-    # --------------------------------------------------------
-    # Fallback استاندارد
-    # --------------------------------------------------------
 
     for lesson in get_finance_lessons(
         chapter_id
     ):
+
         if lesson.get("id") == lesson_id:
             return dict(lesson)
 
@@ -626,6 +653,7 @@ def get_lesson_content(
         return None
 
     if not isinstance(result, dict):
+
         return {
             "lesson_id": lesson_id,
             "lesson_text": _normalize_text(
@@ -633,7 +661,9 @@ def get_lesson_content(
             ),
         }
 
-    content_data = dict(result)
+    content_data = dict(
+        result
+    )
 
     content_data.setdefault(
         "lesson_id",
@@ -686,7 +716,8 @@ def get_complete_lesson(
     lesson_id: str,
 ) -> Dict[str, Any]:
     """
-    ترکیب اطلاعات Data و Content برای ساخت یک درس کامل.
+    ترکیب اطلاعات Data و Content
+    برای ساخت یک درس کامل.
     """
     lesson = get_finance_lesson(
         chapter_id,
@@ -700,7 +731,9 @@ def get_complete_lesson(
         lesson_id
     )
 
-    result = dict(lesson)
+    result = dict(
+        lesson
+    )
 
     if lesson_content:
         result.update(
@@ -779,6 +812,7 @@ def get_examples(
     )
 
     if isinstance(examples, list):
+
         return [
             _normalize_text(item)
             for item in examples
@@ -787,7 +821,9 @@ def get_examples(
 
     if examples:
         return [
-            _normalize_text(examples)
+            _normalize_text(
+                examples
+            )
         ]
 
     return []
@@ -850,24 +886,34 @@ def get_finance_quiz(
     )
 
     if questions is None:
+
         quiz_map = getattr(
             data,
             "FINANCE_QUIZ_QUESTIONS",
             None,
         )
 
-        if isinstance(quiz_map, dict):
+        if isinstance(
+            quiz_map,
+            dict,
+        ):
+
             questions = quiz_map.get(
-                (chapter_id, lesson_id),
+                (
+                    chapter_id,
+                    lesson_id,
+                ),
                 [],
             )
 
     if questions is None:
+
         lesson_content = get_lesson_content(
             lesson_id
         )
 
         if lesson_content:
+
             questions = lesson_content.get(
                 "quiz",
                 [],
@@ -880,10 +926,16 @@ def get_finance_quiz(
     normalized: List[Dict[str, Any]] = []
 
     for question in questions:
-        if not isinstance(question, dict):
+
+        if not isinstance(
+            question,
+            dict,
+        ):
             continue
 
-        item = dict(question)
+        item = dict(
+            question
+        )
 
         item.setdefault(
             "question",
@@ -915,6 +967,7 @@ def get_finance_quiz(
             item["correct_index"] = int(
                 item["correct_index"]
             )
+
         except (
             TypeError,
             ValueError,
@@ -925,10 +978,13 @@ def get_finance_quiz(
             item["question"]
             and item["options"]
         ):
+
             item["chapter_id"] = chapter_id
             item["lesson_id"] = lesson_id
 
-            normalized.append(item)
+            normalized.append(
+                item
+            )
 
     return normalized
 
@@ -943,6 +999,7 @@ def get_all_quiz_questions() -> List[Dict[str, Any]]:
     )
 
     if questions is None:
+
         quiz_map = getattr(
             data,
             "FINANCE_QUIZ_QUESTIONS",
@@ -951,8 +1008,13 @@ def get_all_quiz_questions() -> List[Dict[str, Any]]:
 
         questions = []
 
-        if isinstance(quiz_map, dict):
+        if isinstance(
+            quiz_map,
+            dict,
+        ):
+
             for key, values in quiz_map.items():
+
                 chapter_id = ""
                 lesson_id = ""
 
@@ -960,6 +1022,7 @@ def get_all_quiz_questions() -> List[Dict[str, Any]]:
                     isinstance(key, tuple)
                     and len(key) >= 2
                 ):
+
                     chapter_id = _normalize_text(
                         key[0]
                     )
@@ -971,13 +1034,16 @@ def get_all_quiz_questions() -> List[Dict[str, Any]]:
                 for question in _normalize_list(
                     values
                 ):
+
                     if not isinstance(
                         question,
                         dict,
                     ):
                         continue
 
-                    item = dict(question)
+                    item = dict(
+                        question
+                    )
 
                     item.setdefault(
                         "chapter_id",
@@ -989,20 +1055,25 @@ def get_all_quiz_questions() -> List[Dict[str, Any]]:
                         lesson_id,
                     )
 
-                    questions.append(item)
+                    questions.append(
+                        item
+                    )
 
     normalized: List[Dict[str, Any]] = []
 
     for question in _normalize_list(
         questions
     ):
+
         if not isinstance(
             question,
             dict,
         ):
             continue
 
-        item = dict(question)
+        item = dict(
+            question
+        )
 
         item.setdefault(
             "question",
@@ -1023,8 +1094,34 @@ def get_all_quiz_questions() -> List[Dict[str, Any]]:
             item.get("question")
         )
 
+        item["options"] = [
+            _normalize_text(option)
+            for option in _normalize_list(
+                item.get(
+                    "options",
+                    [],
+                )
+            )
+        ]
+
+        try:
+            item["correct_index"] = int(
+                item.get(
+                    "correct_index",
+                    0,
+                )
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            item["correct_index"] = 0
+
         if item["question"]:
-            normalized.append(item)
+            normalized.append(
+                item
+            )
 
     return normalized
 
@@ -1047,6 +1144,7 @@ def get_finance_chapter_quiz(
     for lesson in get_finance_lessons(
         chapter_id
     ):
+
         lesson_id = lesson.get(
             "id"
         )
@@ -1058,7 +1156,10 @@ def get_finance_chapter_quiz(
             chapter_id,
             lesson_id,
         ):
-            item = dict(question)
+
+            item = dict(
+                question
+            )
 
             item.setdefault(
                 "chapter_id",
@@ -1070,9 +1171,531 @@ def get_finance_chapter_quiz(
                 lesson_id,
             )
 
-            questions.append(item)
+            questions.append(
+                item
+            )
 
     return questions
+
+
+# ============================================================
+# Quiz Result / Attempt
+# ============================================================
+
+def calculate_quiz_score(
+    total_questions: int,
+    correct_answers: int,
+) -> float:
+    """
+    محاسبه درصد آزمون.
+
+    مثال:
+        8 پاسخ صحیح از 10 سؤال = 80.0
+    """
+    try:
+        total_questions = int(
+            total_questions
+        )
+
+        correct_answers = int(
+            correct_answers
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return 0.0
+
+    if total_questions <= 0:
+        return 0.0
+
+    correct_answers = max(
+        0,
+        min(
+            correct_answers,
+            total_questions,
+        ),
+    )
+
+    return round(
+        (
+            correct_answers
+            / total_questions
+        )
+        * 100,
+        2,
+    )
+
+
+def calculate_quiz_result(
+    quiz: List[Dict[str, Any]],
+    answers: List[int],
+) -> Dict[str, Any]:
+    """
+    محاسبه نتیجه کامل آزمون.
+
+    answers:
+        لیست index گزینه‌های انتخاب‌شده.
+
+    خروجی:
+        total_questions
+        answered_questions
+        correct_answers
+        wrong_answers
+        unanswered_questions
+        score
+        results
+    """
+    questions = _normalize_list(
+        quiz
+    )
+
+    submitted_answers = _normalize_list(
+        answers
+    )
+
+    total_questions = len(
+        questions
+    )
+
+    correct_answers = 0
+    answered_questions = 0
+    results: List[Dict[str, Any]] = []
+
+    for index, question in enumerate(
+        questions
+    ):
+
+        selected_index = None
+
+        if index < len(
+            submitted_answers
+        ):
+
+            raw_answer = submitted_answers[
+                index
+            ]
+
+            if raw_answer is not None:
+
+                try:
+                    selected_index = int(
+                        raw_answer
+                    )
+
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+                    selected_index = None
+
+        correct_index = _get_quiz_correct_index(
+            question
+        )
+
+        try:
+            correct_index = int(
+                correct_index
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            correct_index = None
+
+        is_answered = (
+            selected_index is not None
+        )
+
+        is_correct = (
+            is_answered
+            and correct_index is not None
+            and selected_index == correct_index
+        )
+
+        if is_answered:
+            answered_questions += 1
+
+        if is_correct:
+            correct_answers += 1
+
+        results.append(
+            {
+                "question_index": index,
+                "selected_index": selected_index,
+                "correct_index": correct_index,
+                "answered": is_answered,
+                "correct": is_correct,
+            }
+        )
+
+    wrong_answers = (
+        answered_questions
+        - correct_answers
+    )
+
+    unanswered_questions = (
+        total_questions
+        - answered_questions
+    )
+
+    score = calculate_quiz_score(
+        total_questions,
+        correct_answers,
+    )
+
+    return {
+        "total_questions": total_questions,
+        "answered_questions": answered_questions,
+        "correct_answers": correct_answers,
+        "wrong_answers": wrong_answers,
+        "unanswered_questions": unanswered_questions,
+        "score": score,
+        "results": results,
+    }
+
+
+def start_quiz_attempt(
+    telegram_id: int,
+    module_id: str,
+    chapter_id: str,
+    lesson_id: str,
+    total_questions: int,
+) -> Dict[str, Any]:
+    """
+    ایجاد وضعیت اولیه Attempt آزمون.
+
+    این تابع فعلاً Attempt را در دیتابیس
+    به‌عنوان آزمون تکمیل‌شده ذخیره نمی‌کند.
+
+    وضعیت موقت برای Handler برمی‌گرداند.
+    """
+    try:
+        telegram_id = int(
+            telegram_id
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        telegram_id = 0
+
+    try:
+        total_questions = int(
+            total_questions
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        total_questions = 0
+
+    return {
+        "telegram_id": telegram_id,
+        "module_id": _normalize_text(
+            module_id,
+            MODULE_ID,
+        ),
+        "chapter_id": _normalize_text(
+            chapter_id
+        ),
+        "lesson_id": _normalize_text(
+            lesson_id
+        ),
+        "total_questions": max(
+            0,
+            total_questions,
+        ),
+        "current_question": 0,
+        "answers": [],
+        "correct_answers": 0,
+        "completed": False,
+    }
+
+
+def save_quiz_attempt(
+    telegram_id: int,
+    module_id: str,
+    chapter_id: str,
+    lesson_id: str,
+    total_questions: int,
+    correct_answers: int,
+    score: float | None = None,
+) -> Optional[int]:
+    """
+    ثبت Attempt تکمیل‌شده در دیتابیس.
+
+    Handler نباید مستقیماً با database.py
+    کار کند؛ این تابع مرز Service Layer است.
+    """
+    if db_save_quiz_attempt is None:
+        return None
+
+    try:
+        telegram_id = int(
+            telegram_id
+        )
+
+        total_questions = int(
+            total_questions
+        )
+
+        correct_answers = int(
+            correct_answers
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return None
+
+    total_questions = max(
+        0,
+        total_questions,
+    )
+
+    correct_answers = max(
+        0,
+        min(
+            correct_answers,
+            total_questions,
+        ),
+    )
+
+    if score is None:
+        score = calculate_quiz_score(
+            total_questions,
+            correct_answers,
+        )
+
+    try:
+        score = float(
+            score
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        score = calculate_quiz_score(
+            total_questions,
+            correct_answers,
+        )
+
+    score = max(
+        0.0,
+        min(
+            score,
+            100.0,
+        ),
+    )
+
+    try:
+        return db_save_quiz_attempt(
+            telegram_id=telegram_id,
+            module_id=_normalize_text(
+                module_id,
+                MODULE_ID,
+            ),
+            chapter_id=_normalize_text(
+                chapter_id
+            ),
+            lesson_id=_normalize_text(
+                lesson_id
+            ),
+            total_questions=total_questions,
+            correct_answers=correct_answers,
+            score=score,
+        )
+
+    except Exception:
+        return None
+
+
+def complete_quiz_attempt(
+    telegram_id: int,
+    module_id: str,
+    chapter_id: str,
+    lesson_id: str,
+    quiz: List[Dict[str, Any]],
+    answers: List[int],
+) -> Dict[str, Any]:
+    """
+    محاسبه نتیجه و ثبت Attempt آزمون.
+
+    این تابع نقطه اصلی Service Layer
+    برای پایان آزمون است.
+    """
+    result = calculate_quiz_result(
+        quiz,
+        answers,
+    )
+
+    attempt_id = save_quiz_attempt(
+        telegram_id=telegram_id,
+        module_id=module_id,
+        chapter_id=chapter_id,
+        lesson_id=lesson_id,
+        total_questions=result[
+            "total_questions"
+        ],
+        correct_answers=result[
+            "correct_answers"
+        ],
+        score=result[
+            "score"
+        ],
+    )
+
+    result["attempt_id"] = attempt_id
+    result["saved"] = (
+        attempt_id is not None
+    )
+
+    return result
+
+
+def get_quiz_question(
+    quiz: List[Dict[str, Any]],
+    question_index: int,
+) -> Optional[Dict[str, Any]]:
+    """
+    دریافت یک سؤال بر اساس index.
+    """
+    try:
+        question_index = int(
+            question_index
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return None
+
+    if question_index < 0:
+        return None
+
+    questions = _normalize_list(
+        quiz
+    )
+
+    if question_index >= len(
+        questions
+    ):
+        return None
+
+    question = questions[
+        question_index
+    ]
+
+    if not isinstance(
+        question,
+        dict,
+    ):
+        return None
+
+    return dict(
+        question
+    )
+
+
+def validate_quiz_answer(
+    question: Dict[str, Any],
+    selected_index: int,
+) -> Dict[str, Any]:
+    """
+    بررسی یک پاسخ آزمون بدون ثبت دیتابیس.
+    """
+    if not isinstance(
+        question,
+        dict,
+    ):
+        return {
+            "valid": False,
+            "answered": False,
+            "correct": False,
+            "selected_index": None,
+            "correct_index": None,
+        }
+
+    try:
+        selected_index = int(
+            selected_index
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return {
+            "valid": False,
+            "answered": False,
+            "correct": False,
+            "selected_index": None,
+            "correct_index": None,
+        }
+
+    options = _normalize_list(
+        question.get(
+            "options",
+            [],
+        )
+    )
+
+    correct_index = _get_quiz_correct_index(
+        question
+    )
+
+    try:
+        correct_index = int(
+            correct_index
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        correct_index = None
+
+    if not options:
+        return {
+            "valid": False,
+            "answered": False,
+            "correct": False,
+            "selected_index": selected_index,
+            "correct_index": correct_index,
+        }
+
+    if (
+        selected_index < 0
+        or selected_index >= len(options)
+    ):
+        return {
+            "valid": False,
+            "answered": False,
+            "correct": False,
+            "selected_index": selected_index,
+            "correct_index": correct_index,
+        }
+
+    is_correct = (
+        correct_index is not None
+        and selected_index == correct_index
+    )
+
+    return {
+        "valid": True,
+        "answered": True,
+        "correct": is_correct,
+        "selected_index": selected_index,
+        "correct_index": correct_index,
+    }
 
 
 # ============================================================
@@ -1109,12 +1732,15 @@ def get_curriculum_stats() -> Dict[str, Any]:
     return {
         "module_id": MODULE_ID,
         "title": get_module_title(),
-        "chapter_count": len(chapters),
+        "chapter_count": len(
+            chapters
+        ),
         "lesson_count": lesson_count,
         "quiz_count": quiz_count,
         "average_lessons_per_chapter": (
             round(
-                lesson_count / len(chapters),
+                lesson_count
+                / len(chapters),
                 2,
             )
             if chapters
@@ -1160,6 +1786,7 @@ def search_content(
             1,
             int(limit),
         )
+
     except (
         TypeError,
         ValueError,
@@ -1169,6 +1796,7 @@ def search_content(
     results: List[Dict[str, Any]] = []
 
     for chapter in get_finance_chapters():
+
         chapter_id = chapter.get(
             "id",
             "",
@@ -1182,6 +1810,7 @@ def search_content(
         for lesson in get_finance_lessons(
             chapter_id
         ):
+
             lesson_id = lesson.get(
                 "id",
                 "",
@@ -1257,6 +1886,7 @@ def search_content(
             ).lower()
 
             if query in searchable_text:
+
                 results.append(
                     {
                         "chapter_id": chapter_id,
@@ -1294,6 +1924,7 @@ def validate_curriculum() -> Dict[str, Any]:
     chapter_ids = set()
 
     for chapter in chapters:
+
         chapter_id = _normalize_text(
             chapter.get("id")
         )
@@ -1303,12 +1934,15 @@ def validate_curriculum() -> Dict[str, Any]:
         )
 
         if not chapter_id:
+
             errors.append(
                 "یک فصل فاقد شناسه است."
             )
+
             continue
 
         if chapter_id in chapter_ids:
+
             errors.append(
                 f"شناسه فصل تکراری است: {chapter_id}"
             )
@@ -1318,6 +1952,7 @@ def validate_curriculum() -> Dict[str, Any]:
         )
 
         if not chapter_title:
+
             warnings.append(
                 f"فصل {chapter_id} فاقد عنوان است."
             )
@@ -1327,6 +1962,7 @@ def validate_curriculum() -> Dict[str, Any]:
         )
 
         if not lessons:
+
             warnings.append(
                 f"فصل {chapter_id} فاقد درس است."
             )
@@ -1334,6 +1970,7 @@ def validate_curriculum() -> Dict[str, Any]:
         lesson_ids = set()
 
         for lesson in lessons:
+
             lesson_id = _normalize_text(
                 lesson.get("id")
             )
@@ -1343,12 +1980,15 @@ def validate_curriculum() -> Dict[str, Any]:
             )
 
             if not lesson_id:
+
                 errors.append(
                     f"فصل {chapter_id} دارای درس بدون شناسه است."
                 )
+
                 continue
 
             if lesson_id in lesson_ids:
+
                 errors.append(
                     f"درس تکراری در فصل {chapter_id}: "
                     f"{lesson_id}"
@@ -1359,6 +1999,7 @@ def validate_curriculum() -> Dict[str, Any]:
             )
 
             if not lesson_title:
+
                 warnings.append(
                     f"درس {lesson_id} فاقد عنوان است."
                 )
@@ -1368,6 +2009,7 @@ def validate_curriculum() -> Dict[str, Any]:
             )
 
             if not lesson_content:
+
                 warnings.append(
                     f"برای درس {lesson_id} "
                     f"محتوای آموزشی یافت نشد."
@@ -1379,16 +2021,59 @@ def validate_curriculum() -> Dict[str, Any]:
             )
 
             if not quiz:
+
                 warnings.append(
                     f"برای درس {lesson_id} "
                     f"آزمون یافت نشد."
                 )
 
-    # --------------------------------------------------------
-    # بررسی تعداد مورد انتظار
-    # --------------------------------------------------------
+            for question in quiz:
+
+                options = _normalize_list(
+                    question.get(
+                        "options",
+                        [],
+                    )
+                )
+
+                correct_index = question.get(
+                    "correct_index"
+                )
+
+                if len(options) != 4:
+
+                    warnings.append(
+                        f"سؤال آزمون درس {lesson_id} "
+                        f"دقیقاً ۴ گزینه ندارد."
+                    )
+
+                try:
+                    correct_index = int(
+                        correct_index
+                    )
+
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+                    warnings.append(
+                        f"سؤال آزمون درس {lesson_id} "
+                        f"دارای correct_index نامعتبر است."
+                    )
+                    continue
+
+                if (
+                    correct_index < 0
+                    or correct_index >= len(options)
+                ):
+
+                    warnings.append(
+                        f"سؤال آزمون درس {lesson_id} "
+                        f"دارای پاسخ صحیح خارج از محدوده گزینه‌هاست."
+                    )
 
     if len(chapters) != 12:
+
         warnings.append(
             f"تعداد فصل‌ها ۱۲ نیست: {len(chapters)}"
         )
@@ -1396,6 +2081,7 @@ def validate_curriculum() -> Dict[str, Any]:
     total_lessons = get_total_lesson_count()
 
     if total_lessons != 48:
+
         warnings.append(
             f"تعداد درس‌ها ۴۸ نیست: {total_lessons}"
         )
@@ -1419,6 +2105,7 @@ def finance_health_check() -> Dict[str, Any]:
     بررسی سلامت ماژول مدیریت مالی.
     """
     try:
+
         validation = validate_curriculum()
 
         return {
@@ -1429,14 +2116,29 @@ def finance_health_check() -> Dict[str, Any]:
                 else "warning"
             ),
             "valid": validation["valid"],
-            "chapters": validation["chapter_count"],
-            "lessons": validation["lesson_count"],
-            "quizzes": validation["quiz_count"],
-            "errors": validation["errors"],
-            "warnings": validation["warnings"],
+            "chapters": validation[
+                "chapter_count"
+            ],
+            "lessons": validation[
+                "lesson_count"
+            ],
+            "quizzes": validation[
+                "quiz_count"
+            ],
+            "errors": validation[
+                "errors"
+            ],
+            "warnings": validation[
+                "warnings"
+            ],
+            "quiz_answer_service": (
+                db_save_quiz_attempt
+                is not None
+            ),
         }
 
     except Exception as exc:
+
         return {
             "module_id": MODULE_ID,
             "status": "error",
@@ -1448,6 +2150,7 @@ def finance_health_check() -> Dict[str, Any]:
                 f"Finance service error: {exc}"
             ],
             "warnings": [],
+            "quiz_answer_service": False,
         }
 
 
@@ -1471,40 +2174,60 @@ health_check = finance_health_check
 # ============================================================
 
 __all__ = [
+    # Module
     "get_module_title",
     "get_module_description",
     "get_module_info",
 
+    # Chapters
     "get_finance_chapters",
     "get_finance_chapter",
 
+    # Lessons
     "get_finance_lessons",
     "get_finance_lesson",
 
+    # Content
     "get_complete_lesson",
     "get_lesson_content",
-
     "get_specialized_tips",
     "get_exam_tips",
     "get_examples",
     "get_keywords",
 
+    # Quiz
     "get_finance_quiz",
     "get_finance_chapter_quiz",
     "get_all_quiz_questions",
+    "get_quiz_question",
 
+    # Quiz result
+    "calculate_quiz_score",
+    "calculate_quiz_result",
+    "validate_quiz_answer",
+
+    # Quiz attempt
+    "start_quiz_attempt",
+    "save_quiz_attempt",
+    "complete_quiz_attempt",
+
+    # Statistics
     "get_total_lesson_count",
     "get_total_quiz_count",
-
     "get_curriculum_stats",
     "get_finance_statistics",
     "get_curriculum_statistics",
 
+    # Search
     "search_content",
 
+    # Validation
     "validate_curriculum",
+
+    # Health
     "finance_health_check",
 
+    # Compatibility
     "get_chapters",
     "get_chapter",
     "get_lessons",
