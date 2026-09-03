@@ -3,7 +3,6 @@ Finance Handlers
 Andishkadeh Management & Market
 
 مدیریت رابط کاربری ماژول مدیریت مالی:
-- منوی مدیریت مالی
 - فصل‌ها
 - درس‌ها
 - محتوای آموزشی
@@ -127,6 +126,10 @@ def _safe_edit(
 # ============================================================
 
 def _finance_menu_keyboard() -> InlineKeyboardMarkup:
+    """
+    این تابع فعلاً برای سازگاری نگه داشته شده است.
+    ورود اصلی به Finance مستقیماً به فصل‌ها می‌رود.
+    """
     return InlineKeyboardMarkup(
         [
             [
@@ -613,36 +616,23 @@ def _clear_quiz_state(
 
 
 # ============================================================
-# Main Finance Menu
+# Finance Entry
 # ============================================================
 
 async def show_finance_menu(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
+    """
+    ورود مستقیم به فصل‌های مدیریت مالی.
 
-    query = update.callback_query
-
-    if query:
-        await query.answer()
-
-        await query.edit_message_text(
-            "💰 مدیریت مالی\n\n"
-            "دوره تخصصی مدیریت مالی\n"
-            "از مبانی مالی تا تحلیل و تصمیم‌گیری پیشرفته.",
-            reply_markup=_finance_menu_keyboard(),
-        )
-
-        return
-
-    if update.message:
-
-        await update.message.reply_text(
-            "💰 مدیریت مالی\n\n"
-            "دوره تخصصی مدیریت مالی\n"
-            "از مبانی مالی تا تحلیل و تصمیم‌گیری پیشرفته.",
-            reply_markup=_finance_menu_keyboard(),
-        )
+    صفحه واسط «دوره تخصصی مدیریت مالی»
+    عمداً حذف شده است.
+    """
+    await show_finance_chapters(
+        update,
+        context,
+    )
 
 
 # ============================================================
@@ -1260,8 +1250,11 @@ async def route_finance_callback(
         return
 
     # --------------------------------------------------------
-    # Main Finance Menu
+    # Finance Entry
     # --------------------------------------------------------
+    # مهم:
+    # صفحه واسط قبلی حذف شده است.
+    # با menu_finance مستقیماً فصل‌ها نمایش داده می‌شوند.
 
     if callback_data == "menu_finance":
 
@@ -1269,12 +1262,16 @@ async def route_finance_callback(
             context
         )
 
-        await show_finance_menu(
+        await show_finance_chapters(
             update,
             context,
         )
 
         return
+
+    # --------------------------------------------------------
+    # Chapters / Back
+    # --------------------------------------------------------
 
     if callback_data in {
         FINANCE_MENU_CALLBACK,
