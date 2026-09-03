@@ -530,7 +530,7 @@ def _api_json(
     response.headers[
         "Access-Control-Allow-Methods"
     ] = "GET, OPTIONS"
-    
+
     response.headers[
         "Access-Control-Allow-Headers"
     ] = "Content-Type"
@@ -1179,6 +1179,105 @@ def register_web_api(
 
 
 # ==========================================================
+# Website Static Files
+# ==========================================================
+
+async def website_index_handler(
+    request: web.Request,
+) -> web.StreamResponse:
+    """
+    Serve the main website index page.
+    """
+
+    website_dir = os.path.join(
+        os.path.dirname(
+            os.path.abspath(__file__)
+        ),
+        "website",
+    )
+
+    index_file = os.path.join(
+        website_dir,
+        "index.html",
+    )
+
+    if not os.path.isfile(index_file):
+
+        logger.error(
+            "Website index.html not found: %s",
+            index_file,
+        )
+
+        return web.Response(
+            text="Website index.html not found.",
+            status=404,
+            content_type="text/plain",
+        )
+
+    return web.FileResponse(
+        index_file
+    )
+
+
+async def website_html_handler(
+    request: web.Request,
+) -> web.StreamResponse:
+    """
+    Serve individual website HTML pages.
+    """
+
+    website_dir = os.path.join(
+        os.path.dirname(
+            os.path.abspath(__file__)
+        ),
+        "website",
+    )
+
+    filename = request.match_info.get(
+        "filename",
+        "",
+    )
+
+    allowed_files = {
+        "index.html",
+        "modules.html",
+        "chapter.html",
+        "lesson.html",
+        "search.html",
+    }
+
+    if filename not in allowed_files:
+
+        return web.Response(
+            text="Not Found",
+            status=404,
+            content_type="text/plain",
+        )
+
+    file_path = os.path.join(
+        website_dir,
+        filename,
+    )
+
+    if not os.path.isfile(file_path):
+
+        logger.error(
+            "Website file not found: %s",
+            file_path,
+        )
+
+        return web.Response(
+            text="Website file not found.",
+            status=404,
+            content_type="text/plain",
+        )
+
+    return web.FileResponse(
+        file_path
+    )
+
+
+# ==========================================================
 # HTTP Health Server
 # ==========================================================
 
@@ -1202,25 +1301,26 @@ async def health_handler(
 
 async def root_handler(
     request: web.Request,
-) -> web.Response:
+) -> web.StreamResponse:
     """
-    Simple root endpoint.
+    Serve the website homepage.
+
+    The previous implementation returned plain text here.
+    The new implementation serves website/index.html.
     """
 
-    return web.Response(
-        text=(
-            "Andishkadeh Market Bot is running.\n"
-            "Health: /health\n"
-            "API: /api"
-        ),
-        status=200,
-        content_type="text/plain",
+    return await website_index_handler(
+        request
     )
 
 
 async def start_health_server() -> web.AppRunner:
     """
-    Start HTTP health server and Website API.
+    Start HTTP server with:
+    - Website
+    - Website static assets
+    - Website API
+    - Health endpoint
     """
 
     port_value = os.environ.get(
@@ -1246,7 +1346,7 @@ async def start_health_server() -> web.AppRunner:
     app = web.Application()
 
     # ------------------------------------------------------
-    # Existing Render / UptimeRobot endpoints
+    # Website root
     # ------------------------------------------------------
 
     app.router.add_get(
@@ -1254,13 +1354,125 @@ async def start_health_server() -> web.AppRunner:
         root_handler,
     )
 
+    # ------------------------------------------------------
+    # Health endpoint
+    # ------------------------------------------------------
+
     app.router.add_get(
         "/health",
         health_handler,
     )
 
     # ------------------------------------------------------
+    # Website HTML pages
+    # ------------------------------------------------------
+
+    app.router.add_get(
+        "/index.html",
+        website_index_handler,
+    )
+
+    app.router.add_get(
+        "/modules.html",
+        website_html_handler,
+        kwargs={
+            "filename": "modules.html",
+        },
+    )
+
+    app.router.add_get(
+        "/chapter.html",
+        website_html_handler,
+        kwargs={
+            "filename": "chapter.html",
+        },
+    )
+
+    app.router.add_get(
+        "/lesson.html",
+        website_html_handler,
+        kwargs={
+            "filename": "lesson.html",
+        },
+    )
+
+    app.router.add_get(
+        "/search.html",
+        website_html_handler,
+        kwargs={
+            "filename": "search.html",
+        },
+    )
+
+    # ------------------------------------------------------
+    # Website CSS
+    # ------------------------------------------------------
+
+    website_dir = os.path.join(
+        os.path.dirname(
+            os.path.abspath(__file__)
+        ),
+        "website",
+    )
+
+    css_dir = os.path.join(
+        website_dir,
+        "css",
+    )
+
+    js_dir = os.path.join(
+        website_dir,
+        "js",
+    )
+
+    if os.path.isdir(css_dir):
+
+        app.router.add_static(
+            "/css",
+            css_dir,
+        )
+
+        logger.info(
+            "Website CSS static directory registered: %s",
+            css_dir,
+        )
+
+    else:
+
+        logger.warning(
+            "Website CSS directory not found: %s",
+            css_dir,
+        )
+
+    # ------------------------------------------------------
+    # Website JavaScript
+    # ------------------------------------------------------
+
+    if os.path.isdir(js_dir):
+
+        app.router.add_static(
+            "/js",
+            js_dir,
+        )
+
+        logger.info(
+            "Website JS static directory registered: %s",
+            js_dir,
+        )
+
+    else:
+
+        logger.warning(
+            "Website JS directory not found: %s",
+            js_dir,
+        )
+
+    # ------------------------------------------------------
     # Website API
+    #
+    # Registered before server starts.
+    # API paths are explicit and therefore remain
+    # completely separate from static website files.
     # ------------------------------------------------------
 
     register_web_api(
@@ -1289,6 +1501,26 @@ async def start_health_server() -> web.AppRunner:
     logger.info(
         "HTTP Health Server started on 0.0.0.0:%s",
         port,
+    )
+
+    logger.info(
+        "Website available at /"
+    )
+
+    logger.info(
+        "Website modules page available at /modules.html"
+    )
+
+    logger.info(
+        "Website chapter page available at /chapter.html"
+    )
+
+    logger.info(
+        "Website lesson page available at /lesson.html"
+    )
+
+    logger.info(
+        "Website search page available at /search.html"
     )
 
     logger.info(
