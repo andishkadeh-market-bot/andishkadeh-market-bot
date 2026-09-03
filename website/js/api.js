@@ -1,230 +1,288 @@
 /* =========================================================
-   ANDISHKADEH API
-   Central API communication layer
+ANDISHKADEH MANAGEMENT & MARKET
+API COMMUNICATION LAYER
 ========================================================= */
-/*
- * آدرس اصلی API
- *
- * Backend فعلی روی Render قرار دارد.
- *
- * به /api ختم می‌شود.
- */
+
+“use strict”;
+
+/* =========================================================
+API BASE URL
+========================================================= */
+
 const API_BASE =
-    "https://andishkadeh-market-bot-2tdu.onrender.com/api";
+“https://andishkadeh-market-bot-2tdu.onrender.com/api”;
+
 /* =========================================================
-   API FETCH
+GENERIC API FETCH
 ========================================================= */
-async function apiFetch(endpoint = "") {
-    const url =
-        API_BASE +
-        endpoint;
-    console.log(
-        "[Andishkadeh API]",
-        url
+
+async function apiFetch(endpoint = “”) {
+
+const url =
+    API_BASE + endpoint;
+console.log(
+    "[Andishkadeh API] Request:",
+    url
+);
+let response;
+try {
+    response =
+        await fetch(
+            url,
+            {
+                method: "GET",
+                headers: {
+                    "Accept":
+                        "application/json"
+                },
+                cache: "no-store"
+            }
+        );
+} catch (error) {
+    console.error(
+        "[Andishkadeh API] Network error:",
+        error
     );
-    let response;
+    throw new Error(
+        "ارتباط با سرور API برقرار نشد."
+    );
+}
+/* =====================================================
+   HTTP ERROR
+===================================================== */
+if (!response.ok) {
+    let details = "";
     try {
-        response =
-            await fetch(
-                url,
-                {
-                    method: "GET",
-                    headers: {
-                        "Accept":
-                            "application/json"
-                    },
-                    cache: "no-store"
-                }
-            );
-    } catch (error) {
-        console.error(
-            "[Andishkadeh API] Network error:",
-            error
-        );
-        throw new Error(
-            "ارتباط با سرور API برقرار نشد."
-        );
-    }
-    if (!response.ok) {
-        let details = "";
-        try {
-            details =
-                await response.text();
-        } catch (_) {
-            details = "";
-        }
-        console.error(
-            "[Andishkadeh API] HTTP error:",
-            response.status,
-            details
-        );
-        throw new Error(
-            `API Error: HTTP ${response.status}`
-        );
-    }
-    const contentType =
-        response.headers.get(
-            "content-type"
-        ) || "";
-    if (
-        !contentType
-            .toLowerCase()
-            .includes("application/json")
-    ) {
-        const text =
+        details =
             await response.text();
-        console.error(
-            "[Andishkadeh API] Expected JSON but received:",
-            text
-        );
-        throw new Error(
-            "پاسخ API به صورت JSON نیست."
-        );
+    } catch (_) {
+        details = "";
     }
-    try {
-        return await response.json();
-    } catch (error) {
-        console.error(
-            "[Andishkadeh API] JSON parse error:",
-            error
-        );
-        throw new Error(
-            "ساختار پاسخ API قابل خواندن نیست."
-        );
-    }
+    console.error(
+        "[Andishkadeh API] HTTP error:",
+        response.status,
+        details
+    );
+    throw new Error(
+        `خطای API: HTTP ${response.status}`
+    );
 }
+/* =====================================================
+   CONTENT TYPE
+===================================================== */
+const contentType =
+    response.headers.get(
+        "content-type"
+    ) || "";
+if (
+    !contentType
+        .toLowerCase()
+        .includes("application/json")
+) {
+    const text =
+        await response.text();
+    console.error(
+        "[Andishkadeh API] Invalid response:",
+        text
+    );
+    throw new Error(
+        "پاسخ API به صورت JSON نیست."
+    );
+}
+/* =====================================================
+   JSON PARSE
+===================================================== */
+try {
+    const data =
+        await response.json();
+    console.log(
+        "[Andishkadeh API] Response:",
+        data
+    );
+    return data;
+} catch (error) {
+    console.error(
+        "[Andishkadeh API] JSON parse error:",
+        error
+    );
+    throw new Error(
+        "ساختار پاسخ API قابل خواندن نیست."
+    );
+}
+
+}
+
 /* =========================================================
-   GET API INFORMATION
+API INFORMATION
 ========================================================= */
+
 async function getApiInfo() {
-    return await apiFetch("");
+
+return await apiFetch(
+    ""
+);
+
 }
+
 /* =========================================================
-   GET ALL MODULES
+ALL MODULES
 ========================================================= */
+
 async function getModules() {
-    return await apiFetch(
-        "/modules"
+
+return await apiFetch(
+    "/modules"
+);
+
+}
+
+/* =========================================================
+SINGLE MODULE
+========================================================= */
+
+async function getModule(
+moduleId
+) {
+
+if (!moduleId) {
+    throw new Error(
+        "شناسه ماژول مشخص نشده است."
     );
 }
+return await apiFetch(
+    `/modules/${encodeURIComponent(
+        moduleId
+    )}`
+);
+
+}
+
 /* =========================================================
-   GET ONE MODULE
+MODULE CHAPTERS
 ========================================================= */
-async function getModule(moduleId) {
-    if (!moduleId) {
-        throw new Error(
-            "Module ID is required."
-        );
-    }
-    return await apiFetch(
-        `/modules/${encodeURIComponent(
-            moduleId
-        )}`
+
+async function getModuleChapters(
+moduleId
+) {
+
+if (!moduleId) {
+    throw new Error(
+        "شناسه ماژول مشخص نشده است."
     );
 }
-/* =========================================================
-   GET MODULE CHAPTERS
-========================================================= */
-async function getModuleChapters(moduleId) {
-    if (!moduleId) {
-        throw new Error(
-            "Module ID is required."
-        );
-    }
-    return await apiFetch(
-        `/modules/${encodeURIComponent(
-            moduleId
-        )}/chapters`
-    );
+return await apiFetch(
+    `/modules/${encodeURIComponent(
+        moduleId
+    )}/chapters`
+);
+
 }
+
 /* =========================================================
-   GET ONE CHAPTER
+SINGLE CHAPTER
 ========================================================= */
+
 async function getChapter(
-    moduleId,
-    chapterId
+moduleId,
+chapterId
 ) {
-    if (
-        !moduleId ||
-        !chapterId
-    ) {
-        throw new Error(
-            "Module ID and Chapter ID are required."
-        );
-    }
-    return await apiFetch(
-        `/modules/${encodeURIComponent(
-            moduleId
-        )}/chapters/${encodeURIComponent(
-            chapterId
-        )}`
+
+if (
+    !moduleId ||
+    !chapterId
+) {
+    throw new Error(
+        "شناسه ماژول یا فصل مشخص نشده است."
     );
 }
+return await apiFetch(
+    `/modules/${encodeURIComponent(
+        moduleId
+    )}/chapters/${encodeURIComponent(
+        chapterId
+    )}`
+);
+
+}
+
 /* =========================================================
-   GET CHAPTER LESSONS
+CHAPTER LESSONS
 ========================================================= */
+
 async function getChapterLessons(
-    moduleId,
-    chapterId
+moduleId,
+chapterId
 ) {
-    if (
-        !moduleId ||
-        !chapterId
-    ) {
-        throw new Error(
-            "Module ID and Chapter ID are required."
-        );
-    }
-    return await apiFetch(
-        `/modules/${encodeURIComponent(
-            moduleId
-        )}/chapters/${encodeURIComponent(
-            chapterId
-        )}/lessons`
+
+if (
+    !moduleId ||
+    !chapterId
+) {
+    throw new Error(
+        "شناسه ماژول یا فصل مشخص نشده است."
     );
 }
+return await apiFetch(
+    `/modules/${encodeURIComponent(
+        moduleId
+    )}/chapters/${encodeURIComponent(
+        chapterId
+    )}/lessons`
+);
+
+}
+
 /* =========================================================
-   GET ONE LESSON
+SINGLE LESSON
 ========================================================= */
+
 async function getLesson(
-    moduleId,
-    chapterId,
-    lessonId
+moduleId,
+chapterId,
+lessonId
 ) {
-    if (
-        !moduleId ||
-        !chapterId ||
-        !lessonId
-    ) {
-        throw new Error(
-            "Module ID, Chapter ID and Lesson ID are required."
-        );
-    }
-    return await apiFetch(
-        `/modules/${encodeURIComponent(
-            moduleId
-        )}/chapters/${encodeURIComponent(
-            chapterId
-        )}/lessons/${encodeURIComponent(
-            lessonId
-        )}`
+
+if (
+    !moduleId ||
+    !chapterId ||
+    !lessonId
+) {
+    throw new Error(
+        "شناسه ماژول، فصل یا درس مشخص نشده است."
     );
 }
+return await apiFetch(
+    `/modules/${encodeURIComponent(
+        moduleId
+    )}/chapters/${encodeURIComponent(
+        chapterId
+    )}/lessons/${encodeURIComponent(
+        lessonId
+    )}`
+);
+
+}
+
 /* =========================================================
-   SEARCH
+SEARCH
 ========================================================= */
-async function searchContent(query) {
-    if (
-        !query ||
-        !query.trim()
-    ) {
-        return {
-            results: []
-        };
-    }
-    return await apiFetch(
-        `/search?q=${encodeURIComponent(
-            query.trim()
-        )}`
-    );
+
+async function searchContent(
+query
+) {
+
+if (
+    !query ||
+    !query.trim()
+) {
+    return {
+        results: []
+    };
+}
+return await apiFetch(
+    `/search?q=${encodeURIComponent(
+        query.trim()
+    )}`
+);
+
 }
