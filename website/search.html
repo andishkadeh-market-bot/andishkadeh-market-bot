@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>جست‌وجو | اندیشکده مدیریت و بازار</title>
+
+    <link rel="stylesheet" href="css/style.css">
+
+</head>
+
+
+<body>
+
+<header class="site-header">
+
+    <div class="container nav-container">
+
+        <a href="index.html" class="brand">
+
+            <div class="brand-icon">ا</div>
+
+            <div>
+                <strong>اندیشکده مدیریت و بازار</strong>
+                <span>دانش، مدیریت، بازار</span>
+            </div>
+
+        </a>
+
+
+        <nav class="main-nav">
+
+            <a href="index.html">خانه</a>
+            <a href="modules.html">آموزش‌ها</a>
+            <a class="active" href="search.html">جست‌وجو</a>
+
+        </nav>
+
+
+        <button class="mobile-menu-btn" id="mobileMenuBtn">
+            ☰
+        </button>
+
+    </div>
+
+
+    <div class="mobile-nav" id="mobileNav">
+
+        <a href="index.html">خانه</a>
+        <a href="modules.html">آموزش‌ها</a>
+        <a href="search.html">جست‌وجو</a>
+
+    </div>
+
+</header>
+
+
+<main>
+
+<section class="page-hero">
+
+    <div class="container">
+
+        <span class="section-label">
+            جست‌وجوی محتوا
+        </span>
+
+        <h1>
+            چه چیزی می‌خواهی یاد بگیری؟
+        </h1>
+
+        <p>
+            عنوان درس یا موضوع موردنظر را جست‌وجو کنید.
+        </p>
+
+
+        <form id="searchForm" class="search-form">
+
+            <input
+                id="searchInput"
+                type="search"
+                placeholder="مثلاً بانک، مدیریت، تجارت..."
+                autocomplete="off"
+            >
+
+            <button type="submit" class="btn btn-primary">
+                جست‌وجو
+            </button>
+
+        </form>
+
+    </div>
+
+</section>
+
+
+<section class="section">
+
+    <div class="container">
+
+        <div id="searchSummary" class="search-summary">
+            برای شروع، یک عبارت جست‌وجو وارد کنید.
+        </div>
+
+
+        <div id="searchResults" class="lesson-list">
+
+        </div>
+
+    </div>
+
+</section>
+
+</main>
+
+
+<footer class="site-footer">
+
+    <div class="footer-bottom">
+        © <span id="currentYear"></span>
+        اندیشکده مدیریت و بازار
+    </div>
+
+</footer>
+
+
+<script src="js/api.js"></script>
+<script src="js/common.js"></script>
+<script src="js/search.js"></script>
+
+</body>
+</html>
