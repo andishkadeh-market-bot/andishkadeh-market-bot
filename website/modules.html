@@ -3,15 +3,12 @@
 <head>
 
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="description"
+          content="ماژول‌های آموزشی اندیشکده مدیریت و بازار">
 
-    <title>
-        آموزش‌ها | اندیشکده مدیریت و بازار
-    </title>
+    <title>آموزش‌ها | اندیشکده مدیریت و بازار</title>
 
     <link rel="stylesheet" href="css/style.css">
 
@@ -21,97 +18,105 @@
 
 <header class="site-header">
 
-    <div class="container nav">
+    <div class="container nav-container">
 
         <a href="index.html" class="brand">
+            <div class="brand-icon">ا</div>
 
-            <span class="brand-logo">
-                ا
-            </span>
-
-            <span>
-                اندیشکده مدیریت و بازار
-            </span>
-
+            <div>
+                <strong>اندیشکده مدیریت و بازار</strong>
+                <span>دانش، مدیریت، بازار</span>
+            </div>
         </a>
 
-        <button id="menuBtn" class="menu-btn">
+        <nav class="main-nav">
+            <a href="index.html">خانه</a>
+            <a class="active" href="modules.html">آموزش‌ها</a>
+            <a href="search.html">جست‌وجو</a>
+        </nav>
+
+        <button class="mobile-menu-btn" id="mobileMenuBtn">
             ☰
         </button>
 
-        <nav id="mainNav">
+    </div>
 
-            <a href="index.html">
-                خانه
-            </a>
-
-            <a href="modules.html" class="active">
-                آموزش‌ها
-            </a>
-
-            <a href="search.html">
-                جست‌وجو
-            </a>
-
-        </nav>
-
+    <div class="mobile-nav" id="mobileNav">
+        <a href="index.html">خانه</a>
+        <a href="modules.html">آموزش‌ها</a>
+        <a href="search.html">جست‌وجو</a>
     </div>
 
 </header>
 
 
-<main class="page">
+<main>
+
+<section class="page-hero">
 
     <div class="container">
 
-        <div class="page-title">
+        <span class="section-label">
+            مرکز آموزش
+        </span>
 
-            <span class="eyebrow">
-                کتابخانه آموزشی
-            </span>
+        <h1>
+            مسیرهای یادگیری
+        </h1>
 
-            <h1>
-                همه آموزش‌ها
-            </h1>
+        <p>
+            موضوع موردنظر خود را انتخاب کنید و وارد دنیای آموزش شوید.
+        </p>
 
-            <p>
-                فهرست ماژول‌ها مستقیماً از API مرکزی دریافت می‌شود.
-            </p>
+    </div>
 
+</section>
+
+
+<section class="section">
+
+    <div class="container">
+
+        <div id="modulesStatus" class="api-status">
+            در حال دریافت اطلاعات...
         </div>
 
+        <div id="modulesGrid" class="module-grid">
 
-        <div id="modulesGrid" class="card-grid">
-
-            <div class="loading">
-                در حال دریافت اطلاعات...
+            <div class="loading-card">
+                در حال دریافت ماژول‌ها...
             </div>
 
         </div>
 
     </div>
 
+</section>
+
 </main>
 
 
-<footer>
+<footer class="site-footer">
 
-    <div class="container footer-content">
+    <div class="container footer-grid">
 
-        <span>
-            © اندیشکده مدیریت و بازار
-        </span>
+        <div>
+            <h3>اندیشکده مدیریت و بازار</h3>
+            <p>مرجع آموزش مدیریت، بازار، بانکداری و تجارت.</p>
+        </div>
 
-        <span>
-            محتوای مرکزی
-        </span>
+    </div>
 
+    <div class="footer-bottom">
+        © <span id="currentYear"></span>
+        اندیشکده مدیریت و بازار
     </div>
 
 </footer>
 
 
 <script src="js/api.js"></script>
+<script src="js/common.js"></script>
 <script src="js/modules.js"></script>
 
 </body>
