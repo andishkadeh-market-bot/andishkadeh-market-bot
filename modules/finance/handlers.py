@@ -1,16 +1,25 @@
 """
-Finance handlers for Andishkadeh Management & Market.
+Finance Handlers
+Andishkadeh Management & Market
 Responsibilities:
 - Show Finance chapters directly
 - Show lessons inside a chapter
 - Show complete educational content
 - Navigate between Finance screens
+- Use Finance Service Layer as the single data access point
 """
+from __future__ import annotations
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
-from .content import get_lesson_content
-from .data import get_chapters, get_lessons
+from .service import (
+    get_finance_chapters,
+    get_finance_chapter,
+    get_finance_lessons,
+    get_finance_lesson,
+    get_complete_lesson,
+    finance_health_check,
+)
 # =========================================================
 # Callback constants
 # =========================================================
@@ -23,23 +32,39 @@ MAIN_MENU_CALLBACK = "menu_main"
 # Data helpers
 # =========================================================
 def _get_chapters() -> list:
-    """Return all Finance chapters."""
+    """Return all Finance chapters through Service Layer."""
     try:
-        return get_chapters()
+        return get_finance_chapters()
     except Exception:
         return []
-def _get_lessons() -> list:
-    """Return all Finance lessons."""
+def _get_chapter(chapter_id: str):
+    """Return a Finance chapter through Service Layer."""
     try:
-        return get_lessons()
+        return get_finance_chapter(chapter_id)
+    except Exception:
+        return None
+def _get_lessons(chapter_id: str) -> list:
+    """Return lessons of a chapter through Service Layer."""
+    try:
+        return get_finance_lessons(chapter_id)
     except Exception:
         return []
+def _get_lesson(chapter_id: str, lesson_id: str):
+    """Return a Finance lesson through Service Layer."""
+    try:
+        return get_finance_lesson(
+            chapter_id,
+            lesson_id,
+        )
+    except Exception:
+        return None
 def _get_id(item: dict) -> str | None:
     """
     Return the identifier of a chapter or lesson.
-    Finance data normally uses the key 'id'.
-    This helper also supports chapter_id / lesson_id
-    for compatibility.
+    Supports:
+    - id
+    - chapter_id
+    - lesson_id
     """
     if not isinstance(item, dict):
         return None
@@ -50,26 +75,27 @@ def _get_id(item: dict) -> str | None:
     )
 def _find_chapter(chapter_id: str):
     """Find a Finance chapter by ID."""
-    for chapter in _get_chapters():
-        if _get_id(chapter) == chapter_id:
-            return chapter
-    return None
+    return _get_chapter(chapter_id)
 def _find_lesson(lesson_id: str):
-    """Find a Finance lesson by ID."""
-    for lesson in _get_lessons():
-        if _get_id(lesson) == lesson_id:
+    """
+    Find a Finance lesson by ID.
+    The Service Layer normally handles chapter-aware access,
+    but this compatibility helper searches all chapters.
+    """
+    for chapter in _get_chapters():
+        chapter_id = _get_id(chapter)
+        if not chapter_id:
+            continue
+        lesson = _get_lesson(
+            chapter_id,
+            lesson_id,
+        )
+        if lesson is not None:
             return lesson
     return None
 def _get_chapter_lessons(chapter_id: str) -> list:
     """Return lessons belonging to a specific chapter."""
-    result = []
-    for lesson in _get_lessons():
-        lesson_chapter_id = lesson.get(
-            "chapter_id"
-        )
-        if lesson_chapter_id == chapter_id:
-            result.append(lesson)
-    return result
+    return _get_lessons(chapter_id)
 # =========================================================
 # Keyboard helpers
 # =========================================================
@@ -108,9 +134,7 @@ def _finance_chapter_keyboard(
 ) -> InlineKeyboardMarkup:
     """Keyboard containing lessons of a chapter."""
     rows = []
-    for lesson in _get_chapter_lessons(
-        chapter_id
-    ):
+    for lesson in _get_chapter_lessons(chapter_id):
         lesson_id = _get_id(lesson)
         title = lesson.get(
             "title",
@@ -203,6 +227,15 @@ def _format_lesson_content(
 ) -> str:
     """
     Convert Finance lesson content into a Telegram message.
+    Expected structure:
+    - title
+    - lesson_text
+    - subtopics
+    - detailed_content
+    - specialized_points
+    - exam_points
+    - practical_example
+    - review
     """
     title = content.get(
         "title",
@@ -325,9 +358,6 @@ async def show_finance_menu(
     Show Finance chapters directly.
     The previous welcome screen has intentionally
     been removed.
-    Clicking:
-        💳 مدیریت مالی
-    now opens the chapter list directly.
     """
     query = update.callback_query
     chapters = _get_chapters()
@@ -383,9 +413,7 @@ async def show_finance_chapter(
 ) -> None:
     """Show lessons inside a Finance chapter."""
     query = update.callback_query
-    chapter = _find_chapter(
-        chapter_id
-    )
+    chapter = _find_chapter(chapter_id)
     if chapter is None:
         if query:
             await query.answer(
@@ -453,19 +481,27 @@ async def show_finance_lesson(
                 show_alert=True,
             )
         return
-    content = get_lesson_content(
-        lesson_id
+    chapter_id = lesson.get(
+        "chapter_id"
     )
-    if content is None:
+    if not chapter_id:
+        if query:
+            await query.answer(
+                "فصل مربوط به این درس پیدا نشد.",
+                show_alert=True,
+            )
+        return
+    content = get_complete_lesson(
+        chapter_id,
+        lesson_id,
+    )
+    if not content:
         if query:
             await query.answer(
                 "محتوای آموزشی این درس پیدا نشد.",
                 show_alert=True,
             )
         return
-    chapter_id = lesson.get(
-        "chapter_id"
-    )
     text = _format_lesson_content(
         content
     )
@@ -558,10 +594,14 @@ async def route_finance_callback(
         show_alert=True,
     )
 # =========================================================
-# Health check
+# Health Check
 # =========================================================
 def finance_handlers_health_check() -> bool:
-    """Lightweight health check for Finance handlers."""
+    """
+    Lightweight health check for Finance handlers.
+    The actual module validation is delegated to
+    Finance Service Layer.
+    """
     try:
         required_functions = (
             show_finance_menu,
@@ -570,7 +610,12 @@ def finance_handlers_health_check() -> bool:
             show_finance_lesson,
             route_finance_callback,
             _format_lesson_content,
-            get_lesson_content,
+            get_finance_chapters,
+            get_finance_chapter,
+            get_finance_lessons,
+            get_finance_lesson,
+            get_complete_lesson,
+            finance_health_check,
         )
         return all(
             callable(function)
