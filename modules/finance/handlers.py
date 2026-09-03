@@ -2,19 +2,27 @@
 Finance Handlers
 Andishkadeh Management & Market
 
-Responsibilities:
-- Show Finance chapters directly
-- Show lessons inside a chapter
-- Show complete educational content
-- Show lesson quizzes
-- Navigate between Finance screens
-- Use Finance Service Layer as the single data access point
+مدیریت رابط کاربری ماژول مدیریت مالی:
+- منوی مدیریت مالی
+- فصل‌ها
+- درس‌ها
+- محتوای آموزشی
+- آزمون
+- انتخاب گزینه
+- بررسی پاسخ
+- نمایش سؤال بعدی
+- ثبت نتیجه نهایی
 """
 
 from __future__ import annotations
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.constants import ParseMode
+from typing import Any, Dict, List, Optional
+
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Update,
+)
 from telegram.ext import ContextTypes
 
 from .service import (
@@ -24,13 +32,16 @@ from .service import (
     get_finance_lesson,
     get_complete_lesson,
     get_finance_quiz,
+    get_quiz_question,
+    calculate_quiz_result,
+    complete_quiz_attempt,
     finance_health_check,
 )
 
 
-# =========================================================
-# Callback constants
-# =========================================================
+# ============================================================
+# Constants
+# ============================================================
 
 FINANCE_MENU_CALLBACK = "finance_menu"
 FINANCE_CHAPTER_PREFIX = "finance_chapter:"
@@ -38,224 +49,135 @@ FINANCE_LESSON_PREFIX = "finance_lesson:"
 FINANCE_BACK_CALLBACK = "finance_back"
 MAIN_MENU_CALLBACK = "menu_main"
 
-# Quiz callback is intentionally embedded under
-# finance_lesson:* so it remains compatible with the
-# existing bot.py Finance callback pattern.
 FINANCE_LESSON_QUIZ_SUFFIX = ":quiz"
 
-
-# =========================================================
-# Data helpers
-# =========================================================
-
-def _get_chapters() -> list:
-    """Return all Finance chapters through Service Layer."""
-    try:
-        return get_finance_chapters()
-    except Exception:
-        return []
+FINANCE_ANSWER_MARKER = ":answer:"
+FINANCE_QUIZ_STATE_KEY = "finance_quiz_state"
 
 
-def _get_chapter(chapter_id: str):
-    """Return a Finance chapter through Service Layer."""
-    try:
-        return get_finance_chapter(chapter_id)
-    except Exception:
-        return None
+# ============================================================
+# Helpers
+# ============================================================
 
-
-def _get_lessons(chapter_id: str) -> list:
-    """Return lessons of a chapter through Service Layer."""
-    try:
-        return get_finance_lessons(chapter_id)
-    except Exception:
-        return []
-
-
-def _get_lesson(chapter_id: str, lesson_id: str):
-    """Return a Finance lesson through Service Layer."""
-    try:
-        return get_finance_lesson(
-            chapter_id,
-            lesson_id,
-        )
-    except Exception:
-        return None
-
-
-def _get_quiz(chapter_id: str, lesson_id: str) -> list:
-    """Return lesson quiz questions through Service Layer."""
-    try:
-        quiz = get_finance_quiz(
-            chapter_id,
-            lesson_id,
-        )
-
-        if isinstance(quiz, list):
-            return quiz
-
-        return []
-
-    except Exception:
-        return []
-
-
-def _get_id(item: dict) -> str | None:
-    """
-    Return the identifier of a chapter or lesson.
-
-    Supports:
-    - id
-    - chapter_id
-    - lesson_id
-    """
-    if not isinstance(item, dict):
-        return None
-
-    return (
-        item.get("id")
-        or item.get("chapter_id")
-        or item.get("lesson_id")
-    )
-
-
-def _find_chapter(chapter_id: str):
-    """Find a Finance chapter by ID."""
-    return _get_chapter(chapter_id)
-
-
-def _find_lesson(lesson_id: str):
-    """
-    Find a Finance lesson by ID.
-
-    The Service Layer normally handles chapter-aware access,
-    but this compatibility helper searches all chapters.
-    """
-    for chapter in _get_chapters():
-        chapter_id = _get_id(chapter)
-
-        if not chapter_id:
-            continue
-
-        lesson = _get_lesson(
-            chapter_id,
-            lesson_id,
-        )
-
-        if lesson is not None:
-            return lesson
-
-    return None
-
-
-def _get_chapter_lessons(chapter_id: str) -> list:
-    """Return lessons belonging to a specific chapter."""
-    return _get_lessons(chapter_id)
-
-
-# =========================================================
-# Quiz helpers
-# =========================================================
-
-def _get_quiz_value(question: dict, key: str, default=None):
-    """Safely read a quiz field."""
-    if not isinstance(question, dict):
+def _normalize_text(value: Any, default: str = "") -> str:
+    if value is None:
         return default
 
-    return question.get(key, default)
+    return str(value).strip()
 
 
-def _get_quiz_question_text(question: dict) -> str:
-    """
-    Extract quiz question text.
+def _normalize_list(value: Any) -> List[Any]:
+    if value is None:
+        return []
 
-    Supports common keys:
-    - question
-    - text
-    - title
-    """
-    return (
-        _get_quiz_value(question, "question")
-        or _get_quiz_value(question, "text")
-        or _get_quiz_value(question, "title")
-        or "سؤال بدون متن"
+    if isinstance(value, list):
+        return value
+
+    if isinstance(value, tuple):
+        return list(value)
+
+    if isinstance(value, set):
+        return list(value)
+
+    return [value]
+
+
+def _get_id(item: Any) -> str:
+    if isinstance(item, dict):
+        return _normalize_text(
+            item.get("id")
+            or item.get("chapter_id")
+            or item.get("lesson_id")
+        )
+
+    return _normalize_text(
+        getattr(item, "id", None)
+        or getattr(item, "chapter_id", None)
+        or getattr(item, "lesson_id", None)
     )
 
 
-def _get_quiz_options(question: dict) -> list:
-    """
-    Extract quiz options.
+def _get_title(item: Any) -> str:
+    if isinstance(item, dict):
+        return _normalize_text(
+            item.get("title")
+            or item.get("name")
+        )
 
-    Supports:
-    - options
-    """
-    options = _get_quiz_value(
-        question,
-        "options",
-        [],
+    return _normalize_text(
+        getattr(item, "title", None)
+        or getattr(item, "name", None)
     )
 
-    if isinstance(options, list):
-        return options
 
-    return []
-
-
-def _get_quiz_correct_index(question: dict):
+def _safe_edit(
+    query: Any,
+    text: str,
+    reply_markup: Optional[InlineKeyboardMarkup] = None,
+) -> None:
     """
-    Extract correct answer index.
-
-    Supports:
-    - correct_index
-    - answer
-    - correct_answer
+    فقط برای مستندسازی نوع عملیات.
+    عملیات واقعی در handlerهای async انجام می‌شود.
     """
-    if not isinstance(question, dict):
-        return None
-
-    if "correct_index" in question:
-        return question.get("correct_index")
-
-    if "answer" in question:
-        return question.get("answer")
-
-    if "correct_answer" in question:
-        return question.get("correct_answer")
-
     return None
 
 
-# =========================================================
-# Keyboard helpers
-# =========================================================
+# ============================================================
+# Keyboards
+# ============================================================
 
-def _finance_chapters_keyboard() -> InlineKeyboardMarkup:
-    """Keyboard containing Finance chapters."""
-    rows = []
+def _finance_menu_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "📚 فصل‌های مدیریت مالی",
+                    callback_data=FINANCE_MENU_CALLBACK,
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🏠 منوی اصلی",
+                    callback_data=MAIN_MENU_CALLBACK,
+                )
+            ],
+        ]
+    )
 
-    for chapter in _get_chapters():
-        chapter_id = _get_id(chapter)
 
-        title = chapter.get(
-            "title",
-            "فصل بدون عنوان",
+def _finance_chapters_keyboard(
+    chapters: List[Dict[str, Any]],
+) -> InlineKeyboardMarkup:
+
+    buttons: List[List[InlineKeyboardButton]] = []
+
+    for chapter in chapters:
+
+        chapter_id = _normalize_text(
+            chapter.get("id")
+        )
+
+        title = _normalize_text(
+            chapter.get("title"),
+            chapter_id,
         )
 
         if not chapter_id:
             continue
 
-        rows.append(
+        buttons.append(
             [
                 InlineKeyboardButton(
-                    f"📘 {title}",
+                    title,
                     callback_data=(
-                        f"{FINANCE_CHAPTER_PREFIX}{chapter_id}"
+                        f"{FINANCE_CHAPTER_PREFIX}"
+                        f"{chapter_id}"
                     ),
                 )
             ]
         )
 
-    rows.append(
+    buttons.append(
         [
             InlineKeyboardButton(
                 "🏠 منوی اصلی",
@@ -264,47 +186,54 @@ def _finance_chapters_keyboard() -> InlineKeyboardMarkup:
         ]
     )
 
-    return InlineKeyboardMarkup(rows)
+    return InlineKeyboardMarkup(
+        buttons
+    )
 
 
 def _finance_chapter_keyboard(
     chapter_id: str,
+    lessons: List[Dict[str, Any]],
 ) -> InlineKeyboardMarkup:
-    """Keyboard containing lessons of a chapter."""
-    rows = []
 
-    for lesson in _get_chapter_lessons(chapter_id):
-        lesson_id = _get_id(lesson)
+    buttons: List[List[InlineKeyboardButton]] = []
 
-        title = lesson.get(
-            "title",
-            "درس بدون عنوان",
+    for lesson in lessons:
+
+        lesson_id = _normalize_text(
+            lesson.get("id")
+        )
+
+        title = _normalize_text(
+            lesson.get("title"),
+            lesson_id,
         )
 
         if not lesson_id:
             continue
 
-        rows.append(
+        buttons.append(
             [
                 InlineKeyboardButton(
-                    f"📖 {title}",
+                    title,
                     callback_data=(
-                        f"{FINANCE_LESSON_PREFIX}{lesson_id}"
+                        f"{FINANCE_LESSON_PREFIX}"
+                        f"{lesson_id}"
                     ),
                 )
             ]
         )
 
-    rows.append(
+    buttons.append(
         [
             InlineKeyboardButton(
-                "⬅️ بازگشت به فصل‌ها",
+                "⬅️ فصل‌ها",
                 callback_data=FINANCE_MENU_CALLBACK,
             )
         ]
     )
 
-    rows.append(
+    buttons.append(
         [
             InlineKeyboardButton(
                 "🏠 منوی اصلی",
@@ -313,30 +242,20 @@ def _finance_chapter_keyboard(
         ]
     )
 
-    return InlineKeyboardMarkup(rows)
+    return InlineKeyboardMarkup(
+        buttons
+    )
 
 
 def _finance_lesson_keyboard(
-    chapter_id: str | None = None,
-    lesson_id: str | None = None,
+    lesson_id: str,
 ) -> InlineKeyboardMarkup:
-    """
-    Keyboard for a Finance lesson.
 
-    Includes:
-    - Lesson quiz
-    - Back to chapter lessons
-    - Finance chapters
-    - Main menu
-    """
-    rows = []
-
-    # -----------------------------------------------------
-    # Lesson quiz button
-    # -----------------------------------------------------
+    buttons: List[List[InlineKeyboardButton]] = []
 
     if lesson_id:
-        rows.append(
+
+        buttons.append(
             [
                 InlineKeyboardButton(
                     "📝 آزمون این درس",
@@ -349,665 +268,1007 @@ def _finance_lesson_keyboard(
             ]
         )
 
-    # -----------------------------------------------------
-    # Back to chapter lessons
-    # -----------------------------------------------------
+    buttons.append(
+        [
+            InlineKeyboardButton(
+                "⬅️ بازگشت به فصل",
+                callback_data=FINANCE_BACK_CALLBACK,
+            )
+        ]
+    )
 
-    if chapter_id:
-        rows.append(
+    buttons.append(
+        [
+            InlineKeyboardButton(
+                "🏠 منوی اصلی",
+                callback_data=MAIN_MENU_CALLBACK,
+            )
+        ]
+    )
+
+    return InlineKeyboardMarkup(
+        buttons
+    )
+
+
+def _finance_quiz_keyboard(
+    lesson_id: str,
+    question_index: int,
+    options: List[str],
+) -> InlineKeyboardMarkup:
+
+    buttons: List[List[InlineKeyboardButton]] = []
+
+    option_labels = [
+        "1️⃣",
+        "2️⃣",
+        "3️⃣",
+        "4️⃣",
+    ]
+
+    for index, option in enumerate(options):
+
+        if index >= 4:
+            break
+
+        label = _normalize_text(
+            option
+        )
+
+        if not label:
+            continue
+
+        buttons.append(
             [
                 InlineKeyboardButton(
-                    "⬅️ بازگشت به درس‌های فصل",
+                    f"{option_labels[index]} {label}",
                     callback_data=(
-                        f"{FINANCE_CHAPTER_PREFIX}{chapter_id}"
+                        f"{FINANCE_LESSON_PREFIX}"
+                        f"{lesson_id}"
+                        f"{FINANCE_ANSWER_MARKER}"
+                        f"{question_index}:"
+                        f"{index}"
                     ),
                 )
             ]
         )
 
-    # -----------------------------------------------------
-    # Finance chapters
-    # -----------------------------------------------------
-
-    rows.append(
+    buttons.append(
         [
             InlineKeyboardButton(
-                "📚 فصل‌های مدیریت مالی",
-                callback_data=FINANCE_MENU_CALLBACK,
+                "❌ خروج از آزمون",
+                callback_data=(
+                    f"{FINANCE_LESSON_PREFIX}"
+                    f"{lesson_id}"
+                ),
             )
         ]
     )
 
-    # -----------------------------------------------------
-    # Main menu
-    # -----------------------------------------------------
-
-    rows.append(
-        [
-            InlineKeyboardButton(
-                "🏠 منوی اصلی",
-                callback_data=MAIN_MENU_CALLBACK,
-            )
-        ]
+    return InlineKeyboardMarkup(
+        buttons
     )
 
-    return InlineKeyboardMarkup(rows)
 
-
-def _finance_quiz_keyboard(
-    chapter_id: str,
+def _finance_quiz_result_keyboard(
     lesson_id: str,
 ) -> InlineKeyboardMarkup:
-    """Keyboard for Finance lesson quiz."""
-    rows = [
+
+    return InlineKeyboardMarkup(
         [
-            InlineKeyboardButton(
-                "⬅️ بازگشت به درس",
-                callback_data=(
-                    f"{FINANCE_LESSON_PREFIX}{lesson_id}"
-                ),
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "⬅️ بازگشت به درس‌های فصل",
-                callback_data=(
-                    f"{FINANCE_CHAPTER_PREFIX}{chapter_id}"
-                ),
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🏠 منوی اصلی",
-                callback_data=MAIN_MENU_CALLBACK,
-            )
-        ],
-    ]
+            [
+                InlineKeyboardButton(
+                    "🔄 شروع دوباره آزمون",
+                    callback_data=(
+                        f"{FINANCE_LESSON_PREFIX}"
+                        f"{lesson_id}"
+                        f"{FINANCE_LESSON_QUIZ_SUFFIX}"
+                    ),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "📖 بازگشت به درس",
+                    callback_data=(
+                        f"{FINANCE_LESSON_PREFIX}"
+                        f"{lesson_id}"
+                    ),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🏠 منوی اصلی",
+                    callback_data=MAIN_MENU_CALLBACK,
+                )
+            ],
+        ]
+    )
 
-    return InlineKeyboardMarkup(rows)
 
-
-# =========================================================
-# Content formatting
-# =========================================================
-
-def _format_points(
-    title: str,
-    points: list,
-    emoji: str = "•",
-) -> str:
-    """Format a list of educational points."""
-    if not points:
-        return ""
-
-    lines = [
-        f"<b>{title}</b>"
-    ]
-
-    for point in points:
-        if point:
-            lines.append(
-                f"{emoji} {point}"
-            )
-
-    return "\n".join(lines)
-
+# ============================================================
+# Formatting
+# ============================================================
 
 def _format_lesson_content(
-    content: dict,
+    lesson: Dict[str, Any],
 ) -> str:
-    """
-    Convert Finance lesson content into a Telegram message.
 
-    Expected structure:
-    - title
-    - lesson_text
-    - subtopics
-    - detailed_content
-    - specialized_points
-    - exam_points
-    - practical_example
-    - review
-    """
-
-    title = content.get(
-        "title",
+    title = _normalize_text(
+        lesson.get("title"),
         "درس مدیریت مالی",
     )
 
-    lesson_text = content.get(
-        "lesson_text",
-        "",
+    text_parts: List[str] = []
+
+    text_parts.append(
+        f"📖 {title}"
     )
 
-    subtopics = content.get(
-        "subtopics",
-        [],
+    lesson_text = _normalize_text(
+        lesson.get("lesson_text")
     )
-
-    detailed_content = content.get(
-        "detailed_content",
-        "",
-    )
-
-    specialized_points = content.get(
-        "specialized_points",
-        [],
-    )
-
-    exam_points = content.get(
-        "exam_points",
-        [],
-    )
-
-    practical_example = content.get(
-        "practical_example",
-        "",
-    )
-
-    review = content.get(
-        "review",
-        "",
-    )
-
-    sections = []
-
-    # -----------------------------------------------------
-    # Header
-    # -----------------------------------------------------
-
-    sections.append(
-        "💰 <b>مدیریت مالی</b>\n"
-        f"📖 <b>{title}</b>"
-    )
-
-    # -----------------------------------------------------
-    # Lesson text
-    # -----------------------------------------------------
 
     if lesson_text:
-        sections.append(
-            "📝 <b>درسنامه</b>\n"
-            f"{lesson_text}"
+        text_parts.append(
+            f"\n{lesson_text}"
         )
 
-    # -----------------------------------------------------
-    # Subtopics
-    # -----------------------------------------------------
+    subtopics = _normalize_list(
+        lesson.get("subtopics")
+    )
 
     if subtopics:
-        sections.append(
-            _format_points(
-                "📌 زیرموضوع‌ها",
-                subtopics,
-                "▫️",
+
+        text_parts.append(
+            "\n\n📌 سرفصل‌های درس"
+        )
+
+        for item in subtopics:
+
+            item_text = _normalize_text(
+                item
             )
-        )
 
-    # -----------------------------------------------------
-    # Detailed content
-    # -----------------------------------------------------
-
-    if detailed_content:
-        sections.append(
-            "🎓 <b>آموزش مفصل</b>\n"
-            f"{detailed_content}"
-        )
-
-    # -----------------------------------------------------
-    # Specialized points
-    # -----------------------------------------------------
-
-    if specialized_points:
-        sections.append(
-            _format_points(
-                "🔎 نکات تخصصی",
-                specialized_points,
-                "🔹",
-            )
-        )
-
-    # -----------------------------------------------------
-    # Exam points
-    # -----------------------------------------------------
-
-    if exam_points:
-        sections.append(
-            _format_points(
-                "🎯 نکات آزمونی",
-                exam_points,
-                "✅",
-            )
-        )
-
-    # -----------------------------------------------------
-    # Practical example
-    # -----------------------------------------------------
-
-    if practical_example:
-        sections.append(
-            "💼 <b>مثال کاربردی</b>\n"
-            f"{practical_example}"
-        )
-
-    # -----------------------------------------------------
-    # Review
-    # -----------------------------------------------------
-
-    if review:
-        sections.append(
-            "🔄 <b>مرور</b>\n"
-            f"{review}"
-        )
-
-    return "\n\n".join(
-        section
-        for section in sections
-        if section
-    )
-
-
-# =========================================================
-# Quiz formatting
-# =========================================================
-
-def _format_quiz(
-    chapter_id: str,
-    lesson_id: str,
-    lesson: dict,
-    quiz: list,
-) -> str:
-    """Format Finance lesson quiz for Telegram."""
-
-    lesson_title = lesson.get(
-        "title",
-        "درس مدیریت مالی",
-    )
-
-    if not quiz:
-        return (
-            "📝 <b>آزمون درس</b>\n\n"
-            f"📖 <b>{lesson_title}</b>\n\n"
-            "⚠️ برای این درس هنوز سؤال آزمون ثبت نشده است."
-        )
-
-    lines = [
-        "📝 <b>آزمون درس مدیریت مالی</b>",
-        f"📖 <b>{lesson_title}</b>",
-        "",
-        f"تعداد سؤالات: <b>{len(quiz)}</b>",
-        "",
-    ]
-
-    for index, question in enumerate(
-        quiz,
-        start=1,
-    ):
-        question_text = _get_quiz_question_text(
-            question
-        )
-
-        lines.append(
-            f"<b>سؤال {index}</b>\n"
-            f"{question_text}"
-        )
-
-        options = _get_quiz_options(
-            question
-        )
-
-        if options:
-            for option_index, option in enumerate(
-                options,
-                start=1,
-            ):
-                if isinstance(option, dict):
-                    option_text = (
-                        option.get("text")
-                        or option.get("title")
-                        or option.get("label")
-                        or str(option)
-                    )
-                else:
-                    option_text = str(option)
-
-                lines.append(
-                    f"{option_index}. {option_text}"
+            if item_text:
+                text_parts.append(
+                    f"\n• {item_text}"
                 )
 
-        lines.append("")
+    detailed_content = _normalize_text(
+        lesson.get("detailed_content")
+    )
 
-    return "\n".join(lines)
+    if detailed_content:
+
+        text_parts.append(
+            "\n\n📚 آموزش تفصیلی"
+        )
+
+        text_parts.append(
+            f"\n{detailed_content}"
+        )
+
+    specialized_points = _normalize_list(
+        lesson.get("specialized_points")
+    )
+
+    if specialized_points:
+
+        text_parts.append(
+            "\n\n🎓 نکات تخصصی"
+        )
+
+        for item in specialized_points:
+
+            item_text = _normalize_text(
+                item
+            )
+
+            if item_text:
+                text_parts.append(
+                    f"\n• {item_text}"
+                )
+
+    exam_points = _normalize_list(
+        lesson.get("exam_points")
+    )
+
+    if exam_points:
+
+        text_parts.append(
+            "\n\n📝 نکات آزمونی"
+        )
+
+        for item in exam_points:
+
+            item_text = _normalize_text(
+                item
+            )
+
+            if item_text:
+                text_parts.append(
+                    f"\n• {item_text}"
+                )
+
+    practical_example = lesson.get(
+        "practical_example"
+    )
+
+    if practical_example:
+
+        text_parts.append(
+            "\n\n💼 مثال کاربردی"
+        )
+
+        for item in _normalize_list(
+            practical_example
+        ):
+
+            item_text = _normalize_text(
+                item
+            )
+
+            if item_text:
+                text_parts.append(
+                    f"\n• {item_text}"
+                )
+
+    review = lesson.get(
+        "review"
+    )
+
+    if review:
+
+        text_parts.append(
+            "\n\n🔁 مرور"
+        )
+
+        for item in _normalize_list(
+            review
+        ):
+
+            item_text = _normalize_text(
+                item
+            )
+
+            if item_text:
+                text_parts.append(
+                    f"\n• {item_text}"
+                )
+
+    return "".join(
+        text_parts
+    )
 
 
-# =========================================================
-# Screens
-# =========================================================
+def _format_quiz_question(
+    lesson_title: str,
+    question: Dict[str, Any],
+    question_index: int,
+    total_questions: int,
+) -> str:
+
+    question_text = _normalize_text(
+        question.get("question"),
+        "سؤال آزمون",
+    )
+
+    return (
+        "📝 آزمون درس مدیریت مالی\n"
+        f"📖 {lesson_title}\n\n"
+        f"سؤال {question_index + 1} "
+        f"از {total_questions}\n\n"
+        f"{question_text}\n\n"
+        "👇 یکی از گزینه‌ها را انتخاب کنید:"
+    )
+
+
+# ============================================================
+# Quiz State
+# ============================================================
+
+def _create_quiz_state(
+    lesson_id: str,
+    chapter_id: str,
+    quiz: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+
+    return {
+        "lesson_id": lesson_id,
+        "chapter_id": chapter_id,
+        "quiz": quiz,
+        "current_index": 0,
+        "answers": [
+            None
+            for _ in quiz
+        ],
+    }
+
+
+def _get_quiz_state(
+    context: ContextTypes.DEFAULT_TYPE,
+) -> Optional[Dict[str, Any]]:
+
+    state = context.user_data.get(
+        FINANCE_QUIZ_STATE_KEY
+    )
+
+    if not isinstance(
+        state,
+        dict,
+    ):
+        return None
+
+    return state
+
+
+def _clear_quiz_state(
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+
+    context.user_data.pop(
+        FINANCE_QUIZ_STATE_KEY,
+        None,
+    )
+
+
+# ============================================================
+# Main Finance Menu
+# ============================================================
 
 async def show_finance_menu(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    """
-    Show Finance chapters directly.
-
-    The previous welcome screen has intentionally
-    been removed.
-    """
 
     query = update.callback_query
-
-    chapters = _get_chapters()
-
-    text = (
-        "📚 <b>فصل‌های مدیریت مالی</b>\n\n"
-        f"تعداد فصل‌ها: <b>{len(chapters)}</b>\n\n"
-        "فصل موردنظر خود را انتخاب کنید:"
-    )
 
     if query:
         await query.answer()
 
         await query.edit_message_text(
-            text=text,
-            parse_mode=ParseMode.HTML,
-            reply_markup=_finance_chapters_keyboard(),
+            "💰 مدیریت مالی\n\n"
+            "دوره تخصصی مدیریت مالی\n"
+            "از مبانی مالی تا تحلیل و تصمیم‌گیری پیشرفته.",
+            reply_markup=_finance_menu_keyboard(),
         )
 
         return
 
     if update.message:
+
         await update.message.reply_text(
-            text=text,
-            parse_mode=ParseMode.HTML,
-            reply_markup=_finance_chapters_keyboard(),
+            "💰 مدیریت مالی\n\n"
+            "دوره تخصصی مدیریت مالی\n"
+            "از مبانی مالی تا تحلیل و تصمیم‌گیری پیشرفته.",
+            reply_markup=_finance_menu_keyboard(),
         )
 
+
+# ============================================================
+# Chapters
+# ============================================================
 
 async def show_finance_chapters(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    """Show all Finance chapters."""
 
     query = update.callback_query
-
-    chapters = _get_chapters()
-
-    text = (
-        "📚 <b>فصل‌های مدیریت مالی</b>\n\n"
-        f"تعداد فصل‌ها: <b>{len(chapters)}</b>\n\n"
-        "فصل موردنظر خود را انتخاب کنید:"
-    )
 
     if query:
         await query.answer()
 
-        await query.edit_message_text(
-            text=text,
-            parse_mode=ParseMode.HTML,
-            reply_markup=_finance_chapters_keyboard(),
+    chapters = get_finance_chapters()
+
+    if not chapters:
+
+        text = (
+            "💰 مدیریت مالی\n\n"
+            "در حال حاضر فصلی برای نمایش وجود ندارد."
         )
+
+        if query:
+            await query.edit_message_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "🏠 منوی اصلی",
+                                callback_data=MAIN_MENU_CALLBACK,
+                            )
+                        ]
+                    ]
+                ),
+            )
 
         return
 
-    if update.message:
-        await update.message.reply_text(
-            text=text,
-            parse_mode=ParseMode.HTML,
-            reply_markup=_finance_chapters_keyboard(),
+    text = (
+        "💰 مدیریت مالی\n\n"
+        "📚 فصل‌های دوره را انتخاب کنید:"
+    )
+
+    if query:
+
+        await query.edit_message_text(
+            text,
+            reply_markup=_finance_chapters_keyboard(
+                chapters
+            ),
         )
 
+
+# ============================================================
+# Chapter
+# ============================================================
 
 async def show_finance_chapter(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
     chapter_id: str,
 ) -> None:
-    """Show lessons inside a Finance chapter."""
 
     query = update.callback_query
-
-    chapter = _find_chapter(
-        chapter_id
-    )
-
-    if chapter is None:
-        if query:
-            await query.answer(
-                "فصل موردنظر پیدا نشد.",
-                show_alert=True,
-            )
-
-        return
-
-    lessons = _get_chapter_lessons(
-        chapter_id
-    )
-
-    title = chapter.get(
-        "title",
-        "فصل مدیریت مالی",
-    )
-
-    description = chapter.get(
-        "description",
-        "",
-    )
-
-    text_parts = [
-        f"📘 <b>{title}</b>"
-    ]
-
-    if description:
-        text_parts.append(
-            description
-        )
-
-    text_parts.append(
-        f"\n📖 تعداد درس‌ها: <b>{len(lessons)}</b>\n\n"
-        "درس موردنظر را انتخاب کنید:"
-    )
-
-    text = "\n".join(
-        text_parts
-    )
 
     if query:
         await query.answer()
 
-        await query.edit_message_text(
-            text=text,
-            parse_mode=ParseMode.HTML,
-            reply_markup=_finance_chapter_keyboard(
-                chapter_id
-            ),
-        )
+    chapter = get_finance_chapter(
+        chapter_id
+    )
+
+    if chapter is None:
+
+        if query:
+
+            await query.edit_message_text(
+                "❌ فصل موردنظر پیدا نشد.",
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "⬅️ فصل‌ها",
+                                callback_data=FINANCE_MENU_CALLBACK,
+                            )
+                        ]
+                    ]
+                ),
+            )
 
         return
 
-    if update.message:
-        await update.message.reply_text(
-            text=text,
-            parse_mode=ParseMode.HTML,
+    lessons = get_finance_lessons(
+        chapter_id
+    )
+
+    chapter_title = _normalize_text(
+        chapter.get("title"),
+        chapter_id,
+    )
+
+    text = (
+        f"💰 {chapter_title}\n\n"
+        f"📚 تعداد درس‌ها: {len(lessons)}\n\n"
+        "یک درس را انتخاب کنید:"
+    )
+
+    if query:
+
+        await query.edit_message_text(
+            text,
             reply_markup=_finance_chapter_keyboard(
-                chapter_id
+                chapter_id,
+                lessons,
             ),
         )
 
+
+# ============================================================
+# Lesson
+# ============================================================
 
 async def show_finance_lesson(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
+    chapter_id: str,
     lesson_id: str,
 ) -> None:
-    """Show complete educational content of a Finance lesson."""
 
     query = update.callback_query
 
-    lesson = _find_lesson(
-        lesson_id
-    )
+    if query:
+        await query.answer()
 
-    if lesson is None:
-        if query:
-            await query.answer(
-                "درس موردنظر پیدا نشد.",
-                show_alert=True,
-            )
-
-        return
-
-    chapter_id = lesson.get(
-        "chapter_id"
-    )
-
-    if not chapter_id:
-        if query:
-            await query.answer(
-                "فصل مربوط به این درس پیدا نشد.",
-                show_alert=True,
-            )
-
-        return
-
-    content = get_complete_lesson(
+    lesson = get_complete_lesson(
         chapter_id,
         lesson_id,
     )
 
-    if not content:
+    if not lesson:
+
         if query:
-            await query.answer(
-                "محتوای آموزشی این درس پیدا نشد.",
-                show_alert=True,
+
+            await query.edit_message_text(
+                "❌ محتوای درس پیدا نشد.",
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "🏠 منوی اصلی",
+                                callback_data=MAIN_MENU_CALLBACK,
+                            )
+                        ]
+                    ]
+                ),
             )
 
         return
 
     text = _format_lesson_content(
-        content
+        lesson
+    )
+
+    keyboard = _finance_lesson_keyboard(
+        lesson_id
     )
 
     if query:
-        await query.answer()
 
         await query.edit_message_text(
-            text=text,
-            parse_mode=ParseMode.HTML,
-            reply_markup=_finance_lesson_keyboard(
-                chapter_id=chapter_id,
-                lesson_id=lesson_id,
-            ),
+            text,
+            reply_markup=keyboard,
         )
 
-        return
 
-    if update.message:
-        await update.message.reply_text(
-            text=text,
-            parse_mode=ParseMode.HTML,
-            reply_markup=_finance_lesson_keyboard(
-                chapter_id=chapter_id,
-                lesson_id=lesson_id,
-            ),
-        )
-
+# ============================================================
+# Quiz Start
+# ============================================================
 
 async def show_finance_lesson_quiz(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
+    chapter_id: str,
     lesson_id: str,
 ) -> None:
-    """Show the quiz questions of a Finance lesson."""
 
     query = update.callback_query
-
-    lesson = _find_lesson(
-        lesson_id
-    )
-
-    if lesson is None:
-        if query:
-            await query.answer(
-                "درس موردنظر پیدا نشد.",
-                show_alert=True,
-            )
-
-        return
-
-    chapter_id = lesson.get(
-        "chapter_id"
-    )
-
-    if not chapter_id:
-        if query:
-            await query.answer(
-                "فصل مربوط به این درس پیدا نشد.",
-                show_alert=True,
-            )
-
-        return
-
-    quiz = _get_quiz(
-        chapter_id,
-        lesson_id,
-    )
-
-    text = _format_quiz(
-        chapter_id,
-        lesson_id,
-        lesson,
-        quiz,
-    )
 
     if query:
         await query.answer()
 
-        await query.edit_message_text(
-            text=text,
-            parse_mode=ParseMode.HTML,
-            reply_markup=_finance_quiz_keyboard(
-                chapter_id,
-                lesson_id,
-            ),
-        )
+    lesson = get_finance_lesson(
+        chapter_id,
+        lesson_id,
+    )
+
+    if lesson is None:
+
+        if query:
+            await query.edit_message_text(
+                "❌ درس موردنظر پیدا نشد."
+            )
 
         return
 
-    if update.message:
-        await update.message.reply_text(
-            text=text,
-            parse_mode=ParseMode.HTML,
-            reply_markup=_finance_quiz_keyboard(
-                chapter_id,
-                lesson_id,
+    quiz = get_finance_quiz(
+        chapter_id,
+        lesson_id,
+    )
+
+    if not quiz:
+
+        if query:
+
+            await query.edit_message_text(
+                "📝 آزمون این درس هنوز آماده نشده است.",
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "📖 بازگشت به درس",
+                                callback_data=(
+                                    f"{FINANCE_LESSON_PREFIX}"
+                                    f"{lesson_id}"
+                                ),
+                            )
+                        ]
+                    ]
+                ),
+            )
+
+        return
+
+    state = _create_quiz_state(
+        lesson_id=lesson_id,
+        chapter_id=chapter_id,
+        quiz=quiz,
+    )
+
+    context.user_data[
+        FINANCE_QUIZ_STATE_KEY
+    ] = state
+
+    question = get_quiz_question(
+        quiz,
+        0,
+    )
+
+    if question is None:
+
+        _clear_quiz_state(
+            context
+        )
+
+        if query:
+
+            await query.edit_message_text(
+                "❌ سؤال معتبر برای این آزمون پیدا نشد."
+            )
+
+        return
+
+    lesson_title = _normalize_text(
+        lesson.get("title"),
+        "مدیریت مالی",
+    )
+
+    options = _normalize_list(
+        question.get(
+            "options",
+            [],
+        )
+    )
+
+    text = _format_quiz_question(
+        lesson_title,
+        question,
+        0,
+        len(quiz),
+    )
+
+    keyboard = _finance_quiz_keyboard(
+        lesson_id,
+        0,
+        options,
+    )
+
+    if query:
+
+        await query.edit_message_text(
+            text,
+            reply_markup=keyboard,
+        )
+
+
+# ============================================================
+# Quiz Answer
+# ============================================================
+
+async def handle_finance_quiz_answer(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    lesson_id: str,
+    question_index: int,
+    option_index: int,
+) -> None:
+
+    query = update.callback_query
+
+    if query:
+        await query.answer()
+
+    state = _get_quiz_state(
+        context
+    )
+
+    if state is None:
+
+        if query:
+
+            await query.edit_message_text(
+                "⚠️ آزمون فعالی وجود ندارد.\n"
+                "لطفاً آزمون را دوباره شروع کنید.",
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "📝 شروع آزمون",
+                                callback_data=(
+                                    f"{FINANCE_LESSON_PREFIX}"
+                                    f"{lesson_id}"
+                                    f"{FINANCE_LESSON_QUIZ_SUFFIX}"
+                                ),
+                            )
+                        ]
+                    ]
+                ),
+            )
+
+        return
+
+    state_lesson_id = _normalize_text(
+        state.get("lesson_id")
+    )
+
+    if state_lesson_id != lesson_id:
+
+        if query:
+            await query.edit_message_text(
+                "⚠️ وضعیت آزمون با این درس مطابقت ندارد."
+            )
+
+        return
+
+    quiz = _normalize_list(
+        state.get("quiz")
+    )
+
+    answers = _normalize_list(
+        state.get("answers")
+    )
+
+    try:
+        question_index = int(
+            question_index
+        )
+
+        option_index = int(
+            option_index
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+
+        return
+
+    if (
+        question_index < 0
+        or question_index >= len(quiz)
+    ):
+        return
+
+    question = get_quiz_question(
+        quiz,
+        question_index,
+    )
+
+    if question is None:
+        return
+
+    options = _normalize_list(
+        question.get(
+            "options",
+            [],
+        )
+    )
+
+    if (
+        option_index < 0
+        or option_index >= len(options)
+    ):
+        return
+
+    while len(answers) < len(quiz):
+        answers.append(None)
+
+    answers[
+        question_index
+    ] = option_index
+
+    state["answers"] = answers
+
+    next_index = (
+        question_index + 1
+    )
+
+    if next_index < len(quiz):
+
+        state["current_index"] = next_index
+
+        next_question = get_quiz_question(
+            quiz,
+            next_index,
+        )
+
+        if next_question is None:
+            return
+
+        chapter_id = _normalize_text(
+            state.get(
+                "chapter_id"
+            )
+        )
+
+        lesson = get_finance_lesson(
+            chapter_id,
+            lesson_id,
+        )
+
+        lesson_title = _normalize_text(
+            lesson.get("title")
+            if lesson
+            else None,
+            "مدیریت مالی",
+        )
+
+        next_options = _normalize_list(
+            next_question.get(
+                "options",
+                [],
+            )
+        )
+
+        text = _format_quiz_question(
+            lesson_title,
+            next_question,
+            next_index,
+            len(quiz),
+        )
+
+        keyboard = _finance_quiz_keyboard(
+            lesson_id,
+            next_index,
+            next_options,
+        )
+
+        if query:
+
+            await query.edit_message_text(
+                text,
+                reply_markup=keyboard,
+            )
+
+        return
+
+    # ========================================================
+    # Quiz Finished
+    # ========================================================
+
+    chapter_id = _normalize_text(
+        state.get(
+            "chapter_id"
+        )
+    )
+
+    result = complete_quiz_attempt(
+        telegram_id=(
+            update.effective_user.id
+            if update.effective_user
+            else 0
+        ),
+        module_id="finance",
+        chapter_id=chapter_id,
+        lesson_id=lesson_id,
+        quiz=quiz,
+        answers=answers,
+    )
+
+    _clear_quiz_state(
+        context
+    )
+
+    total_questions = result.get(
+        "total_questions",
+        len(quiz),
+    )
+
+    correct_answers = result.get(
+        "correct_answers",
+        0,
+    )
+
+    wrong_answers = result.get(
+        "wrong_answers",
+        0,
+    )
+
+    unanswered_questions = result.get(
+        "unanswered_questions",
+        0,
+    )
+
+    score = result.get(
+        "score",
+        0,
+    )
+
+    attempt_id = result.get(
+        "attempt_id"
+    )
+
+    saved = result.get(
+        "saved",
+        False,
+    )
+
+    if score >= 90:
+
+        level = "🏆 عالی"
+
+    elif score >= 75:
+
+        level = "🥇 بسیار خوب"
+
+    elif score >= 50:
+
+        level = "🥈 متوسط"
+
+    else:
+
+        level = "📚 نیازمند مرور"
+
+    save_status = (
+        "💾 نتیجه در سوابق آزمون ثبت شد."
+        if saved
+        else "⚠️ نتیجه محاسبه شد، اما ثبت سوابق انجام نشد."
+    )
+
+    attempt_text = ""
+
+    if attempt_id is not None:
+
+        attempt_text = (
+            f"\nشناسه آزمون: {attempt_id}"
+        )
+
+    text = (
+        "🎯 پایان آزمون مدیریت مالی\n\n"
+        f"📊 نتیجه: {level}\n\n"
+        f"📝 تعداد سؤالات: {total_questions}\n"
+        f"✅ پاسخ صحیح: {correct_answers}\n"
+        f"❌ پاسخ غلط: {wrong_answers}\n"
+        f"⚪ بدون پاسخ: {unanswered_questions}\n"
+        f"📈 درصد نهایی: {score}%\n\n"
+        f"{save_status}"
+        f"{attempt_text}"
+    )
+
+    if query:
+
+        await query.edit_message_text(
+            text,
+            reply_markup=_finance_quiz_result_keyboard(
+                lesson_id
             ),
         )
 
 
-# =========================================================
-# Router
-# =========================================================
+# ============================================================
+# Callback Router
+# ============================================================
 
 async def route_finance_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    """Route Finance callbacks."""
 
     query = update.callback_query
 
-    if not query:
+    if query is None:
         return
 
-    callback_data = query.data or ""
+    callback_data = _normalize_text(
+        query.data
+    )
 
-    # -----------------------------------------------------
-    # Finance main menu
-    # -----------------------------------------------------
+    if not callback_data:
+        await query.answer()
+        return
+
+    # --------------------------------------------------------
+    # Main Finance Menu
+    # --------------------------------------------------------
 
     if callback_data == "menu_finance":
+
+        _clear_quiz_state(
+            context
+        )
+
         await show_finance_menu(
             update,
             context,
@@ -1015,14 +1276,15 @@ async def route_finance_callback(
 
         return
 
-    # -----------------------------------------------------
-    # Finance chapter list
-    # -----------------------------------------------------
-
     if callback_data in {
         FINANCE_MENU_CALLBACK,
         FINANCE_BACK_CALLBACK,
     }:
+
+        _clear_quiz_state(
+            context
+        )
+
         await show_finance_chapters(
             update,
             context,
@@ -1030,57 +1292,247 @@ async def route_finance_callback(
 
         return
 
-    # -----------------------------------------------------
-    # Lesson / Lesson Quiz
-    # -----------------------------------------------------
+    # --------------------------------------------------------
+    # Finance Lesson Callbacks
+    # --------------------------------------------------------
 
     if callback_data.startswith(
         FINANCE_LESSON_PREFIX
     ):
-        lesson_id = callback_data[
+
+        payload = callback_data[
             len(FINANCE_LESSON_PREFIX):
         ]
 
-        # -------------------------------------------------
-        # Quiz callback
-        # Format:
-        # finance_lesson:<lesson_id>:quiz
-        # -------------------------------------------------
+        # ====================================================
+        # Answer Callback
+        # ====================================================
 
-        if lesson_id.endswith(
+        if FINANCE_ANSWER_MARKER in payload:
+
+            try:
+
+                lesson_id, answer_data = payload.split(
+                    FINANCE_ANSWER_MARKER,
+                    1,
+                )
+
+                question_index_text, option_index_text = (
+                    answer_data.split(
+                        ":",
+                        1,
+                    )
+                )
+
+                question_index = int(
+                    question_index_text
+                )
+
+                option_index = int(
+                    option_index_text
+                )
+
+            except (
+                ValueError,
+                TypeError,
+            ):
+
+                await query.answer(
+                    "❌ پاسخ نامعتبر است.",
+                    show_alert=True,
+                )
+
+                return
+
+            await handle_finance_quiz_answer(
+                update,
+                context,
+                lesson_id,
+                question_index,
+                option_index,
+            )
+
+            return
+
+        # ====================================================
+        # Quiz Start Callback
+        # ====================================================
+
+        if payload.endswith(
             FINANCE_LESSON_QUIZ_SUFFIX
         ):
-            real_lesson_id = lesson_id[
-                : -len(FINANCE_LESSON_QUIZ_SUFFIX)
+
+            real_lesson_id = payload[
+                : -len(
+                    FINANCE_LESSON_QUIZ_SUFFIX
+                )
             ]
+
+            state = _get_quiz_state(
+                context
+            )
+
+            chapter_id = ""
+
+            if state:
+
+                state_lesson_id = _normalize_text(
+                    state.get(
+                        "lesson_id"
+                    )
+                )
+
+                if (
+                    state_lesson_id
+                    == real_lesson_id
+                ):
+
+                    chapter_id = _normalize_text(
+                        state.get(
+                            "chapter_id"
+                        )
+                    )
+
+            if not chapter_id:
+
+                for chapter in get_finance_chapters():
+
+                    current_chapter_id = _normalize_text(
+                        chapter.get(
+                            "id"
+                        )
+                    )
+
+                    lessons = get_finance_lessons(
+                        current_chapter_id
+                    )
+
+                    for lesson in lessons:
+
+                        if (
+                            _normalize_text(
+                                lesson.get(
+                                    "id"
+                                )
+                            )
+                            == real_lesson_id
+                        ):
+
+                            chapter_id = (
+                                current_chapter_id
+                            )
+
+                            break
+
+                    if chapter_id:
+                        break
+
+            if not chapter_id:
+
+                await query.answer(
+                    "❌ فصل این درس پیدا نشد.",
+                    show_alert=True,
+                )
+
+                return
 
             await show_finance_lesson_quiz(
                 update,
                 context,
+                chapter_id,
                 real_lesson_id,
             )
 
             return
 
-        # -------------------------------------------------
-        # Normal lesson callback
-        # -------------------------------------------------
+        # ====================================================
+        # Normal Lesson Callback
+        # ====================================================
+
+        lesson_id = payload
+
+        state = _get_quiz_state(
+            context
+        )
+
+        if state:
+
+            state_lesson_id = _normalize_text(
+                state.get(
+                    "lesson_id"
+                )
+            )
+
+            if state_lesson_id == lesson_id:
+
+                _clear_quiz_state(
+                    context
+                )
+
+        chapter_id = ""
+
+        for chapter in get_finance_chapters():
+
+            current_chapter_id = _normalize_text(
+                chapter.get(
+                    "id"
+                )
+            )
+
+            lessons = get_finance_lessons(
+                current_chapter_id
+            )
+
+            for lesson in lessons:
+
+                if (
+                    _normalize_text(
+                        lesson.get(
+                            "id"
+                        )
+                    )
+                    == lesson_id
+                ):
+
+                    chapter_id = (
+                        current_chapter_id
+                    )
+
+                    break
+
+            if chapter_id:
+                break
+
+        if not chapter_id:
+
+            await query.answer(
+                "❌ فصل درس پیدا نشد.",
+                show_alert=True,
+            )
+
+            return
 
         await show_finance_lesson(
             update,
             context,
+            chapter_id,
             lesson_id,
         )
 
         return
 
-    # -----------------------------------------------------
+    # --------------------------------------------------------
     # Chapter
-    # -----------------------------------------------------
+    # --------------------------------------------------------
 
     if callback_data.startswith(
         FINANCE_CHAPTER_PREFIX
     ):
+
+        _clear_quiz_state(
+            context
+        )
+
         chapter_id = callback_data[
             len(FINANCE_CHAPTER_PREFIX):
         ]
@@ -1093,74 +1545,82 @@ async def route_finance_callback(
 
         return
 
-    # -----------------------------------------------------
-    # Unknown callback
-    # -----------------------------------------------------
+    # --------------------------------------------------------
+    # Main Menu
+    # --------------------------------------------------------
+
+    if callback_data == MAIN_MENU_CALLBACK:
+
+        _clear_quiz_state(
+            context
+        )
+
+        await query.answer()
+
+        await query.edit_message_text(
+            "🏠 منوی اصلی",
+        )
+
+        return
+
+    # --------------------------------------------------------
+    # Unknown Callback
+    # --------------------------------------------------------
 
     await query.answer(
-        "گزینه مدیریت مالی شناسایی نشد.",
+        "⚠️ این گزینه دیگر فعال نیست.",
         show_alert=True,
     )
 
 
-# =========================================================
+# ============================================================
 # Health Check
-# =========================================================
+# ============================================================
 
-def finance_handlers_health_check() -> bool:
+def finance_handlers_health_check() -> Dict[str, Any]:
     """
-    Lightweight health check for Finance handlers.
-
-    The actual module validation is delegated to
-    Finance Service Layer.
+    بررسی سلامت Handlerهای Finance.
     """
-
     try:
-        required_functions = (
-            show_finance_menu,
-            show_finance_chapters,
-            show_finance_chapter,
-            show_finance_lesson,
-            show_finance_lesson_quiz,
-            route_finance_callback,
-            _format_lesson_content,
-            _format_quiz,
-            _finance_lesson_keyboard,
-            _finance_quiz_keyboard,
-            get_finance_chapters,
-            get_finance_chapter,
-            get_finance_lessons,
-            get_finance_lesson,
-            get_complete_lesson,
-            get_finance_quiz,
-            finance_health_check,
-        )
 
-        return all(
-            callable(function)
-            for function in required_functions
-        )
+        service_health = finance_health_check()
 
-    except Exception:
-        return False
+        return {
+            "module_id": "finance",
+            "status": (
+                "healthy"
+                if service_health.get(
+                    "valid",
+                    False,
+                )
+                else "warning"
+            ),
+            "service": service_health,
+            "quiz_answer_handler": True,
+            "quiz_state": FINANCE_QUIZ_STATE_KEY,
+        }
+
+    except Exception as exc:
+
+        return {
+            "module_id": "finance",
+            "status": "error",
+            "quiz_answer_handler": False,
+            "error": str(exc),
+        }
 
 
-# =========================================================
+# ============================================================
 # Public API
-# =========================================================
+# ============================================================
 
 __all__ = [
-    "FINANCE_MENU_CALLBACK",
-    "FINANCE_CHAPTER_PREFIX",
-    "FINANCE_LESSON_PREFIX",
-    "FINANCE_BACK_CALLBACK",
-    "MAIN_MENU_CALLBACK",
-    "FINANCE_LESSON_QUIZ_SUFFIX",
     "show_finance_menu",
     "show_finance_chapters",
     "show_finance_chapter",
     "show_finance_lesson",
     "show_finance_lesson_quiz",
+    "handle_finance_quiz_answer",
     "route_finance_callback",
     "finance_handlers_health_check",
 ]
