@@ -59,6 +59,8 @@ class ChapterRecord:
     title: str
     module_id: str
 
+    description: str = ""
+
     lessons: dict[
         str,
         LessonRecord,
@@ -73,6 +75,8 @@ class ModuleRecord:
 
     module_id: str
     title: str
+
+    description: str = ""
 
     chapters: dict[
         str,
@@ -155,6 +159,20 @@ class Registry:
                 f"{field_name} cannot be empty."
             )
 
+    @staticmethod
+    def _normalize_description(
+        description: Any,
+    ) -> str:
+        """Normalize optional description text."""
+
+        if description is None:
+            return ""
+
+        if not isinstance(description, str):
+            return str(description)
+
+        return description.strip()
+
     def _ensure_database(self) -> None:
         """Ensure the SQLite database exists."""
 
@@ -169,11 +187,14 @@ class Registry:
         self,
         module_id: str,
         title: str,
+        description: str = "",
     ) -> ModuleRecord:
         """
         Register or update a module.
 
         The module is stored in memory and SQLite.
+
+        description is optional for backward compatibility.
         """
 
         self._validate_identifier(
@@ -186,6 +207,10 @@ class Registry:
             "module title",
         )
 
+        description = self._normalize_description(
+            description
+        )
+
         module = self.modules.get(
             module_id
         )
@@ -195,6 +220,7 @@ class Registry:
             module = ModuleRecord(
                 module_id=module_id,
                 title=title,
+                description=description,
             )
 
             self.modules[
@@ -205,12 +231,31 @@ class Registry:
 
             module.title = title
 
+            if description:
+                module.description = description
+
         self._ensure_database()
 
-        upsert_module(
-            module_id=module_id,
-            title=title,
-        )
+        # --------------------------------------------------
+        # Database compatibility
+        # --------------------------------------------------
+
+        try:
+
+            upsert_module(
+                module_id=module_id,
+                title=title,
+                description=description,
+            )
+
+        except TypeError:
+
+            # Older database implementation
+            # may not support description.
+            upsert_module(
+                module_id=module_id,
+                title=title,
+            )
 
         return module
 
@@ -223,12 +268,15 @@ class Registry:
         module_id: str,
         chapter_id: str,
         title: str,
+        description: str = "",
     ) -> ChapterRecord:
         """
         Register or update a chapter.
 
         If the module does not exist, it is created
         automatically.
+
+        description is optional for backward compatibility.
         """
 
         self._validate_identifier(
@@ -244,6 +292,10 @@ class Registry:
         self._validate_title(
             title,
             "chapter title",
+        )
+
+        description = self._normalize_description(
+            description
         )
 
         if module_id not in self.modules:
@@ -267,6 +319,7 @@ class Registry:
                 chapter_id=chapter_id,
                 title=title,
                 module_id=module_id,
+                description=description,
             )
 
             module.chapters[
@@ -277,7 +330,14 @@ class Registry:
 
             chapter.title = title
 
+            if description:
+                chapter.description = description
+
         self._ensure_database()
+
+        # --------------------------------------------------
+        # Database synchronization
+        # --------------------------------------------------
 
         upsert_chapter(
             module_id=module_id,
@@ -304,6 +364,10 @@ class Registry:
 
         The parent module and chapter are created
         automatically when necessary.
+
+        IMPORTANT:
+        If the chapter already exists, its existing title
+        and description are preserved.
         """
 
         self._validate_identifier(
@@ -334,11 +398,26 @@ class Registry:
                 "lesson data must be a dictionary."
             )
 
-        chapter = self.register_chapter(
+        # --------------------------------------------------
+        # Find existing chapter first.
+        #
+        # Do NOT call register_chapter with
+        # title=chapter_id because that would overwrite
+        # the real chapter title.
+        # --------------------------------------------------
+
+        chapter = self.get_chapter(
             module_id=module_id,
             chapter_id=chapter_id,
-            title=chapter_id,
         )
+
+        if chapter is None:
+
+            chapter = self.register_chapter(
+                module_id=module_id,
+                chapter_id=chapter_id,
+                title=chapter_id,
+            )
 
         lesson = chapter.lessons.get(
             lesson_id
@@ -731,6 +810,7 @@ class Registry:
             result[module_id] = {
                 "id": module.module_id,
                 "title": module.title,
+                "description": module.description,
                 "chapters": {},
             }
 
@@ -745,6 +825,7 @@ class Registry:
                 ][chapter_id] = {
                     "id": chapter.chapter_id,
                     "title": chapter.title,
+                    "description": chapter.description,
                     "lessons": {},
                 }
 
