@@ -1,270 +1,337 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>آموزش تخصصی | اندیشکده مدیریت و بازار</title>
-<!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-    <title>آموزش تخصصی | اندیشکده مدیریت و بازار</title>
-    <meta
-        name="description"
-        content="دوره‌ها و آموزش‌های تخصصی اندیشکده مدیریت و بازار"
-    >
-    <!-- مسیر صحیح CSS -->
-    <link
-        rel="stylesheet"
-        href="css/style.css"
-    >
-    <style>
+<meta charset="UTF-8">
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+<meta
+    name="description"
+    content="دوره‌ها و آموزش‌های تخصصی اندیشکده مدیریت و بازار"
+>
+<title>
+    آموزش تخصصی | اندیشکده مدیریت و بازار
+</title>
+<!-- Main CSS -->
+<link
+    rel="stylesheet"
+    href="css/style.css"
+>
+<style>
+    /* =====================================================
+       MODULES PAGE
+    ===================================================== */
+    .page-header {
+        padding: 65px 20px 30px;
+        text-align: center;
+    }
+    .page-header h1 {
+        margin: 0 0 14px;
+        color: var(--navy);
+        font-size: 36px;
+        font-weight: 800;
+    }
+    .page-header p {
+        max-width: 720px;
+        margin: 0 auto;
+        color: var(--muted);
+        line-height: 2;
+        font-size: 14px;
+    }
+    .back-home {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 22px;
+        padding: 10px 18px;
+        border-radius: 10px;
+        background: var(--navy);
+        color: #ffffff;
+        text-decoration: none;
+        transition: 0.2s ease;
+    }
+    .back-home:hover {
+        transform: translateY(-2px);
+        background: var(--navy-2);
+    }
+    /* =====================================================
+       STATISTICS
+    ===================================================== */
+    .stats {
+        width: min(900px, calc(100% - 40px));
+        margin: 20px auto 45px;
+        display: grid;
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+        gap: 18px;
+    }
+    .stat-box {
+        padding: 24px;
+        background: #ffffff;
+        border: 1px solid var(--gray-2);
+        border-radius: var(--radius);
+        text-align: center;
+        box-shadow:
+            0 8px 25px rgba(7, 26, 47, 0.04);
+    }
+    .stat-box strong {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--navy);
+        font-size: 32px;
+        font-weight: 800;
+    }
+    .stat-box span {
+        color: var(--muted);
+        font-size: 13px;
+    }
+    /* =====================================================
+       MODULES GRID
+    ===================================================== */
+    .modules-container {
+        width: min(1200px, calc(100% - 40px));
+        margin: 0 auto 80px;
+        display: grid;
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+        gap: 22px;
+    }
+    /* =====================================================
+       MODULE CARD
+    ===================================================== */
+    .module-card {
+        position: relative;
+        display: block;
+        min-height: 245px;
+        padding: 28px;
+        background: #ffffff;
+        border: 1px solid var(--gray-2);
+        border-radius: var(--radius);
+        color: inherit;
+        text-decoration: none;
+        overflow: hidden;
+        box-shadow:
+            0 8px 25px rgba(7, 26, 47, 0.04);
+        transition:
+            transform 0.25s ease,
+            box-shadow 0.25s ease,
+            border-color 0.25s ease;
+    }
+    .module-card::after {
+        content: "";
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        left: -45px;
+        bottom: -45px;
+        border-radius: 50%;
+        background:
+            rgba(22, 199, 189, 0.08);
+        pointer-events: none;
+    }
+    .module-card:hover {
+        transform: translateY(-6px);
+        border-color:
+            rgba(22, 199, 189, 0.45);
+        box-shadow:
+            0 18px 45px
+            rgba(7, 26, 47, 0.10);
+    }
+    /* =====================================================
+       MODULE ICON
+    ===================================================== */
+    .module-icon {
+        position: relative;
+        z-index: 1;
+        width: 58px;
+        height: 58px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 18px;
+        border-radius: 16px;
+        background: var(--gray);
+        font-size: 27px;
+    }
+    /* =====================================================
+       MODULE TITLE
+    ===================================================== */
+    .module-card h3 {
+        position: relative;
+        z-index: 1;
+        margin: 0 0 10px;
+        color: var(--navy);
+        font-size: 20px;
+        font-weight: 800;
+        line-height: 1.8;
+    }
+    /* =====================================================
+       MODULE DESCRIPTION
+    ===================================================== */
+    .module-card p {
+        position: relative;
+        z-index: 1;
+        min-height: 52px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.9;
+    }
+    /* =====================================================
+       MODULE META
+    ===================================================== */
+    .module-meta {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        margin-top: 20px;
+    }
+    .module-meta span {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 9px;
+        background: var(--gray);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+    }
+    /* =====================================================
+       LOADING / ERROR / EMPTY
+    ===================================================== */
+    .loading,
+    .error,
+    .empty {
+        width: min(800px, calc(100% - 40px));
+        margin: 50px auto;
+        padding: 30px;
+        text-align: center;
+        background: #ffffff;
+        border: 1px solid var(--gray-2);
+        border-radius: 18px;
+        box-shadow:
+            0 8px 25px
+            rgba(7, 26, 47, 0.04);
+    }
+    .loading p,
+    .error p,
+    .empty p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        line-height: 1.9;
+    }
+    /* =====================================================
+       SPINNER
+    ===================================================== */
+    .spinner {
+        width: 36px;
+        height: 36px;
+        margin: 0 auto 14px;
+        border: 4px solid var(--gray-2);
+        border-top-color:
+            var(--turquoise);
+        border-radius: 50%;
+        animation:
+            modulesSpinner 0.8s linear infinite;
+    }
+    @keyframes modulesSpinner {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+    /* =====================================================
+       ERROR
+    ===================================================== */
+    .error {
+        border-color:
+            rgba(220, 60, 60, 0.25);
+    }
+    .error-title {
+        margin-bottom: 8px;
+        color: #b42318;
+        font-weight: 700;
+    }
+    .error-details {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 13px;
+        direction: ltr;
+        word-break: break-word;
+    }
+    .retry-button {
+        margin-top: 18px;
+        padding: 11px 22px;
+        border: 0;
+        border-radius: 10px;
+        cursor: pointer;
+        font-family: inherit;
+        background:
+            var(--turquoise);
+        color:
+            var(--navy);
+        font-weight: 700;
+        transition:
+            transform 0.2s ease;
+    }
+    .retry-button:hover {
+        transform:
+            translateY(-2px);
+    }
+    /* =====================================================
+       EMPTY
+    ===================================================== */
+    .empty-title {
+        color: var(--navy);
+        font-weight: 700;
+    }
+    /* =====================================================
+       RESPONSIVE
+    ===================================================== */
+    @media (max-width: 900px) {
+        .modules-container {
+            grid-template-columns:
+                repeat(2, minmax(0, 1fr));
+        }
+    }
+    @media (max-width: 650px) {
         .page-header {
-            padding: 70px 20px 30px;
-            text-align: center;
+            padding:
+                45px 15px 25px;
         }
         .page-header h1 {
-            margin: 0 0 12px;
-            font-size: 36px;
-            color: var(--navy);
-        }
-        .page-header p {
-            margin: 0 auto;
-            max-width: 720px;
-            color: var(--muted);
-            line-height: 2;
-        }
-        .back-home {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 22px;
-            padding: 10px 18px;
-            border-radius: 10px;
-            background: var(--navy);
-            color: white;
-            transition: .2s;
-        }
-        .back-home:hover {
-            transform: translateY(-2px);
-            background: var(--navy-2);
+            font-size: 28px;
         }
         .stats {
-            width: min(900px, calc(100% - 40px));
-            margin: 20px auto 45px;
-            display: grid;
-            grid-template-columns:
-                repeat(3, minmax(0, 1fr));
-            gap: 18px;
-        }
-        .stat-box {
-            background: white;
-            border: 1px solid var(--gray-2);
-            border-radius: var(--radius);
-            padding: 24px;
-            text-align: center;
-            box-shadow:
-                0 8px 25px rgba(7, 26, 47, .04);
-        }
-        .stat-box strong {
-            display: block;
-            color: var(--navy);
-            font-size: 32px;
-            margin-bottom: 5px;
-        }
-        .stat-box span {
-            color: var(--muted);
-            font-size: 13px;
+            width:
+                min(500px, calc(100% - 25px));
+            grid-template-columns: 1fr;
+            gap: 12px;
         }
         .modules-container {
-            width: min(1200px, calc(100% - 40px));
-            margin: 0 auto 80px;
-            display: grid;
-            grid-template-columns:
-                repeat(3, minmax(0, 1fr));
-            gap: 22px;
+            width:
+                min(100% - 25px, 1200px);
+            grid-template-columns: 1fr;
+            gap: 16px;
         }
         .module-card {
-            position: relative;
-            display: block;
-            min-height: 245px;
-            padding: 28px;
-            background: white;
-            border: 1px solid var(--gray-2);
-            border-radius: var(--radius);
-            color: inherit;
-            text-decoration: none;
-            overflow: hidden;
-            box-shadow:
-                0 8px 25px rgba(7, 26, 47, .04);
-            transition:
-                transform .25s ease,
-                box-shadow .25s ease,
-                border-color .25s ease;
+            min-height: auto;
+            padding: 22px;
         }
-        .module-card::after {
-            content: "";
-            position: absolute;
-            width: 120px;
-            height: 120px;
-            left: -45px;
-            bottom: -45px;
-            border-radius: 50%;
-            background:
-                rgba(22, 199, 189, .08);
-            pointer-events: none;
-        }
-        .module-card:hover {
-            transform: translateY(-6px);
-            border-color:
-                rgba(22, 199, 189, .45);
-            box-shadow:
-                0 18px 45px
-                rgba(7, 26, 47, .10);
-        }
-        .module-icon {
-            width: 58px;
-            height: 58px;
-            display: grid;
-            place-items: center;
-            margin-bottom: 18px;
-            border-radius: 16px;
-            background: var(--gray);
-            font-size: 27px;
-        }
-        .module-card h2 {
-            margin: 0 0 10px;
-            color: var(--navy);
-            font-size: 20px;
-        }
-        .module-card p {
-            margin: 0;
-            min-height: 52px;
-            color: var(--muted);
-            font-size: 13px;
-            line-height: 1.9;
-        }
-        .module-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 9px;
-            margin-top: 20px;
-        }
-        .module-meta span {
-            display: inline-flex;
-            align-items: center;
-            padding: 6px 10px;
-            border-radius: 9px;
-            background: var(--gray);
-            color: var(--muted);
-            font-size: 12px;
-        }
-        .loading,
-        .error,
-        .empty {
-            width: min(800px, calc(100% - 40px));
-            margin: 50px auto;
-            padding: 30px;
-            text-align: center;
-            background: white;
-            border: 1px solid var(--gray-2);
-            border-radius: 18px;
-            box-shadow:
-                0 8px 25px
-                rgba(7, 26, 47, .04);
-        }
-        .loading p,
-        .error p,
-        .empty p {
-            margin: 10px 0 0;
-            color: var(--muted);
-            line-height: 1.9;
-        }
-        .error {
-            border-color:
-                rgba(220, 60, 60, .25);
-        }
-        .error-title {
-            color: #b42318;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-        .error-details {
-            color: var(--muted);
-            font-size: 13px;
-            direction: ltr;
-            word-break: break-word;
-        }
-        .retry-button {
-            margin-top: 18px;
-            padding: 11px 22px;
-            border: 0;
-            border-radius: 10px;
-            cursor: pointer;
-            font-family: inherit;
-            background: var(--turquoise);
-            color: var(--navy);
-            font-weight: 700;
-            transition: .2s;
-        }
-        .retry-button:hover {
-            transform: translateY(-2px);
-        }
-        .spinner {
-            width: 35px;
-            height: 35px;
-            margin: 0 auto 12px;
-            border: 4px solid var(--gray-2);
-            border-top-color:
-                var(--turquoise);
-            border-radius: 50%;
-            animation:
-                modulesSpinner .8s linear infinite;
-        }
-        @keyframes modulesSpinner {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-        @media (max-width: 900px) {
-            .modules-container {
-                grid-template-columns:
-                    repeat(2, minmax(0, 1fr));
-            }
-        }
-        @media (max-width: 650px) {
-            .page-header {
-                padding-top: 45px;
-            }
-            .page-header h1 {
-                font-size: 28px;
-            }
-            .stats {
-                grid-template-columns: 1fr;
-                width: min(500px, calc(100% - 25px));
-            }
-            .modules-container {
-                width: min(100% - 25px, 1200px);
-                grid-template-columns: 1fr;
-                gap: 16px;
-            }
-            .module-card {
-                min-height: auto;
-            }
-        }
-    </style>
+    }
+</style>
 </head>
 <body>
+<!-- =====================================================
+     HEADER
+===================================================== -->
 <header class="header">
     <div class="container nav">
         <a
             href="index.html"
             class="brand"
+            aria-label="اندیشکده مدیریت و بازار"
         >
             <div class="brand-logo">
                 ا
@@ -291,7 +358,11 @@
         </nav>
     </div>
 </header>
+<!-- =====================================================
+     MAIN
+===================================================== -->
 <main>
+    <!-- PAGE HEADER -->
     <section class="page-header">
         <h1>
             📚 آموزش تخصصی
@@ -308,13 +379,16 @@
             ← بازگشت به صفحه اصلی
         </a>
     </section>
+    <!-- =================================================
+         STATISTICS
+    ================================================== -->
     <section
         class="stats"
         id="stats"
     >
         <div class="stat-box">
             <strong id="moduleCount">
-                ...
+                ۰
             </strong>
             <span>
                 ماژول آموزشی
@@ -322,7 +396,7 @@
         </div>
         <div class="stat-box">
             <strong id="chapterCount">
-                ...
+                ۰
             </strong>
             <span>
                 فصل
@@ -330,13 +404,16 @@
         </div>
         <div class="stat-box">
             <strong id="lessonCount">
-                ...
+                ۰
             </strong>
             <span>
                 درس
             </span>
         </div>
     </section>
+    <!-- =================================================
+         LOADING
+    ================================================== -->
     <div
         id="loading"
         class="loading"
@@ -346,13 +423,16 @@
             در حال دریافت دوره‌های آموزشی...
         </p>
     </div>
+    <!-- =================================================
+         ERROR
+    ================================================== -->
     <div
         id="error"
         class="error"
-        style="display:none;"
+        hidden
     >
         <div class="error-title">
-            دریافت اطلاعات با مشکل مواجه شد.
+            ⚠️ دریافت اطلاعات با مشکل مواجه شد.
         </div>
         <p>
             ارتباط با سیستم آموزشی برقرار نشد.
@@ -369,24 +449,32 @@
             تلاش مجدد
         </button>
     </div>
+    <!-- =================================================
+         EMPTY
+    ================================================== -->
     <div
         id="empty"
         class="empty"
-        style="display:none;"
+        hidden
     >
-        <div>
+        <div class="empty-title">
             هنوز ماژول آموزشی‌ای ثبت نشده است.
         </div>
         <p>
             در حال حاضر محتوایی برای نمایش وجود ندارد.
         </p>
     </div>
+    <!-- =================================================
+         MODULES CONTAINER
+    ================================================== -->
     <section
         id="modulesContainer"
         class="modules-container"
-        style="display:none;"
     ></section>
 </main>
+<!-- =====================================================
+     FOOTER
+===================================================== -->
 <footer class="footer">
     <div class="container">
         <p>
@@ -394,755 +482,11 @@
         </p>
     </div>
 </footer>
-<!--
-    ترتیب بارگذاری مهم است:
-    1. api.js
-    2. modules.js
-    api.js توابع ارتباط با API را ایجاد می‌کند.
-    modules.js از همان توابع استفاده می‌کند.
--->
+<!-- =====================================================
+     JAVASCRIPT
+     فقط این دو فایل باید اجرا شوند.
+===================================================== -->
 <script src="js/api.js"></script>
 <script src="js/modules.js"></script>
-</body>
-</html>
-    <meta
-        name="description"
-        content="دوره‌ها و آموزش‌های تخصصی اندیشکده مدیریت و بازار"
-    >
-
-    <link rel="stylesheet" href="style.css">
-
-    <style>
-        .page-header {
-            padding: 70px 20px 30px;
-            text-align: center;
-        }
-
-        .page-header h1 {
-            margin: 0 0 12px;
-            font-size: 36px;
-        }
-
-        .page-header p {
-            margin: 0 auto;
-            max-width: 700px;
-            opacity: .75;
-            line-height: 2;
-        }
-
-        .stats {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin: 25px auto 45px;
-            padding: 0 20px;
-        }
-
-        .stat-box {
-            min-width: 150px;
-            padding: 18px 25px;
-            border-radius: 16px;
-            background: rgba(255,255,255,.06);
-            border: 1px solid rgba(255,255,255,.08);
-            text-align: center;
-        }
-
-        .stat-box strong {
-            display: block;
-            font-size: 25px;
-            margin-bottom: 5px;
-        }
-
-        .stat-box span {
-            opacity: .7;
-            font-size: 14px;
-        }
-
-        .modules-container {
-            width: min(1200px, calc(100% - 40px));
-            margin: 0 auto 70px;
-
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 20px;
-        }
-
-        .module-card {
-            display: block;
-            text-decoration: none;
-            color: inherit;
-
-            padding: 28px;
-            min-height: 220px;
-
-            border-radius: 22px;
-            background: rgba(255,255,255,.055);
-            border: 1px solid rgba(255,255,255,.09);
-
-            transition:
-                transform .25s ease,
-                border-color .25s ease,
-                background .25s ease,
-                box-shadow .25s ease;
-        }
-
-        .module-card:hover {
-            transform: translateY(-6px);
-            border-color: rgba(0, 200, 180, .45);
-            background: rgba(255,255,255,.08);
-            box-shadow: 0 15px 40px rgba(0,0,0,.18);
-        }
-
-        .module-icon {
-            width: 55px;
-            height: 55px;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            border-radius: 16px;
-            background: rgba(0, 200, 180, .12);
-
-            font-size: 26px;
-            margin-bottom: 20px;
-        }
-
-        .module-card h2 {
-            margin: 0 0 12px;
-            font-size: 21px;
-        }
-
-        .module-card p {
-            margin: 0 0 20px;
-            line-height: 1.9;
-            opacity: .7;
-            min-height: 55px;
-        }
-
-        .module-meta {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .module-meta span {
-            display: inline-block;
-            padding: 6px 11px;
-            border-radius: 9px;
-            background: rgba(255,255,255,.06);
-            font-size: 13px;
-            opacity: .8;
-        }
-
-        .loading,
-        .error,
-        .empty {
-            width: min(800px, calc(100% - 40px));
-            margin: 50px auto;
-            padding: 30px;
-            text-align: center;
-            border-radius: 18px;
-            background: rgba(255,255,255,.05);
-        }
-
-        .error {
-            border: 1px solid rgba(255,80,80,.25);
-        }
-
-        .retry-button {
-            margin-top: 18px;
-            padding: 11px 22px;
-            border: 0;
-            border-radius: 10px;
-            cursor: pointer;
-            font-family: inherit;
-            background: #00bfa6;
-            color: white;
-        }
-
-        .back-home {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 10px 18px;
-            border-radius: 10px;
-            text-decoration: none;
-            background: rgba(255,255,255,.06);
-            color: inherit;
-        }
-
-        @media (max-width: 600px) {
-            .page-header {
-                padding-top: 45px;
-            }
-
-            .page-header h1 {
-                font-size: 28px;
-            }
-
-            .modules-container {
-                width: min(100% - 25px, 1200px);
-                grid-template-columns: 1fr;
-            }
-
-            .stat-box {
-                min-width: 120px;
-            }
-        }
-    </style>
-</head>
-
-<body>
-
-    <!-- Header -->
-    <header>
-        <div class="container">
-
-            <a href="index.html" class="logo">
-                اندیشکده مدیریت و بازار
-            </a>
-
-            <nav>
-                <a href="index.html">خانه</a>
-                <a href="modules.html" class="active">آموزش تخصصی</a>
-            </nav>
-
-        </div>
-    </header>
-
-
-    <!-- Page Header -->
-    <main>
-
-        <section class="page-header">
-
-            <h1>📚 آموزش تخصصی</h1>
-
-            <p>
-                آموزش‌های تخصصی مدیریت، بانکداری، تجارت، اقتصاد و سایر حوزه‌های
-                کاربردی را انتخاب کنید و مسیر یادگیری خود را آغاز کنید.
-            </p>
-
-            <a href="index.html" class="back-home">
-                ← بازگشت به صفحه اصلی
-            </a>
-
-        </section>
-
-
-        <!-- Statistics -->
-        <section class="stats" id="stats">
-
-            <div class="stat-box">
-                <strong id="moduleCount">-</strong>
-                <span>ماژول آموزشی</span>
-            </div>
-
-            <div class="stat-box">
-                <strong id="chapterCount">-</strong>
-                <span>فصل</span>
-            </div>
-
-            <div class="stat-box">
-                <strong id="lessonCount">-</strong>
-                <span>درس</span>
-            </div>
-
-        </section>
-
-
-        <!-- Loading -->
-        <div id="loading" class="loading">
-            در حال دریافت دوره‌های آموزشی...
-        </div>
-
-
-        <!-- Error -->
-        <div id="error" class="error" style="display:none;">
-
-            <div>
-                دریافت اطلاعات با مشکل مواجه شد.
-            </div>
-
-            <button
-                id="retryButton"
-                class="retry-button"
-                type="button"
-            >
-                تلاش مجدد
-            </button>
-
-        </div>
-
-
-        <!-- Empty -->
-        <div id="empty" class="empty" style="display:none;">
-            هنوز ماژول آموزشی‌ای ثبت نشده است.
-        </div>
-
-
-        <!-- Modules -->
-        <section
-            id="modulesContainer"
-            class="modules-container"
-            style="display:none;"
-        ></section>
-
-    </main>
-
-
-    <!-- Footer -->
-    <footer>
-
-        <div class="container">
-
-            <p>
-                © اندیشکده مدیریت و بازار
-            </p>
-
-        </div>
-
-    </footer>
-
-
-    <script>
-
-        /*
-         * API
-         *
-         * در Render، درخواست /api به API ربات متصل می‌شود.
-         *
-         * بنابراین لازم نیست آدرس دامنه ربات را اینجا هاردکد کنیم.
-         */
-
-        const API_BASE = "/api";
-
-
-        /*
-         * عناصر صفحه
-         */
-
-        const loadingElement =
-            document.getElementById("loading");
-
-        const errorElement =
-            document.getElementById("error");
-
-        const emptyElement =
-            document.getElementById("empty");
-
-        const modulesContainer =
-            document.getElementById("modulesContainer");
-
-        const retryButton =
-            document.getElementById("retryButton");
-
-        const moduleCountElement =
-            document.getElementById("moduleCount");
-
-        const chapterCountElement =
-            document.getElementById("chapterCount");
-
-        const lessonCountElement =
-            document.getElementById("lessonCount");
-
-
-        /*
-         * آیکون ماژول‌ها
-         */
-
-        const moduleIcons = {
-
-            banking: "🏦",
-
-            management: "📚",
-
-            international_trade: "🌍",
-
-            marketing_sales: "📈",
-
-            economics_market: "💰",
-
-            employment_exam: "📝",
-
-            psychology_social_work: "🧠",
-
-            finance: "💳",
-
-            default: "📘"
-
-        };
-
-
-        /*
-         * گرفتن آیکون
-         */
-
-        function getModuleIcon(moduleId) {
-
-            return moduleIcons[moduleId] ||
-                   moduleIcons.default;
-
-        }
-
-
-        /*
-         * فرار دادن متن از HTML
-         *
-         * برای اینکه اگر محتوای API شامل HTML ناخواسته بود،
-         * مستقیماً وارد صفحه نشود.
-         */
-
-        function escapeHTML(value) {
-
-            if (value === null || value === undefined) {
-                return "";
-            }
-
-            return String(value)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
-
-
-        /*
-         * دریافت اطلاعات API
-         */
-
-        async function fetchJSON(url) {
-
-            const response = await fetch(url, {
-                method: "GET",
-                headers: {
-                    "Accept": "application/json"
-                }
-            });
-
-            if (!response.ok) {
-
-                throw new Error(
-                    `HTTP ${response.status}`
-                );
-
-            }
-
-            return await response.json();
-        }
-
-
-        /*
-         * نمایش وضعیت اولیه
-         */
-
-        function showLoading() {
-
-            loadingElement.style.display = "block";
-
-            errorElement.style.display = "none";
-
-            emptyElement.style.display = "none";
-
-            modulesContainer.style.display = "none";
-
-        }
-
-
-        /*
-         * نمایش خطا
-         */
-
-        function showError() {
-
-            loadingElement.style.display = "none";
-
-            errorElement.style.display = "block";
-
-            emptyElement.style.display = "none";
-
-            modulesContainer.style.display = "none";
-
-        }
-
-
-        /*
-         * نمایش محتوای اصلی
-         */
-
-        function showContent() {
-
-            loadingElement.style.display = "none";
-
-            errorElement.style.display = "none";
-
-        }
-
-
-        /*
-         * ساخت کارت ماژول
-         */
-
-        function createModuleCard(module) {
-
-            /*
-             * شناسه واقعی ماژول
-             *
-             * برای بانکداری:
-             *
-             * banking
-             *
-             * لینک نهایی:
-             *
-             * chapter.html?module=banking
-             */
-
-            const moduleId =
-                String(module.id || "").trim();
-
-
-            if (!moduleId) {
-                return "";
-            }
-
-
-            const title =
-                escapeHTML(
-                    module.title ||
-                    "ماژول آموزشی"
-                );
-
-
-            const description =
-                escapeHTML(
-                    module.description ||
-                    "مشاهده فصل‌ها و درس‌های آموزشی"
-                );
-
-
-            const chapterCount =
-                Number(module.chapter_count || 0);
-
-
-            const lessonCount =
-                Number(module.lesson_count || 0);
-
-
-            /*
-             * لینک بسیار مهم
-             */
-
-            const chapterURL =
-                `chapter.html?module=${encodeURIComponent(moduleId)}`;
-
-
-            return `
-
-                <a
-                    href="${chapterURL}"
-                    class="module-card"
-                    data-module="${escapeHTML(moduleId)}"
-                >
-
-                    <div class="module-icon">
-                        ${getModuleIcon(moduleId)}
-                    </div>
-
-                    <h2>
-                        ${title}
-                    </h2>
-
-                    <p>
-                        ${description}
-                    </p>
-
-                    <div class="module-meta">
-
-                        <span>
-                            📖 ${chapterCount} فصل
-                        </span>
-
-                        <span>
-                            📝 ${lessonCount} درس
-                        </span>
-
-                    </div>
-
-                </a>
-
-            `;
-
-        }
-
-
-        /*
-         * نمایش ماژول‌ها
-         */
-
-        function renderModules(modules) {
-
-            if (!Array.isArray(modules)) {
-
-                throw new Error(
-                    "ساختار اطلاعات ماژول‌ها نامعتبر است."
-                );
-
-            }
-
-
-            if (modules.length === 0) {
-
-                loadingElement.style.display = "none";
-
-                errorElement.style.display = "none";
-
-                emptyElement.style.display = "block";
-
-                modulesContainer.style.display = "none";
-
-                return;
-
-            }
-
-
-            const cards = modules
-                .map(createModuleCard)
-                .filter(Boolean)
-                .join("");
-
-
-            modulesContainer.innerHTML = cards;
-
-            modulesContainer.style.display = "grid";
-
-            emptyElement.style.display = "none";
-
-        }
-
-
-        /*
-         * دریافت آمار
-         */
-
-        async function loadStats() {
-
-            try {
-
-                const data =
-                    await fetchJSON(API_BASE);
-
-                if (data.statistics) {
-
-                    moduleCountElement.textContent =
-                        data.statistics.modules ?? "-";
-
-                    chapterCountElement.textContent =
-                        data.statistics.chapters ?? "-";
-
-                    lessonCountElement.textContent =
-                        data.statistics.lessons ?? "-";
-
-                }
-
-            } catch (error) {
-
-                console.warn(
-                    "Statistics could not be loaded:",
-                    error
-                );
-
-            }
-
-        }
-
-
-        /*
-         * دریافت ماژول‌ها
-         */
-
-        async function loadModules() {
-
-            showLoading();
-
-            try {
-
-                const data =
-                    await fetchJSON(
-                        `${API_BASE}/modules`
-                    );
-
-
-                /*
-                 * API ممکن است مستقیماً آرایه برگرداند
-                 * یا داخل کلید modules قرار دهد.
-                 */
-
-                let modules;
-
-
-                if (Array.isArray(data)) {
-
-                    modules = data;
-
-                } else if (Array.isArray(data.modules)) {
-
-                    modules = data.modules;
-
-                } else {
-
-                    throw new Error(
-                        "API modules structure is invalid."
-                    );
-
-                }
-
-
-                renderModules(modules);
-
-                showContent();
-
-                await loadStats();
-
-            } catch (error) {
-
-                console.error(
-                    "Failed to load modules:",
-                    error
-                );
-
-                showError();
-
-            }
-
-        }
-
-
-        /*
-         * تلاش مجدد
-         */
-
-        retryButton.addEventListener(
-            "click",
-            loadModules
-        );
-
-
-        /*
-         * شروع صفحه
-         */
-
-        document.addEventListener(
-            "DOMContentLoaded",
-            () => {
-
-                loadModules();
-
-            }
-        );
-
-    </script>
-
 </body>
 </html>
