@@ -1,587 +1,599 @@
 /* =========================================================
-   ANDISHKADEH
-   MODULES PAGE
+ANDISHKADEH MANAGEMENT & MARKET
+MODULES PAGE
 ========================================================= */
+
+“use strict”;
+
 /* =========================================================
-   MODULE ICONS
+MODULE ICONS
 ========================================================= */
+
 const MODULE_ICONS = {
-    banking:
-        "🏦",
-    management:
-        "📚",
-    international_trade:
-        "🌍",
-    marketing_sales:
-        "📈",
-    economics_market:
-        "💰",
-    employment_exam:
-        "📝",
-    psychology_social_work:
-        "🧠",
-    finance:
-        "💳",
-    accounting:
-        "🧮",
-    general:
-        "📘",
-    default:
-        "📘"
+
+management:
+    "📚",
+banking:
+    "🏦",
+international_trade:
+    "🌍",
+psychology_socialwork:
+    "🧠",
+finance:
+    "💰",
+general_exam:
+    "📝"
+
 };
+
 /* =========================================================
-   DOM ELEMENTS
+DOM ELEMENTS
 ========================================================= */
-const modulesContainer =
+
+let modulesContainer;
+let loadingBox;
+let errorBox;
+let errorDetails;
+let emptyBox;
+
+let retryButton;
+
+let moduleCount;
+let chapterCount;
+let lessonCount;
+
+/* =========================================================
+INITIALIZE DOM
+========================================================= */
+
+function initializeElements() {
+
+modulesContainer =
     document.getElementById(
         "modulesContainer"
     );
-const loadingElement =
+loadingBox =
     document.getElementById(
         "loading"
     );
-const errorElement =
+errorBox =
     document.getElementById(
         "error"
     );
-const errorDetailsElement =
+errorDetails =
     document.getElementById(
         "errorDetails"
     );
-const emptyElement =
+emptyBox =
     document.getElementById(
         "empty"
     );
-const retryButton =
+retryButton =
     document.getElementById(
         "retryButton"
     );
-const moduleCountElement =
+moduleCount =
     document.getElementById(
         "moduleCount"
     );
-const chapterCountElement =
+chapterCount =
     document.getElementById(
         "chapterCount"
     );
-const lessonCountElement =
+lessonCount =
     document.getElementById(
         "lessonCount"
     );
+
+}
+
 /* =========================================================
-   ESCAPE HTML
+ESCAPE HTML
 ========================================================= */
+
 function escapeHtml(value) {
-    if (
-        value === null ||
-        value === undefined
-    ) {
-        return "";
-    }
-    return String(value)
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-}
-/* =========================================================
-   GET MODULE ICON
-========================================================= */
-function getModuleIcon(
-    module
+
+if (
+    value === null ||
+    value === undefined
 ) {
-    const id =
-        String(
-            module?.id || ""
-        )
-        .trim()
-        .toLowerCase();
-    const title =
-        String(
-            module?.title || ""
-        )
-        .trim();
-    if (
-        MODULE_ICONS[id]
-    ) {
-        return MODULE_ICONS[id];
-    }
-    /*
-     * fallback بر اساس عنوان
-     */
-    const titleLower =
-        title.toLowerCase();
-    if (
-        title.includes("بانک") ||
-        titleLower.includes("bank")
-    ) {
-        return "🏦";
-    }
-    if (
-        title.includes("مدیریت") ||
-        titleLower.includes("management")
-    ) {
-        return "📚";
-    }
-    if (
-        title.includes("تجارت") ||
-        titleLower.includes("trade")
-    ) {
-        return "🌍";
-    }
-    if (
-        title.includes("بازاریابی") ||
-        title.includes("فروش") ||
-        titleLower.includes("marketing")
-    ) {
-        return "📈";
-    }
-    if (
-        title.includes("اقتصاد") ||
-        titleLower.includes("econom")
-    ) {
-        return "💰";
-    }
-    if (
-        title.includes("آزمون") ||
-        title.includes("استخدام")
-    ) {
-        return "📝";
-    }
-    if (
-        title.includes("روانشناسی") ||
-        title.includes("مددکاری")
-    ) {
-        return "🧠";
-    }
-    return MODULE_ICONS.default;
+    return "";
 }
-/* =========================================================
-   NORMALIZE MODULE DATA
-========================================================= */
-function normalizeModulesResponse(
-    data
-) {
-    /*
-     * حالت معمول:
-     *
-     * {
-     *     "modules": [...]
-     * }
-     */
-    if (
-        data &&
-        Array.isArray(data.modules)
-    ) {
-        return data.modules;
-    }
-    /*
-     * بعضی APIها مستقیماً آرایه برمی‌گردانند.
-     */
-    if (
-        Array.isArray(data)
-    ) {
-        return data;
-    }
-    /*
-     * حالت احتمالی:
-     *
-     * {
-     *     "data": {
-     *         "modules": [...]
-     *     }
-     * }
-     */
-    if (
-        data &&
-        data.data &&
-        Array.isArray(data.data.modules)
-    ) {
-        return data.data.modules;
-    }
-    return [];
-}
-/* =========================================================
-   GET NUMBER
-========================================================= */
-function getNumber(
-    value
-) {
-    const number =
-        Number(value);
-    if (
-        Number.isFinite(number)
-    ) {
-        return number;
-    }
-    return 0;
-}
-/* =========================================================
-   CALCULATE STATISTICS
-========================================================= */
-function calculateStats(
-    modules,
-    apiData
-) {
-    let chapters = 0;
-    let lessons = 0;
-    modules.forEach(
-        module => {
-            chapters +=
-                getNumber(
-                    module.chapter_count
-                );
-            lessons +=
-                getNumber(
-                    module.lesson_count
-                );
-        }
+return String(value)
+    .replace(
+        /&/g,
+        "&amp;"
+    )
+    .replace(
+        /</g,
+        "&lt;"
+    )
+    .replace(
+        />/g,
+        "&gt;"
+    )
+    .replace(
+        /"/g,
+        "&quot;"
+    )
+    .replace(
+        /'/g,
+        "&#039;"
     );
-    /*
-     * اگر API آمار کلی را خودش داده باشد،
-     * در صورت وجود از آن استفاده می‌کنیم.
-     */
-    if (
-        apiData &&
-        apiData.chapter_count !== undefined
-    ) {
-        chapters =
-            getNumber(
-                apiData.chapter_count
-            );
-    }
-    if (
-        apiData &&
-        apiData.lesson_count !== undefined
-    ) {
-        lessons =
-            getNumber(
-                apiData.lesson_count
-            );
-    }
-    return {
-        modules:
-            modules.length,
-        chapters,
-        lessons
-    };
+
 }
+
 /* =========================================================
-   RENDER STATISTICS
+MODULE ICON
 ========================================================= */
-function renderStats(
-    stats
+
+function getModuleIcon(
+module
 ) {
-    if (
-        moduleCountElement
-    ) {
-        moduleCountElement.textContent =
-            stats.modules;
-    }
-    if (
-        chapterCountElement
-    ) {
-        chapterCountElement.textContent =
-            stats.chapters;
-    }
-    if (
-        lessonCountElement
-    ) {
-        lessonCountElement.textContent =
-            stats.lessons;
-    }
-}
-/* =========================================================
-   SHOW LOADING
-========================================================= */
-function showLoading() {
-    if (
-        loadingElement
-    ) {
-        loadingElement.style.display =
-            "block";
-    }
-    if (
-        errorElement
-    ) {
-        errorElement.style.display =
-            "none";
-    }
-    if (
-        emptyElement
-    ) {
-        emptyElement.style.display =
-            "none";
-    }
-    if (
-        modulesContainer
-    ) {
-        modulesContainer.style.display =
-            "none";
-    }
-}
-/* =========================================================
-   SHOW ERROR
-========================================================= */
-function showModulesError(
-    error
+
+const id =
+    String(
+        module?.id || ""
+    )
+    .trim()
+    .toLowerCase();
+if (
+    MODULE_ICONS[id]
 ) {
-    if (
-        loadingElement
-    ) {
-        loadingElement.style.display =
-            "none";
-    }
-    if (
-        emptyElement
-    ) {
-        emptyElement.style.display =
-            "none";
-    }
-    if (
-        modulesContainer
-    ) {
-        modulesContainer.style.display =
-            "none";
-    }
-    if (
-        errorElement
-    ) {
-        errorElement.style.display =
-            "block";
-    }
-    if (
-        errorDetailsElement
-    ) {
-        errorDetailsElement.textContent =
-            error?.message ||
-            "Unknown error";
-    }
+    return MODULE_ICONS[id];
 }
-/* =========================================================
-   SHOW EMPTY
-========================================================= */
-function showEmpty() {
-    if (
-        loadingElement
-    ) {
-        loadingElement.style.display =
-            "none";
-    }
-    if (
-        errorElement
-    ) {
-        errorElement.style.display =
-            "none";
-    }
-    if (
-        modulesContainer
-    ) {
-        modulesContainer.style.display =
-            "none";
-    }
-    if (
-        emptyElement
-    ) {
-        emptyElement.style.display =
-            "block";
-    }
-}
-/* =========================================================
-   CREATE MODULE CARD
-========================================================= */
-function createModuleCard(
-    module
+const title =
+    String(
+        module?.title || ""
+    );
+if (
+    title.includes(
+        "مدیریت"
+    )
 ) {
-    if (
-        !module
-    ) {
-        return "";
-    }
-    const moduleId =
-        String(
-            module.id || ""
-        ).trim();
-    if (
-        !moduleId
-    ) {
-        return "";
-    }
-    const title =
-        escapeHtml(
-            module.title ||
-            "ماژول آموزشی"
-        );
-    const description =
-        escapeHtml(
-            module.description ||
-            "مشاهده فصل‌ها و درس‌های آموزشی اندیشکده"
-        );
-    const chapterCount =
+    return "📚";
+}
+if (
+    title.includes(
+        "بانک"
+    )
+) {
+    return "🏦";
+}
+if (
+    title.includes(
+        "تجارت"
+    )
+) {
+    return "🌍";
+}
+if (
+    title.includes(
+        "روان"
+    ) ||
+    title.includes(
+        "مددکار"
+    )
+) {
+    return "🧠";
+}
+if (
+    title.includes(
+        "مالی"
+    )
+) {
+    return "💰";
+}
+if (
+    title.includes(
+        "آزمون"
+    )
+) {
+    return "📝";
+}
+return "📘";
+
+}
+
+/* =========================================================
+NUMBER NORMALIZER
+========================================================= */
+
+function getNumber(
+value
+) {
+
+const number =
+    Number(value);
+if (
+    Number.isFinite(number)
+) {
+    return number;
+}
+return 0;
+
+}
+
+/* =========================================================
+NORMALIZE MODULE RESPONSE
+========================================================= */
+
+function normalizeModulesResponse(
+data
+) {
+
+/*
+   Supported formats:
+   1)
+   {
+       count: 6,
+       modules: [...]
+   }
+   2)
+   [...]
+   3)
+   {
+       data: {
+           modules: [...]
+       }
+   }
+*/
+if (
+    Array.isArray(data)
+) {
+    return data;
+}
+if (
+    data &&
+    Array.isArray(
+        data.modules
+    )
+) {
+    return data.modules;
+}
+if (
+    data &&
+    data.data &&
+    Array.isArray(
+        data.data.modules
+    )
+) {
+    return data.data.modules;
+}
+return [];
+
+}
+
+/* =========================================================
+CALCULATE STATISTICS
+========================================================= */
+
+function calculateStats(
+modules
+) {
+
+let chapters = 0;
+let lessons = 0;
+for (
+    const module of modules
+) {
+    chapters +=
         getNumber(
             module.chapter_count
         );
-    const lessonCount =
+    lessons +=
         getNumber(
             module.lesson_count
         );
-    const icon =
-        getModuleIcon(
-            module
-        );
-    const chapterURL =
-        `chapter.html?module=${encodeURIComponent(
-            moduleId
-        )}`;
-    return `
-        <a
-            href="${chapterURL}"
-            class="module-card"
-            data-module="${escapeHtml(
-                moduleId
-            )}"
-        >
-            <div class="module-icon">
-                ${icon}
-            </div>
-            <h2>
-                ${title}
-            </h2>
-            <p>
-                ${description}
-            </p>
-            <div class="module-meta">
-                <span>
-                    📖
-                    ${chapterCount}
-                    فصل
-                </span>
-                <span>
-                    📝
-                    ${lessonCount}
-                    درس
-                </span>
-            </div>
-        </a>
-    `;
 }
+return {
+    modules:
+        modules.length,
+    chapters,
+    lessons
+};
+
+}
+
 /* =========================================================
-   RENDER MODULES
+RENDER STATISTICS
 ========================================================= */
-function renderModules(
-    modules
+
+function renderStats(
+stats
 ) {
-    if (
-        !Array.isArray(modules)
-    ) {
-        throw new Error(
-            "ساختار اطلاعات ماژول‌ها نامعتبر است."
-        );
-    }
-    if (
-        modules.length === 0
-    ) {
-        showEmpty();
-        return;
-    }
-    const cards =
-        modules
-            .map(
-                createModuleCard
-            )
-            .filter(
-                Boolean
-            )
-            .join("");
-    if (
-        !cards
-    ) {
-        showEmpty();
-        return;
-    }
+
+if (moduleCount) {
+    moduleCount.textContent =
+        stats.modules
+            .toLocaleString(
+                "fa-IR"
+            );
+}
+if (chapterCount) {
+    chapterCount.textContent =
+        stats.chapters
+            .toLocaleString(
+                "fa-IR"
+            );
+}
+if (lessonCount) {
+    lessonCount.textContent =
+        stats.lessons
+            .toLocaleString(
+                "fa-IR"
+            );
+}
+
+}
+
+/* =========================================================
+SHOW LOADING
+========================================================= */
+
+function showLoading() {
+
+if (loadingBox) {
+    loadingBox.hidden =
+        false;
+}
+if (errorBox) {
+    errorBox.hidden =
+        true;
+}
+if (emptyBox) {
+    emptyBox.hidden =
+        true;
+}
+if (modulesContainer) {
     modulesContainer.innerHTML =
-        cards;
-    modulesContainer.style.display =
-        "grid";
-    loadingElement.style.display =
-        "none";
-    errorElement.style.display =
-        "none";
-    emptyElement.style.display =
-        "none";
+        "";
 }
-/* =========================================================
-   LOAD MODULES
-========================================================= */
-async function loadModules() {
-    showLoading();
-    try {
-        const data =
-            await getModules();
-        console.log(
-            "[Andishkadeh] API response:",
-            data
-        );
-        const modules =
-            normalizeModulesResponse(
-                data
-            );
-        const stats =
-            calculateStats(
-                modules,
-                data
-            );
-        renderStats(
-            stats
-        );
-        renderModules(
-            modules
-        );
-    } catch (error) {
-        console.error(
-            "[Andishkadeh] Failed to load modules:",
-            error
-        );
-        showModulesError(
-            error
-        );
-    }
+
 }
+
 /* =========================================================
-   RETRY
+SHOW ERROR
 ========================================================= */
-if (
-    retryButton
+
+function showModulesError(
+error
 ) {
-    retryButton.addEventListener(
-        "click",
-        () => {
-            loadModules();
-        }
+
+if (loadingBox) {
+    loadingBox.hidden =
+        true;
+}
+if (emptyBox) {
+    emptyBox.hidden =
+        true;
+}
+if (modulesContainer) {
+    modulesContainer.innerHTML =
+        "";
+}
+if (errorBox) {
+    errorBox.hidden =
+        false;
+}
+if (errorDetails) {
+    errorDetails.textContent =
+        error?.message ||
+        "خطای نامشخص در دریافت اطلاعات.";
+}
+
+}
+
+/* =========================================================
+SHOW EMPTY
+========================================================= */
+
+function showEmpty() {
+
+if (loadingBox) {
+    loadingBox.hidden =
+        true;
+}
+if (errorBox) {
+    errorBox.hidden =
+        true;
+}
+if (emptyBox) {
+    emptyBox.hidden =
+        false;
+}
+if (modulesContainer) {
+    modulesContainer.innerHTML =
+        "";
+}
+
+}
+
+/* =========================================================
+CREATE MODULE CARD
+========================================================= */
+
+function createModuleCard(
+module
+) {
+
+const id =
+    escapeHtml(
+        module.id
+    );
+const title =
+    escapeHtml(
+        module.title ||
+        "ماژول آموزشی"
+    );
+const description =
+    escapeHtml(
+        module.description ||
+        "محتوای تخصصی و کاربردی اندیشکده مدیریت و بازار."
+    );
+const chapters =
+    getNumber(
+        module.chapter_count
+    );
+const lessons =
+    getNumber(
+        module.lesson_count
+    );
+const icon =
+    getModuleIcon(
+        module
+    );
+return `
+    <a
+        class="module-card"
+        href="chapter.html?module=${encodeURIComponent(
+            module.id
+        )}"
+        aria-label="${title}"
+    >
+        <div class="module-icon">
+            ${icon}
+        </div>
+        <h3>
+            ${title}
+        </h3>
+        <p>
+            ${description}
+        </p>
+        <div class="module-meta">
+            <span class="meta-badge">
+                ${chapters.toLocaleString("fa-IR")}
+                فصل
+            </span>
+            <span class="meta-badge">
+                ${lessons.toLocaleString("fa-IR")}
+                درس
+            </span>
+        </div>
+    </a>
+`;
+
+}
+
+/* =========================================================
+RENDER MODULES
+========================================================= */
+
+function renderModules(
+modules
+) {
+
+if (!modulesContainer) {
+    throw new Error(
+        "عنصر modulesContainer در صفحه پیدا نشد."
     );
 }
+modulesContainer.innerHTML =
+    modules
+        .map(
+            createModuleCard
+        )
+        .join("");
+if (loadingBox) {
+    loadingBox.hidden =
+        true;
+}
+if (errorBox) {
+    errorBox.hidden =
+        true;
+}
+if (emptyBox) {
+    emptyBox.hidden =
+        true;
+}
+
+}
+
 /* =========================================================
-   PAGE LOAD
+LOAD MODULES
 ========================================================= */
-document.addEventListener(
-    "DOMContentLoaded",
+
+async function loadModules() {
+
+console.log(
+    "[Modules] Loading modules..."
+);
+showLoading();
+try {
+    const data =
+        await getModules();
+    console.log(
+        "[Modules] API data:",
+        data
+    );
+    const modules =
+        normalizeModulesResponse(
+            data
+        );
+    console.log(
+        "[Modules] Modules:",
+        modules
+    );
+    const stats =
+        calculateStats(
+            modules
+        );
+    renderStats(
+        stats
+    );
+    if (
+        !modules.length
+    ) {
+        showEmpty();
+        return;
+    }
+    renderModules(
+        modules
+    );
+    console.log(
+        `[Modules] ${modules.length} modules rendered successfully.`
+    );
+} catch (error) {
+    console.error(
+        "[Modules] Loading failed:",
+        error
+    );
+    showModulesError(
+        error
+    );
+}
+
+}
+
+/* =========================================================
+RETRY BUTTON
+========================================================= */
+
+function initializeRetry() {
+
+if (!retryButton) {
+    return;
+}
+retryButton.addEventListener(
+    "click",
     () => {
         loadModules();
     }
+);
+
+}
+
+/* =========================================================
+DOM READY
+========================================================= */
+
+document.addEventListener(
+“DOMContentLoaded”,
+() => {
+
+    initializeElements();
+    initializeRetry();
+    loadModules();
+}
+
 );
