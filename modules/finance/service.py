@@ -63,6 +63,7 @@ def _safe_call(
 
     try:
         return function(*args, **kwargs)
+
     except Exception:
         return default
 
@@ -83,6 +84,7 @@ def _safe_content_call(
 
     try:
         return function(*args, **kwargs)
+
     except Exception:
         return default
 
@@ -126,6 +128,7 @@ def _get_id(item: Any) -> str:
     دریافت شناسه از dict/object.
     """
     if isinstance(item, dict):
+
         return _normalize_text(
             item.get("id")
             or item.get("chapter_id")
@@ -145,6 +148,7 @@ def _get_title(item: Any) -> str:
     دریافت عنوان از dict/object.
     """
     if isinstance(item, dict):
+
         return _normalize_text(
             item.get("title")
             or item.get("name")
@@ -156,6 +160,62 @@ def _get_title(item: Any) -> str:
         getattr(item, "title", None)
         or getattr(item, "name", None)
     )
+
+
+def _get_quiz_correct_index(
+    question: Dict[str, Any],
+) -> Optional[int]:
+    """
+    دریافت index پاسخ صحیح سؤال.
+
+    پشتیبانی از چند نام رایج:
+    - correct_index
+    - answer_index
+    - correct_answer
+    - answer
+
+    خروجی:
+        عدد معتبر بین گزینه‌ها
+        یا None
+    """
+    if not isinstance(
+        question,
+        dict,
+    ):
+        return None
+
+    raw_value = None
+
+    for key in (
+        "correct_index",
+        "answer_index",
+        "correct_answer",
+        "answer",
+    ):
+
+        if key in question:
+
+            value = question.get(
+                key
+            )
+
+            if value is not None:
+                raw_value = value
+                break
+
+    if raw_value is None:
+        return None
+
+    try:
+        return int(
+            raw_value
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return None
 
 
 # ============================================================
@@ -189,6 +249,7 @@ def get_module_description() -> str:
     )
 
     if description:
+
         return _normalize_text(
             description
         )
@@ -214,11 +275,19 @@ def get_module_info() -> Dict[str, Any]:
     )
 
     if callable(raw_info):
+
         try:
+
             result = raw_info()
 
-            if isinstance(result, dict):
-                info.update(result)
+            if isinstance(
+                result,
+                dict,
+            ):
+
+                info.update(
+                    result
+                )
 
         except Exception:
             pass
@@ -267,7 +336,9 @@ def get_module_info() -> Dict[str, Any]:
 
     info.setdefault(
         "quiz_count",
-        len(get_all_quiz_questions()),
+        len(
+            get_all_quiz_questions()
+        ),
     )
 
     return info
@@ -293,17 +364,24 @@ def get_finance_chapters() -> List[Dict[str, Any]]:
         None,
     )
 
-    if callable(raw_get_chapters):
+    if callable(
+        raw_get_chapters
+    ):
+
         try:
+
             chapters = raw_get_chapters()
 
         except TypeError:
+
             chapters = None
 
         except Exception:
+
             chapters = None
 
     if chapters is None:
+
         chapters = getattr(
             data,
             "CHAPTERS",
@@ -311,6 +389,7 @@ def get_finance_chapters() -> List[Dict[str, Any]]:
         )
 
     if chapters is None:
+
         chapters = getattr(
             data,
             "FINANCE_CHAPTERS",
@@ -325,13 +404,24 @@ def get_finance_chapters() -> List[Dict[str, Any]]:
 
     for chapter in chapters:
 
-        if isinstance(chapter, dict):
-            item = dict(chapter)
+        if isinstance(
+            chapter,
+            dict,
+        ):
+
+            item = dict(
+                chapter
+            )
 
         else:
+
             item = {
-                "id": _get_id(chapter),
-                "title": _get_title(chapter),
+                "id": _get_id(
+                    chapter
+                ),
+                "title": _get_title(
+                    chapter
+                ),
             }
 
         item["id"] = _normalize_text(
@@ -343,7 +433,10 @@ def get_finance_chapters() -> List[Dict[str, Any]]:
         )
 
         if item["id"]:
-            normalized.append(item)
+
+            normalized.append(
+                item
+            )
 
     return normalized
 
@@ -367,21 +460,36 @@ def get_finance_chapter(
         None,
     )
 
-    if callable(raw_get_chapter):
+    if callable(
+        raw_get_chapter
+    ):
+
         try:
+
             chapter = raw_get_chapter(
                 chapter_id
             )
 
             if chapter is not None:
 
-                if isinstance(chapter, dict):
-                    result = dict(chapter)
+                if isinstance(
+                    chapter,
+                    dict,
+                ):
+
+                    result = dict(
+                        chapter
+                    )
 
                 else:
+
                     result = {
-                        "id": _get_id(chapter),
-                        "title": _get_title(chapter),
+                        "id": _get_id(
+                            chapter
+                        ),
+                        "title": _get_title(
+                            chapter
+                        ),
                     }
 
                 result["id"] = _normalize_text(
@@ -400,8 +508,13 @@ def get_finance_chapter(
 
     for chapter in get_finance_chapters():
 
-        if chapter.get("id") == chapter_id:
-            return dict(chapter)
+        if chapter.get(
+            "id"
+        ) == chapter_id:
+
+            return dict(
+                chapter
+            )
 
     return None
 
@@ -422,17 +535,24 @@ def _get_all_finance_lessons_from_data() -> List[Dict[str, Any]]:
         None,
     )
 
-    if callable(raw_get_lessons):
+    if callable(
+        raw_get_lessons
+    ):
+
         try:
+
             lessons = raw_get_lessons()
 
         except TypeError:
+
             lessons = None
 
         except Exception:
+
             lessons = None
 
     if lessons is None:
+
         lessons = getattr(
             data,
             "LESSONS",
@@ -440,13 +560,17 @@ def _get_all_finance_lessons_from_data() -> List[Dict[str, Any]]:
         )
 
     if lessons is None:
+
         lessons = getattr(
             data,
             "FINANCE_LESSONS",
             None,
         )
 
-    if isinstance(lessons, dict):
+    if isinstance(
+        lessons,
+        dict,
+    ):
 
         flattened: List[Any] = []
 
@@ -458,13 +582,19 @@ def _get_all_finance_lessons_from_data() -> List[Dict[str, Any]]:
 
             for lesson in values:
 
-                if isinstance(lesson, dict):
+                if isinstance(
+                    lesson,
+                    dict,
+                ):
 
-                    item = dict(lesson)
+                    item = dict(
+                        lesson
+                    )
 
                     if not item.get(
                         "chapter_id"
                     ):
+
                         item["chapter_id"] = key
 
                     flattened.append(
@@ -472,6 +602,7 @@ def _get_all_finance_lessons_from_data() -> List[Dict[str, Any]]:
                     )
 
                 else:
+
                     flattened.append(
                         lesson
                     )
@@ -486,13 +617,24 @@ def _get_all_finance_lessons_from_data() -> List[Dict[str, Any]]:
 
     for lesson in lessons:
 
-        if isinstance(lesson, dict):
-            item = dict(lesson)
+        if isinstance(
+            lesson,
+            dict,
+        ):
+
+            item = dict(
+                lesson
+            )
 
         else:
+
             item = {
-                "id": _get_id(lesson),
-                "title": _get_title(lesson),
+                "id": _get_id(
+                    lesson
+                ),
+                "title": _get_title(
+                    lesson
+                ),
             }
 
         item["id"] = _normalize_text(
@@ -508,6 +650,7 @@ def _get_all_finance_lessons_from_data() -> List[Dict[str, Any]]:
         )
 
         if item["id"]:
+
             normalized.append(
                 item
             )
@@ -537,13 +680,17 @@ def get_finance_lessons(
     for lesson in all_lessons:
 
         lesson_chapter_id = _normalize_text(
-            lesson.get("chapter_id")
+            lesson.get(
+                "chapter_id"
+            )
         )
 
         if lesson_chapter_id != chapter_id:
             continue
 
-        item = dict(lesson)
+        item = dict(
+            lesson
+        )
 
         item["chapter_id"] = chapter_id
 
@@ -578,9 +725,12 @@ def get_finance_lesson(
         None,
     )
 
-    if callable(raw_get_lesson):
+    if callable(
+        raw_get_lesson
+    ):
 
         try:
+
             lesson = raw_get_lesson(
                 chapter_id,
                 lesson_id,
@@ -588,13 +738,24 @@ def get_finance_lesson(
 
             if lesson is not None:
 
-                if isinstance(lesson, dict):
-                    result = dict(lesson)
+                if isinstance(
+                    lesson,
+                    dict,
+                ):
+
+                    result = dict(
+                        lesson
+                    )
 
                 else:
+
                     result = {
-                        "id": _get_id(lesson),
-                        "title": _get_title(lesson),
+                        "id": _get_id(
+                            lesson
+                        ),
+                        "title": _get_title(
+                            lesson
+                        ),
                     }
 
                 result["id"] = _normalize_text(
@@ -620,8 +781,13 @@ def get_finance_lesson(
         chapter_id
     ):
 
-        if lesson.get("id") == lesson_id:
-            return dict(lesson)
+        if lesson.get(
+            "id"
+        ) == lesson_id:
+
+            return dict(
+                lesson
+            )
 
     return None
 
@@ -652,7 +818,10 @@ def get_lesson_content(
     if result is None:
         return None
 
-    if not isinstance(result, dict):
+    if not isinstance(
+        result,
+        dict,
+    ):
 
         return {
             "lesson_id": lesson_id,
@@ -736,6 +905,7 @@ def get_complete_lesson(
     )
 
     if lesson_content:
+
         result.update(
             lesson_content
         )
@@ -811,7 +981,10 @@ def get_examples(
         "practical_example"
     )
 
-    if isinstance(examples, list):
+    if isinstance(
+        examples,
+        list,
+    ):
 
         return [
             _normalize_text(item)
@@ -820,6 +993,7 @@ def get_examples(
         ]
 
     if examples:
+
         return [
             _normalize_text(
                 examples
@@ -964,6 +1138,7 @@ def get_finance_quiz(
         ]
 
         try:
+
             item["correct_index"] = int(
                 item["correct_index"]
             )
@@ -972,6 +1147,7 @@ def get_finance_quiz(
             TypeError,
             ValueError,
         ):
+
             item["correct_index"] = 0
 
         if (
@@ -1105,6 +1281,7 @@ def get_all_quiz_questions() -> List[Dict[str, Any]]:
         ]
 
         try:
+
             item["correct_index"] = int(
                 item.get(
                     "correct_index",
@@ -1116,9 +1293,11 @@ def get_all_quiz_questions() -> List[Dict[str, Any]]:
             TypeError,
             ValueError,
         ):
+
             item["correct_index"] = 0
 
         if item["question"]:
+
             normalized.append(
                 item
             )
@@ -1193,6 +1372,7 @@ def calculate_quiz_score(
         8 پاسخ صحیح از 10 سؤال = 80.0
     """
     try:
+
         total_questions = int(
             total_questions
         )
@@ -1205,6 +1385,7 @@ def calculate_quiz_score(
         TypeError,
         ValueError,
     ):
+
         return 0.0
 
     if total_questions <= 0:
@@ -1261,6 +1442,7 @@ def calculate_quiz_result(
 
     correct_answers = 0
     answered_questions = 0
+
     results: List[Dict[str, Any]] = []
 
     for index, question in enumerate(
@@ -1280,6 +1462,7 @@ def calculate_quiz_result(
             if raw_answer is not None:
 
                 try:
+
                     selected_index = int(
                         raw_answer
                     )
@@ -1288,26 +1471,37 @@ def calculate_quiz_result(
                     TypeError,
                     ValueError,
                 ):
+
                     selected_index = None
 
         correct_index = _get_quiz_correct_index(
             question
         )
 
-        try:
-            correct_index = int(
-                correct_index
+        options = _normalize_list(
+            question.get(
+                "options",
+                [],
             )
+        )
 
-        except (
-            TypeError,
-            ValueError,
+        if (
+            correct_index is not None
+            and (
+                correct_index < 0
+                or correct_index >= len(options)
+            )
         ):
+
             correct_index = None
 
         is_answered = (
             selected_index is not None
         )
+
+        if is_answered:
+
+            answered_questions += 1
 
         is_correct = (
             is_answered
@@ -1315,10 +1509,8 @@ def calculate_quiz_result(
             and selected_index == correct_index
         )
 
-        if is_answered:
-            answered_questions += 1
-
         if is_correct:
+
             correct_answers += 1
 
         results.append(
@@ -1367,12 +1559,13 @@ def start_quiz_attempt(
     """
     ایجاد وضعیت اولیه Attempt آزمون.
 
-    این تابع فعلاً Attempt را در دیتابیس
-    به‌عنوان آزمون تکمیل‌شده ذخیره نمی‌کند.
+    این تابع Attempt را به‌عنوان آزمون
+    تکمیل‌شده در دیتابیس ذخیره نمی‌کند.
 
     وضعیت موقت برای Handler برمی‌گرداند.
     """
     try:
+
         telegram_id = int(
             telegram_id
         )
@@ -1381,9 +1574,11 @@ def start_quiz_attempt(
         TypeError,
         ValueError,
     ):
+
         telegram_id = 0
 
     try:
+
         total_questions = int(
             total_questions
         )
@@ -1392,6 +1587,7 @@ def start_quiz_attempt(
         TypeError,
         ValueError,
     ):
+
         total_questions = 0
 
     return {
@@ -1436,6 +1632,7 @@ def save_quiz_attempt(
         return None
 
     try:
+
         telegram_id = int(
             telegram_id
         )
@@ -1452,6 +1649,7 @@ def save_quiz_attempt(
         TypeError,
         ValueError,
     ):
+
         return None
 
     total_questions = max(
@@ -1468,12 +1666,14 @@ def save_quiz_attempt(
     )
 
     if score is None:
+
         score = calculate_quiz_score(
             total_questions,
             correct_answers,
         )
 
     try:
+
         score = float(
             score
         )
@@ -1482,6 +1682,7 @@ def save_quiz_attempt(
         TypeError,
         ValueError,
     ):
+
         score = calculate_quiz_score(
             total_questions,
             correct_answers,
@@ -1496,6 +1697,7 @@ def save_quiz_attempt(
     )
 
     try:
+
         return db_save_quiz_attempt(
             telegram_id=telegram_id,
             module_id=_normalize_text(
@@ -1514,6 +1716,7 @@ def save_quiz_attempt(
         )
 
     except Exception:
+
         return None
 
 
@@ -1553,6 +1756,7 @@ def complete_quiz_attempt(
     )
 
     result["attempt_id"] = attempt_id
+
     result["saved"] = (
         attempt_id is not None
     )
@@ -1568,6 +1772,7 @@ def get_quiz_question(
     دریافت یک سؤال بر اساس index.
     """
     try:
+
         question_index = int(
             question_index
         )
@@ -1576,6 +1781,7 @@ def get_quiz_question(
         TypeError,
         ValueError,
     ):
+
         return None
 
     if question_index < 0:
@@ -1588,6 +1794,7 @@ def get_quiz_question(
     if question_index >= len(
         questions
     ):
+
         return None
 
     question = questions[
@@ -1598,6 +1805,7 @@ def get_quiz_question(
         question,
         dict,
     ):
+
         return None
 
     return dict(
@@ -1616,6 +1824,7 @@ def validate_quiz_answer(
         question,
         dict,
     ):
+
         return {
             "valid": False,
             "answered": False,
@@ -1625,6 +1834,7 @@ def validate_quiz_answer(
         }
 
     try:
+
         selected_index = int(
             selected_index
         )
@@ -1633,6 +1843,7 @@ def validate_quiz_answer(
         TypeError,
         ValueError,
     ):
+
         return {
             "valid": False,
             "answered": False,
@@ -1652,18 +1863,18 @@ def validate_quiz_answer(
         question
     )
 
-    try:
-        correct_index = int(
-            correct_index
+    if (
+        correct_index is not None
+        and (
+            correct_index < 0
+            or correct_index >= len(options)
         )
-
-    except (
-        TypeError,
-        ValueError,
     ):
+
         correct_index = None
 
     if not options:
+
         return {
             "valid": False,
             "answered": False,
@@ -1676,6 +1887,7 @@ def validate_quiz_answer(
         selected_index < 0
         or selected_index >= len(options)
     ):
+
         return {
             "valid": False,
             "answered": False,
@@ -1782,6 +1994,7 @@ def search_content(
         return []
 
     try:
+
         limit = max(
             1,
             int(limit),
@@ -1791,6 +2004,7 @@ def search_content(
         TypeError,
         ValueError,
     ):
+
         limit = 20
 
     results: List[Dict[str, Any]] = []
@@ -1898,6 +2112,7 @@ def search_content(
                 )
 
                 if len(results) >= limit:
+
                     return results
 
     return results
@@ -1917,6 +2132,7 @@ def validate_curriculum() -> Dict[str, Any]:
     warnings: List[str] = []
 
     if not chapters:
+
         errors.append(
             "هیچ فصلی برای ماژول مدیریت مالی یافت نشد."
         )
@@ -2036,8 +2252,8 @@ def validate_curriculum() -> Dict[str, Any]:
                     )
                 )
 
-                correct_index = question.get(
-                    "correct_index"
+                correct_index = _get_quiz_correct_index(
+                    question
                 )
 
                 if len(options) != 4:
@@ -2047,19 +2263,13 @@ def validate_curriculum() -> Dict[str, Any]:
                         f"دقیقاً ۴ گزینه ندارد."
                     )
 
-                try:
-                    correct_index = int(
-                        correct_index
-                    )
+                if correct_index is None:
 
-                except (
-                    TypeError,
-                    ValueError,
-                ):
                     warnings.append(
                         f"سؤال آزمون درس {lesson_id} "
                         f"دارای correct_index نامعتبر است."
                     )
+
                     continue
 
                 if (
