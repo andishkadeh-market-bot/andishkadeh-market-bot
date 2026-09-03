@@ -1,123 +1,749 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta name="description"
-          content="ماژول‌های آموزشی اندیشکده مدیریت و بازار">
+    <title>آموزش تخصصی | اندیشکده مدیریت و بازار</title>
 
-    <title>آموزش‌ها | اندیشکده مدیریت و بازار</title>
+    <meta
+        name="description"
+        content="دوره‌ها و آموزش‌های تخصصی اندیشکده مدیریت و بازار"
+    >
 
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="style.css">
 
+    <style>
+        .page-header {
+            padding: 70px 20px 30px;
+            text-align: center;
+        }
+
+        .page-header h1 {
+            margin: 0 0 12px;
+            font-size: 36px;
+        }
+
+        .page-header p {
+            margin: 0 auto;
+            max-width: 700px;
+            opacity: .75;
+            line-height: 2;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 25px auto 45px;
+            padding: 0 20px;
+        }
+
+        .stat-box {
+            min-width: 150px;
+            padding: 18px 25px;
+            border-radius: 16px;
+            background: rgba(255,255,255,.06);
+            border: 1px solid rgba(255,255,255,.08);
+            text-align: center;
+        }
+
+        .stat-box strong {
+            display: block;
+            font-size: 25px;
+            margin-bottom: 5px;
+        }
+
+        .stat-box span {
+            opacity: .7;
+            font-size: 14px;
+        }
+
+        .modules-container {
+            width: min(1200px, calc(100% - 40px));
+            margin: 0 auto 70px;
+
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .module-card {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+
+            padding: 28px;
+            min-height: 220px;
+
+            border-radius: 22px;
+            background: rgba(255,255,255,.055);
+            border: 1px solid rgba(255,255,255,.09);
+
+            transition:
+                transform .25s ease,
+                border-color .25s ease,
+                background .25s ease,
+                box-shadow .25s ease;
+        }
+
+        .module-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(0, 200, 180, .45);
+            background: rgba(255,255,255,.08);
+            box-shadow: 0 15px 40px rgba(0,0,0,.18);
+        }
+
+        .module-icon {
+            width: 55px;
+            height: 55px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 16px;
+            background: rgba(0, 200, 180, .12);
+
+            font-size: 26px;
+            margin-bottom: 20px;
+        }
+
+        .module-card h2 {
+            margin: 0 0 12px;
+            font-size: 21px;
+        }
+
+        .module-card p {
+            margin: 0 0 20px;
+            line-height: 1.9;
+            opacity: .7;
+            min-height: 55px;
+        }
+
+        .module-meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .module-meta span {
+            display: inline-block;
+            padding: 6px 11px;
+            border-radius: 9px;
+            background: rgba(255,255,255,.06);
+            font-size: 13px;
+            opacity: .8;
+        }
+
+        .loading,
+        .error,
+        .empty {
+            width: min(800px, calc(100% - 40px));
+            margin: 50px auto;
+            padding: 30px;
+            text-align: center;
+            border-radius: 18px;
+            background: rgba(255,255,255,.05);
+        }
+
+        .error {
+            border: 1px solid rgba(255,80,80,.25);
+        }
+
+        .retry-button {
+            margin-top: 18px;
+            padding: 11px 22px;
+            border: 0;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: inherit;
+            background: #00bfa6;
+            color: white;
+        }
+
+        .back-home {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 18px;
+            border-radius: 10px;
+            text-decoration: none;
+            background: rgba(255,255,255,.06);
+            color: inherit;
+        }
+
+        @media (max-width: 600px) {
+            .page-header {
+                padding-top: 45px;
+            }
+
+            .page-header h1 {
+                font-size: 28px;
+            }
+
+            .modules-container {
+                width: min(100% - 25px, 1200px);
+                grid-template-columns: 1fr;
+            }
+
+            .stat-box {
+                min-width: 120px;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-<header class="site-header">
+    <!-- Header -->
+    <header>
+        <div class="container">
 
-    <div class="container nav-container">
+            <a href="index.html" class="logo">
+                اندیشکده مدیریت و بازار
+            </a>
 
-        <a href="index.html" class="brand">
-            <div class="brand-icon">ا</div>
+            <nav>
+                <a href="index.html">خانه</a>
+                <a href="modules.html" class="active">آموزش تخصصی</a>
+            </nav>
+
+        </div>
+    </header>
+
+
+    <!-- Page Header -->
+    <main>
+
+        <section class="page-header">
+
+            <h1>📚 آموزش تخصصی</h1>
+
+            <p>
+                آموزش‌های تخصصی مدیریت، بانکداری، تجارت، اقتصاد و سایر حوزه‌های
+                کاربردی را انتخاب کنید و مسیر یادگیری خود را آغاز کنید.
+            </p>
+
+            <a href="index.html" class="back-home">
+                ← بازگشت به صفحه اصلی
+            </a>
+
+        </section>
+
+
+        <!-- Statistics -->
+        <section class="stats" id="stats">
+
+            <div class="stat-box">
+                <strong id="moduleCount">-</strong>
+                <span>ماژول آموزشی</span>
+            </div>
+
+            <div class="stat-box">
+                <strong id="chapterCount">-</strong>
+                <span>فصل</span>
+            </div>
+
+            <div class="stat-box">
+                <strong id="lessonCount">-</strong>
+                <span>درس</span>
+            </div>
+
+        </section>
+
+
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            در حال دریافت دوره‌های آموزشی...
+        </div>
+
+
+        <!-- Error -->
+        <div id="error" class="error" style="display:none;">
 
             <div>
-                <strong>اندیشکده مدیریت و بازار</strong>
-                <span>دانش، مدیریت، بازار</span>
-            </div>
-        </a>
-
-        <nav class="main-nav">
-            <a href="index.html">خانه</a>
-            <a class="active" href="modules.html">آموزش‌ها</a>
-            <a href="search.html">جست‌وجو</a>
-        </nav>
-
-        <button class="mobile-menu-btn" id="mobileMenuBtn">
-            ☰
-        </button>
-
-    </div>
-
-    <div class="mobile-nav" id="mobileNav">
-        <a href="index.html">خانه</a>
-        <a href="modules.html">آموزش‌ها</a>
-        <a href="search.html">جست‌وجو</a>
-    </div>
-
-</header>
-
-
-<main>
-
-<section class="page-hero">
-
-    <div class="container">
-
-        <span class="section-label">
-            مرکز آموزش
-        </span>
-
-        <h1>
-            مسیرهای یادگیری
-        </h1>
-
-        <p>
-            موضوع موردنظر خود را انتخاب کنید و وارد دنیای آموزش شوید.
-        </p>
-
-    </div>
-
-</section>
-
-
-<section class="section">
-
-    <div class="container">
-
-        <div id="modulesStatus" class="api-status">
-            در حال دریافت اطلاعات...
-        </div>
-
-        <div id="modulesGrid" class="module-grid">
-
-            <div class="loading-card">
-                در حال دریافت ماژول‌ها...
+                دریافت اطلاعات با مشکل مواجه شد.
             </div>
 
+            <button
+                id="retryButton"
+                class="retry-button"
+                type="button"
+            >
+                تلاش مجدد
+            </button>
+
         </div>
 
-    </div>
 
-</section>
-
-</main>
-
-
-<footer class="site-footer">
-
-    <div class="container footer-grid">
-
-        <div>
-            <h3>اندیشکده مدیریت و بازار</h3>
-            <p>مرجع آموزش مدیریت، بازار، بانکداری و تجارت.</p>
+        <!-- Empty -->
+        <div id="empty" class="empty" style="display:none;">
+            هنوز ماژول آموزشی‌ای ثبت نشده است.
         </div>
 
-    </div>
 
-    <div class="footer-bottom">
-        © <span id="currentYear"></span>
-        اندیشکده مدیریت و بازار
-    </div>
+        <!-- Modules -->
+        <section
+            id="modulesContainer"
+            class="modules-container"
+            style="display:none;"
+        ></section>
 
-</footer>
+    </main>
 
 
-<script src="js/api.js"></script>
-<script src="js/common.js"></script>
-<script src="js/modules.js"></script>
+    <!-- Footer -->
+    <footer>
+
+        <div class="container">
+
+            <p>
+                © اندیشکده مدیریت و بازار
+            </p>
+
+        </div>
+
+    </footer>
+
+
+    <script>
+
+        /*
+         * API
+         *
+         * در Render، درخواست /api به API ربات متصل می‌شود.
+         *
+         * بنابراین لازم نیست آدرس دامنه ربات را اینجا هاردکد کنیم.
+         */
+
+        const API_BASE = "/api";
+
+
+        /*
+         * عناصر صفحه
+         */
+
+        const loadingElement =
+            document.getElementById("loading");
+
+        const errorElement =
+            document.getElementById("error");
+
+        const emptyElement =
+            document.getElementById("empty");
+
+        const modulesContainer =
+            document.getElementById("modulesContainer");
+
+        const retryButton =
+            document.getElementById("retryButton");
+
+        const moduleCountElement =
+            document.getElementById("moduleCount");
+
+        const chapterCountElement =
+            document.getElementById("chapterCount");
+
+        const lessonCountElement =
+            document.getElementById("lessonCount");
+
+
+        /*
+         * آیکون ماژول‌ها
+         */
+
+        const moduleIcons = {
+
+            banking: "🏦",
+
+            management: "📚",
+
+            international_trade: "🌍",
+
+            marketing_sales: "📈",
+
+            economics_market: "💰",
+
+            employment_exam: "📝",
+
+            psychology_social_work: "🧠",
+
+            finance: "💳",
+
+            default: "📘"
+
+        };
+
+
+        /*
+         * گرفتن آیکون
+         */
+
+        function getModuleIcon(moduleId) {
+
+            return moduleIcons[moduleId] ||
+                   moduleIcons.default;
+
+        }
+
+
+        /*
+         * فرار دادن متن از HTML
+         *
+         * برای اینکه اگر محتوای API شامل HTML ناخواسته بود،
+         * مستقیماً وارد صفحه نشود.
+         */
+
+        function escapeHTML(value) {
+
+            if (value === null || value === undefined) {
+                return "";
+            }
+
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+
+        /*
+         * دریافت اطلاعات API
+         */
+
+        async function fetchJSON(url) {
+
+            const response = await fetch(url, {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
+
+            if (!response.ok) {
+
+                throw new Error(
+                    `HTTP ${response.status}`
+                );
+
+            }
+
+            return await response.json();
+        }
+
+
+        /*
+         * نمایش وضعیت اولیه
+         */
+
+        function showLoading() {
+
+            loadingElement.style.display = "block";
+
+            errorElement.style.display = "none";
+
+            emptyElement.style.display = "none";
+
+            modulesContainer.style.display = "none";
+
+        }
+
+
+        /*
+         * نمایش خطا
+         */
+
+        function showError() {
+
+            loadingElement.style.display = "none";
+
+            errorElement.style.display = "block";
+
+            emptyElement.style.display = "none";
+
+            modulesContainer.style.display = "none";
+
+        }
+
+
+        /*
+         * نمایش محتوای اصلی
+         */
+
+        function showContent() {
+
+            loadingElement.style.display = "none";
+
+            errorElement.style.display = "none";
+
+        }
+
+
+        /*
+         * ساخت کارت ماژول
+         */
+
+        function createModuleCard(module) {
+
+            /*
+             * شناسه واقعی ماژول
+             *
+             * برای بانکداری:
+             *
+             * banking
+             *
+             * لینک نهایی:
+             *
+             * chapter.html?module=banking
+             */
+
+            const moduleId =
+                String(module.id || "").trim();
+
+
+            if (!moduleId) {
+                return "";
+            }
+
+
+            const title =
+                escapeHTML(
+                    module.title ||
+                    "ماژول آموزشی"
+                );
+
+
+            const description =
+                escapeHTML(
+                    module.description ||
+                    "مشاهده فصل‌ها و درس‌های آموزشی"
+                );
+
+
+            const chapterCount =
+                Number(module.chapter_count || 0);
+
+
+            const lessonCount =
+                Number(module.lesson_count || 0);
+
+
+            /*
+             * لینک بسیار مهم
+             */
+
+            const chapterURL =
+                `chapter.html?module=${encodeURIComponent(moduleId)}`;
+
+
+            return `
+
+                <a
+                    href="${chapterURL}"
+                    class="module-card"
+                    data-module="${escapeHTML(moduleId)}"
+                >
+
+                    <div class="module-icon">
+                        ${getModuleIcon(moduleId)}
+                    </div>
+
+                    <h2>
+                        ${title}
+                    </h2>
+
+                    <p>
+                        ${description}
+                    </p>
+
+                    <div class="module-meta">
+
+                        <span>
+                            📖 ${chapterCount} فصل
+                        </span>
+
+                        <span>
+                            📝 ${lessonCount} درس
+                        </span>
+
+                    </div>
+
+                </a>
+
+            `;
+
+        }
+
+
+        /*
+         * نمایش ماژول‌ها
+         */
+
+        function renderModules(modules) {
+
+            if (!Array.isArray(modules)) {
+
+                throw new Error(
+                    "ساختار اطلاعات ماژول‌ها نامعتبر است."
+                );
+
+            }
+
+
+            if (modules.length === 0) {
+
+                loadingElement.style.display = "none";
+
+                errorElement.style.display = "none";
+
+                emptyElement.style.display = "block";
+
+                modulesContainer.style.display = "none";
+
+                return;
+
+            }
+
+
+            const cards = modules
+                .map(createModuleCard)
+                .filter(Boolean)
+                .join("");
+
+
+            modulesContainer.innerHTML = cards;
+
+            modulesContainer.style.display = "grid";
+
+            emptyElement.style.display = "none";
+
+        }
+
+
+        /*
+         * دریافت آمار
+         */
+
+        async function loadStats() {
+
+            try {
+
+                const data =
+                    await fetchJSON(API_BASE);
+
+                if (data.statistics) {
+
+                    moduleCountElement.textContent =
+                        data.statistics.modules ?? "-";
+
+                    chapterCountElement.textContent =
+                        data.statistics.chapters ?? "-";
+
+                    lessonCountElement.textContent =
+                        data.statistics.lessons ?? "-";
+
+                }
+
+            } catch (error) {
+
+                console.warn(
+                    "Statistics could not be loaded:",
+                    error
+                );
+
+            }
+
+        }
+
+
+        /*
+         * دریافت ماژول‌ها
+         */
+
+        async function loadModules() {
+
+            showLoading();
+
+            try {
+
+                const data =
+                    await fetchJSON(
+                        `${API_BASE}/modules`
+                    );
+
+
+                /*
+                 * API ممکن است مستقیماً آرایه برگرداند
+                 * یا داخل کلید modules قرار دهد.
+                 */
+
+                let modules;
+
+
+                if (Array.isArray(data)) {
+
+                    modules = data;
+
+                } else if (Array.isArray(data.modules)) {
+
+                    modules = data.modules;
+
+                } else {
+
+                    throw new Error(
+                        "API modules structure is invalid."
+                    );
+
+                }
+
+
+                renderModules(modules);
+
+                showContent();
+
+                await loadStats();
+
+            } catch (error) {
+
+                console.error(
+                    "Failed to load modules:",
+                    error
+                );
+
+                showError();
+
+            }
+
+        }
+
+
+        /*
+         * تلاش مجدد
+         */
+
+        retryButton.addEventListener(
+            "click",
+            loadModules
+        );
+
+
+        /*
+         * شروع صفحه
+         */
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            () => {
+
+                loadModules();
+
+            }
+        );
+
+    </script>
 
 </body>
 </html>
