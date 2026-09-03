@@ -1,7 +1,5 @@
 document.addEventListener(
-
     "DOMContentLoaded",
-
     async () => {
 
         await loadHomeStats();
@@ -9,196 +7,233 @@ document.addEventListener(
         await loadFeaturedModules();
 
     }
-
 );
+
+
+/* =========================================================
+   HOME STATISTICS
+========================================================= */
 
 async function loadHomeStats() {
 
     try {
 
         const data =
-
             await getApiInfo();
 
-        const stats =
 
+        const stats =
             data.statistics || {};
 
-        const modules =
 
+        const modules =
             stats.modules ?? 0;
 
         const chapters =
-
             stats.chapters ?? 0;
 
         const lessons =
-
             stats.lessons ?? 0;
 
-        document.getElementById(
 
-            "statModules"
+        setElementText(
+            "statModules",
+            modules
+        );
 
-        ).textContent = modules;
+        setElementText(
+            "statChapters",
+            chapters
+        );
 
-        document.getElementById(
+        setElementText(
+            "statLessons",
+            lessons
+        );
 
-            "statChapters"
 
-        ).textContent = chapters;
+        setElementText(
+            "heroModuleCount",
+            modules
+        );
 
-        document.getElementById(
+        setElementText(
+            "heroChapterCount",
+            chapters
+        );
 
-            "statLessons"
+        setElementText(
+            "heroLessonCount",
+            lessons
+        );
 
-        ).textContent = lessons;
-
-        document.getElementById(
-
-            "heroModuleCount"
-
-        ).textContent = modules;
-
-        document.getElementById(
-
-            "heroChapterCount"
-
-        ).textContent = chapters;
-
-        document.getElementById(
-
-            "heroLessonCount"
-
-        ).textContent = lessons;
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Home statistics error:",
+            error
+        );
 
     }
 
 }
 
+
+/* =========================================================
+   FEATURED MODULES
+========================================================= */
+
 async function loadFeaturedModules() {
 
     const container =
-
         document.getElementById(
-
             "featuredModules"
-
         );
+
+
+    if (!container) {
+
+        return;
+
+    }
+
 
     try {
 
         const data =
-
             await getModules();
 
-        const modules =
 
-            data.modules || [];
+        const modules =
+            Array.isArray(data.modules)
+                ? data.modules
+                : [];
+
 
         const featured =
+            modules.slice(
+                0,
+                6
+            );
 
-            modules.slice(0, 6);
 
         if (!featured.length) {
 
             showError(
-
                 container,
-
                 "ماژول آموزشی پیدا نشد."
-
             );
 
             return;
 
         }
 
+
         container.innerHTML =
-
             featured
-
-                .map(createModuleCard)
-
+                .map(
+                    createModuleCard
+                )
                 .join("");
+
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Featured modules error:",
+            error
+        );
+
 
         showError(
-
             container,
-
             "ارتباط با API برقرار نشد."
-
         );
 
     }
 
 }
 
-function createModuleCard(module) {
+
+/* =========================================================
+   CREATE MODULE CARD
+========================================================= */
+
+function createModuleCard(
+    module
+) {
 
     const id =
-
         encodeURIComponent(
-
-            module.id
-
+            module.id || ""
         );
+
+
+    const title =
+        module.title ||
+        "ماژول آموزشی";
+
+
+    const description =
+        module.description ||
+        "محتوای تخصصی آموزشی";
+
+
+    const chapterCount =
+        module.chapter_count ??
+        0;
+
+
+    const lessonCount =
+        module.lesson_count ??
+        0;
+
 
     return `
 
         <a
-
             class="module-card"
-
-            href="chapter.html?module=${id}&overview=true"
-
+            href="chapter.html?module=${id}"
         >
 
             <div class="module-icon">
 
-                ${getModuleIcon(module.title)}
+                ${getModuleIcon(title)}
 
             </div>
 
+
             <h3>
 
-                ${escapeHtml(module.title)}
+                ${escapeHtml(title)}
 
             </h3>
+
 
             <p>
 
                 ${escapeHtml(
-
-                    module.description ||
-
-                    "محتوای تخصصی آموزشی"
-
+                    description
                 )}
 
             </p>
+
 
             <div class="module-meta">
 
                 <span class="meta-badge">
 
-                    ${module.chapter_count ?? 0}
+                    ${chapterCount}
 
                     فصل
 
                 </span>
 
+
                 <span class="meta-badge">
 
-                    ${module.lesson_count ?? 0}
+                    ${lessonCount}
 
                     درس
 
@@ -209,5 +244,33 @@ function createModuleCard(module) {
         </a>
 
     `;
+
+}
+
+
+/* =========================================================
+   SAFE TEXT SETTER
+========================================================= */
+
+function setElementText(
+    elementId,
+    value
+) {
+
+    const element =
+        document.getElementById(
+            elementId
+        );
+
+
+    if (!element) {
+
+        return;
+
+    }
+
+
+    element.textContent =
+        value;
 
 }
