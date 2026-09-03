@@ -35,7 +35,6 @@ from typing import Any
 from aiohttp import web
 
 from telegram import MenuButtonCommands, Update
-
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -188,12 +187,8 @@ try:
 except ImportError:
 
     BANKING_MODULE_ID = "banking"
-
     BANKING_MODULE_TITLE = "🏦 بانکداری تخصصی"
-
-    BANKING_MODULE_DESCRIPTION = (
-        "ماژول بانکداری تخصصی"
-    )
+    BANKING_MODULE_DESCRIPTION = "ماژول بانکداری تخصصی"
 
     BANKING_AVAILABLE = False
 
@@ -237,12 +232,8 @@ try:
 except ImportError:
 
     FINANCE_MODULE_ID = "finance"
-
     FINANCE_MODULE_TITLE = "💰 مدیریت مالی"
-
-    FINANCE_MODULE_DESCRIPTION = (
-        "ماژول مدیریت مالی"
-    )
+    FINANCE_MODULE_DESCRIPTION = "ماژول مدیریت مالی"
 
     FINANCE_AVAILABLE = False
 
@@ -293,39 +284,26 @@ logger = logging.getLogger(__name__)
 # ==========================================================
 
 MANAGEMENT_MODULE_ID = "management"
-
 MANAGEMENT_MODULE_TITLE = "آموزش مدیریت"
 
 GENERAL_EXAM_MODULE_ID = "general_exam"
-
 GENERAL_EXAM_MODULE_TITLE = "آزمون عمومی"
-
 GENERAL_EXAM_CHAPTER_ID = "general"
-
 GENERAL_EXAM_CHAPTER_TITLE = "آزمون عمومی"
-
 GENERAL_EXAM_LESSON_ID = "general_quiz"
-
 GENERAL_EXAM_LESSON_TITLE = "آزمون عمومی"
 
-INTERNATIONAL_TRADE_MODULE_ID = (
-    "international_trade"
-)
-
-INTERNATIONAL_TRADE_MODULE_TITLE = (
-    "تجارت بین‌الملل"
-)
+INTERNATIONAL_TRADE_MODULE_ID = "international_trade"
+INTERNATIONAL_TRADE_MODULE_TITLE = "تجارت بین‌الملل"
 
 # ==========================================================
 # Website API Helpers
 # ==========================================================
 
 
-def _safe_text(
-    value: Any,
-) -> str:
+def _safe_text(value: Any) -> str:
     """
-    Convert any value safely to string.
+    Convert a value safely to string.
     """
 
     if value is None:
@@ -334,11 +312,9 @@ def _safe_text(
     return str(value)
 
 
-def _safe_dict(
-    value: Any,
-) -> dict[str, Any]:
+def _safe_dict(value: Any) -> dict[str, Any]:
     """
-    Convert value safely to dictionary.
+    Safely convert value to dictionary.
     """
 
     if isinstance(value, dict):
@@ -347,31 +323,26 @@ def _safe_dict(
     return {}
 
 
-def _safe_list(
-    value: Any,
-) -> list[Any]:
+def _get_module_description(module: Any) -> str:
     """
-    Convert value safely to list.
+    Read module description safely from Registry.
     """
 
-    if isinstance(value, list):
-        return list(value)
+    description = getattr(
+        module,
+        "description",
+        "",
+    )
 
-    if isinstance(value, tuple):
-        return list(value)
+    if description:
+        return _safe_text(description)
 
-    return []
+    return ""
 
 
-def _lesson_payload(
-    lesson: Any,
-) -> dict[str, Any]:
+def _lesson_payload(lesson: Any) -> dict[str, Any]:
     """
-    Convert a Registry LessonRecord
-    to API-safe data.
-
-    The complete lesson data is preserved
-    under the `data` property.
+    Convert a Registry LessonRecord to API-safe data.
     """
 
     data = _safe_dict(
@@ -414,7 +385,7 @@ def _lesson_payload(
         )
     )
 
-    payload = {
+    return {
         "id": lesson_id,
         "title": title,
         "module_id": module_id,
@@ -422,15 +393,10 @@ def _lesson_payload(
         "data": data,
     }
 
-    return payload
 
-
-def _chapter_payload(
-    chapter: Any,
-) -> dict[str, Any]:
+def _chapter_payload(chapter: Any) -> dict[str, Any]:
     """
-    Convert a Registry ChapterRecord
-    to API-safe data.
+    Convert a Registry ChapterRecord to API-safe data.
     """
 
     lessons = getattr(
@@ -486,12 +452,9 @@ def _chapter_payload(
     }
 
 
-def _module_payload(
-    module: Any,
-) -> dict[str, Any]:
+def _module_payload(module: Any) -> dict[str, Any]:
     """
-    Convert a Registry ModuleRecord
-    to API-safe data.
+    Convert a Registry ModuleRecord to API-safe data.
     """
 
     chapters = getattr(
@@ -506,64 +469,53 @@ def _module_payload(
     ):
         chapters = {}
 
-    module_id = _safe_text(
-        getattr(
-            module,
-            "module_id",
-            "",
-        )
-    )
-
-    title = _safe_text(
-        getattr(
-            module,
-            "title",
-            "",
-        )
-    )
-
-    description = _safe_text(
-        getattr(
-            module,
-            "description",
-            "",
-        )
-    )
-
-    chapter_count = len(chapters)
-
     lesson_count = 0
 
     for chapter in chapters.values():
 
-        lessons = getattr(
+        chapter_lessons = getattr(
             chapter,
             "lessons",
             {},
         )
 
         if isinstance(
-            lessons,
+            chapter_lessons,
             dict,
         ):
-            lesson_count += len(lessons)
+            lesson_count += len(
+                chapter_lessons
+            )
 
     return {
-        "id": module_id,
-        "title": title,
-        "description": description,
-        "chapter_count": chapter_count,
+        "id": _safe_text(
+            getattr(
+                module,
+                "module_id",
+                "",
+            )
+        ),
+        "title": _safe_text(
+            getattr(
+                module,
+                "title",
+                "",
+            )
+        ),
+        "description": _get_module_description(
+            module
+        ),
+        "chapter_count": len(chapters),
         "lesson_count": lesson_count,
     }
 
 
-def _json_response(
+def _api_json(
     data: Any,
     status: int = 200,
 ) -> web.Response:
     """
-    Return JSON response with
-    CORS headers.
+    Return JSON response with CORS headers.
     """
 
     response = web.json_response(
@@ -581,18 +533,11 @@ def _json_response(
     
     response.headers[
         "Access-Control-Allow-Headers"
-    ] = (
-        "Content-Type, "
-        "Authorization"
-    )
-
-    response.headers[
-        "Access-Control-Max-Age"
-    ] = "86400"
+    ] = "Content-Type"
 
     response.headers[
         "Cache-Control"
-    ] = "no-store"
+    ] = "no-cache"
 
     return response
 
@@ -601,7 +546,6 @@ def _json_response(
 # Website API - OPTIONS
 # ==========================================================
 
-
 async def api_options(
     request: web.Request,
 ) -> web.Response:
@@ -609,7 +553,7 @@ async def api_options(
     Handle CORS preflight requests.
     """
 
-    return _json_response(
+    return _api_json(
         {
             "ok": True,
         }
@@ -620,7 +564,6 @@ async def api_options(
 # Website API - Information
 # ==========================================================
 
-
 async def api_info(
     request: web.Request,
 ) -> web.Response:
@@ -630,11 +573,10 @@ async def api_info(
 
     statistics = registry.statistics()
 
-    return _json_response(
+    return _api_json(
         {
             "name": (
-                "Andishkadeh Management "
-                "& Market API"
+                "Andishkadeh Management & Market API"
             ),
             "version": "1.0.0",
             "status": "online",
@@ -653,7 +595,6 @@ async def api_info(
 # Website API - Modules
 # ==========================================================
 
-
 async def api_modules(
     request: web.Request,
 ) -> web.Response:
@@ -663,15 +604,13 @@ async def api_modules(
 
     modules = registry.list_modules()
 
-    payload = [
-        _module_payload(module)
-        for module in modules
-    ]
-
-    return _json_response(
+    return _api_json(
         {
-            "count": len(payload),
-            "modules": payload,
+            "count": len(modules),
+            "modules": [
+                _module_payload(module)
+                for module in modules
+            ],
         }
     )
 
@@ -679,7 +618,6 @@ async def api_modules(
 # ==========================================================
 # Website API - Single Module
 # ==========================================================
-
 
 async def api_module(
     request: web.Request,
@@ -698,7 +636,7 @@ async def api_module(
 
     if module is None:
 
-        return _json_response(
+        return _api_json(
             {
                 "error": "Module not found",
                 "module_id": module_id,
@@ -706,7 +644,7 @@ async def api_module(
             status=404,
         )
 
-    return _json_response(
+    return _api_json(
         _module_payload(module)
     )
 
@@ -715,12 +653,11 @@ async def api_module(
 # Website API - Chapters
 # ==========================================================
 
-
 async def api_chapters(
     request: web.Request,
 ) -> web.Response:
     """
-    Return all chapters of a module.
+    Return chapters of a module.
     """
 
     module_id = request.match_info[
@@ -733,7 +670,7 @@ async def api_chapters(
 
     if module is None:
 
-        return _json_response(
+        return _api_json(
             {
                 "error": "Module not found",
                 "module_id": module_id,
@@ -745,16 +682,14 @@ async def api_chapters(
         module_id
     )
 
-    payload = [
-        _chapter_payload(chapter)
-        for chapter in chapters
-    ]
-
-    return _json_response(
+    return _api_json(
         {
             "module_id": module_id,
-            "count": len(payload),
-            "chapters": payload,
+            "count": len(chapters),
+            "chapters": [
+                _chapter_payload(chapter)
+                for chapter in chapters
+            ],
         }
     )
 
@@ -762,7 +697,6 @@ async def api_chapters(
 # ==========================================================
 # Website API - Single Chapter
 # ==========================================================
-
 
 async def api_chapter(
     request: web.Request,
@@ -786,7 +720,7 @@ async def api_chapter(
 
     if chapter is None:
 
-        return _json_response(
+        return _api_json(
             {
                 "error": "Chapter not found",
                 "module_id": module_id,
@@ -795,7 +729,7 @@ async def api_chapter(
             status=404,
         )
 
-    return _json_response(
+    return _api_json(
         _chapter_payload(chapter)
     )
 
@@ -804,12 +738,11 @@ async def api_chapter(
 # Website API - Lessons
 # ==========================================================
 
-
 async def api_lessons(
     request: web.Request,
 ) -> web.Response:
     """
-    Return all lessons of a chapter.
+    Return lessons of a chapter.
     """
 
     module_id = request.match_info[
@@ -827,7 +760,7 @@ async def api_lessons(
 
     if chapter is None:
 
-        return _json_response(
+        return _api_json(
             {
                 "error": "Chapter not found",
                 "module_id": module_id,
@@ -841,17 +774,15 @@ async def api_lessons(
         chapter_id=chapter_id,
     )
 
-    payload = [
-        _lesson_payload(lesson)
-        for lesson in lessons
-    ]
-
-    return _json_response(
+    return _api_json(
         {
             "module_id": module_id,
             "chapter_id": chapter_id,
-            "count": len(payload),
-            "lessons": payload,
+            "count": len(lessons),
+            "lessons": [
+                _lesson_payload(lesson)
+                for lesson in lessons
+            ],
         }
     )
 
@@ -860,13 +791,11 @@ async def api_lessons(
 # Website API - Single Lesson
 # ==========================================================
 
-
 async def api_lesson(
     request: web.Request,
 ) -> web.Response:
     """
-    Return one lesson including
-    complete content data.
+    Return one lesson including its content data.
     """
 
     module_id = request.match_info[
@@ -889,7 +818,7 @@ async def api_lesson(
 
     if lesson is None:
 
-        return _json_response(
+        return _api_json(
             {
                 "error": "Lesson not found",
                 "module_id": module_id,
@@ -899,7 +828,7 @@ async def api_lesson(
             status=404,
         )
 
-    return _json_response(
+    return _api_json(
         _lesson_payload(lesson)
     )
 
@@ -907,7 +836,6 @@ async def api_lesson(
 # ==========================================================
 # Website API - Search
 # ==========================================================
-
 
 async def api_search(
     request: web.Request,
@@ -923,7 +851,7 @@ async def api_search(
 
     if not query:
 
-        return _json_response(
+        return _api_json(
             {
                 "query": "",
                 "count": 0,
@@ -931,9 +859,7 @@ async def api_search(
             }
         )
 
-    results: list[
-        dict[str, Any]
-    ] = []
+    results: list[dict[str, Any]] = []
 
     for module in registry.list_modules():
 
@@ -953,29 +879,22 @@ async def api_search(
             )
         )
 
-        module_description = _safe_text(
-            getattr(
-                module,
-                "description",
-                "",
-            )
+        module_description = _get_module_description(
+            module
         )
 
-        module_searchable = (
+        module_search_text = (
             f"{module_title} "
             f"{module_description}"
         ).lower()
 
-        if query in module_searchable:
+        if query in module_search_text:
 
             results.append(
                 {
                     "type": "module",
                     "module_id": module_id,
                     "title": module_title,
-                    "description": (
-                        module_description
-                    ),
                 }
             )
 
@@ -1017,12 +936,12 @@ async def api_search(
                 )
             )
 
-            chapter_searchable = (
+            chapter_search_text = (
                 f"{chapter_title} "
                 f"{chapter_description}"
             ).lower()
 
-            if query in chapter_searchable:
+            if query in chapter_search_text:
 
                 results.append(
                     {
@@ -1030,9 +949,6 @@ async def api_search(
                         "module_id": module_id,
                         "chapter_id": chapter_id,
                         "title": chapter_title,
-                        "description": (
-                            chapter_description
-                        ),
                     }
                 )
 
@@ -1078,62 +994,48 @@ async def api_search(
                     lesson_title,
                 ]
 
-                for value in lesson_data.values():
+                def collect_searchable(
+                    value: Any,
+                ) -> None:
 
                     if isinstance(
                         value,
-                        (
-                            str,
-                            int,
-                            float,
-                        ),
+                        (str, int, float),
                     ):
+
                         searchable_parts.append(
                             str(value)
                         )
 
                     elif isinstance(
                         value,
-                        list,
-                    ):
-
-                        for item in value:
-
-                            if isinstance(
-                                item,
-                                (
-                                    str,
-                                    int,
-                                    float,
-                                ),
-                            ):
-                                searchable_parts.append(
-                                    str(item)
-                                )
-
-                    elif isinstance(
-                        value,
                         dict,
                     ):
 
-                        for item in value.values():
+                        for nested_value in value.values():
+                            collect_searchable(
+                                nested_value
+                            )
 
-                            if isinstance(
-                                item,
-                                (
-                                    str,
-                                    int,
-                                    float,
-                                ),
-                            ):
-                                searchable_parts.append(
-                                    str(item)
-                                )
+                    elif isinstance(
+                        value,
+                        list,
+                    ):
+
+                        for nested_value in value:
+                            collect_searchable(
+                                nested_value
+                            )
+
+                collect_searchable(
+                    lesson_data
+                )
 
                 searchable_text = (
                     " ".join(
                         searchable_parts
-                    ).lower()
+                    )
+                    .lower()
                 )
 
                 if query in searchable_text:
@@ -1148,7 +1050,7 @@ async def api_search(
                         }
                     )
 
-    return _json_response(
+    return _api_json(
         {
             "query": query,
             "count": len(results),
@@ -1161,16 +1063,14 @@ async def api_search(
 # Website API Registration
 # ==========================================================
 
-
 def register_web_api(
     app: web.Application,
 ) -> None:
     """
-    Register all Website API routes
-    on the existing aiohttp application.
+    Register Website API routes on the existing
+    aiohttp application.
 
-    The API uses the same central Registry
-    as the Telegram bot.
+    The API uses the same Registry as the Telegram bot.
     """
 
     # ------------------------------------------------------
@@ -1226,18 +1126,12 @@ def register_web_api(
     )
 
     app.router.add_get(
-        (
-            "/api/modules/{module_id}"
-            "/chapters/{chapter_id}"
-        ),
+        "/api/modules/{module_id}/chapters/{chapter_id}",
         api_chapter,
     )
 
     app.router.add_options(
-        (
-            "/api/modules/{module_id}"
-            "/chapters/{chapter_id}"
-        ),
+        "/api/modules/{module_id}/chapters/{chapter_id}",
         api_options,
     )
 
@@ -1246,36 +1140,22 @@ def register_web_api(
     # ------------------------------------------------------
 
     app.router.add_get(
-        (
-            "/api/modules/{module_id}"
-            "/chapters/{chapter_id}/lessons"
-        ),
+        "/api/modules/{module_id}/chapters/{chapter_id}/lessons",
         api_lessons,
     )
 
     app.router.add_options(
-        (
-            "/api/modules/{module_id}"
-            "/chapters/{chapter_id}/lessons"
-        ),
+        "/api/modules/{module_id}/chapters/{chapter_id}/lessons",
         api_options,
     )
 
     app.router.add_get(
-        (
-            "/api/modules/{module_id}"
-            "/chapters/{chapter_id}"
-            "/lessons/{lesson_id}"
-        ),
+        "/api/modules/{module_id}/chapters/{chapter_id}/lessons/{lesson_id}",
         api_lesson,
     )
 
     app.router.add_options(
-        (
-            "/api/modules/{module_id}"
-            "/chapters/{chapter_id}"
-            "/lessons/{lesson_id}"
-        ),
+        "/api/modules/{module_id}/chapters/{chapter_id}/lessons/{lesson_id}",
         api_options,
     )
 
@@ -1302,21 +1182,17 @@ def register_web_api(
 # HTTP Health Server
 # ==========================================================
 
-
 async def health_handler(
     request: web.Request,
 ) -> web.Response:
     """
-    Health endpoint for Render
-    and UptimeRobot.
+    Health endpoint for Render and UptimeRobot.
     """
 
     return web.json_response(
         {
             "status": "ok",
-            "service": (
-                "andishkadeh-market-bot"
-            ),
+            "service": "andishkadeh-market-bot",
             "app": APP_NAME,
             "version": APP_VERSION,
         },
@@ -1344,8 +1220,7 @@ async def root_handler(
 
 async def start_health_server() -> web.AppRunner:
     """
-    Start HTTP health server
-    and Website API.
+    Start HTTP health server and Website API.
     """
 
     port_value = os.environ.get(
@@ -1362,10 +1237,7 @@ async def start_health_server() -> web.AppRunner:
     except ValueError:
 
         logger.warning(
-            (
-                "Invalid PORT value '%s'. "
-                "Using 10000."
-            ),
+            "Invalid PORT value '%s'. Using 10000.",
             port_value,
         )
 
@@ -1415,10 +1287,7 @@ async def start_health_server() -> web.AppRunner:
     await site.start()
 
     logger.info(
-        (
-            "HTTP Health Server started "
-            "on 0.0.0.0:%s"
-        ),
+        "HTTP Health Server started on 0.0.0.0:%s",
         port,
     )
 
@@ -1437,16 +1306,13 @@ async def start_health_server() -> web.AppRunner:
 # Management Auto Registry
 # ==========================================================
 
-
 def register_management_content() -> dict[str, int]:
     """
     Register complete Management module.
 
-    Kept for compatibility with the existing
-    bot architecture.
-
-    Primary content initialization is now
-    handled by core.content_initializer.
+    Kept for compatibility with the existing bot architecture.
+    Primary content initialization is now handled by
+    core.content_initializer.
     """
 
     logger.info(
@@ -1477,10 +1343,7 @@ def register_management_content() -> dict[str, int]:
         if not detailed_lessons:
 
             logger.warning(
-                (
-                    "Chapter '%s' has no "
-                    "registered lessons."
-                ),
+                "Chapter '%s' has no registered lessons.",
                 chapter_id,
             )
 
@@ -1538,7 +1401,6 @@ def register_management_content() -> dict[str, int]:
 # General Exam Auto Registry
 # ==========================================================
 
-
 def register_general_exam_content() -> dict[str, int]:
     """
     Register General Exam module.
@@ -1595,23 +1457,17 @@ def register_general_exam_content() -> dict[str, int]:
 # International Trade Auto Registry
 # ==========================================================
 
-
 def register_international_trade_content() -> dict[str, int]:
     """
     Register complete International Trade module.
 
-    Kept for compatibility with the existing
-    bot architecture.
-
-    Primary content initialization is now
-    handled by core.content_initializer.
+    Kept for compatibility with the existing bot architecture.
+    Primary content initialization is now handled by
+    core.content_initializer.
     """
 
     logger.info(
-        (
-            "Starting International Trade "
-            "Auto Registry..."
-        )
+        "Starting International Trade Auto Registry..."
     )
 
     module_id = (
@@ -1651,11 +1507,7 @@ def register_international_trade_content() -> dict[str, int]:
     except Exception:
 
         logger.exception(
-            (
-                "Failed to load "
-                "International Trade "
-                "module info."
-            )
+            "Failed to load International Trade module info."
         )
 
     registry.register_module(
@@ -1670,17 +1522,12 @@ def register_international_trade_content() -> dict[str, int]:
     except Exception:
 
         logger.exception(
-            (
-                "Failed to load "
-                "International Trade "
-                "chapters."
-            )
+            "Failed to load International Trade chapters."
         )
 
         chapters = []
 
     registered_chapters = 0
-
     registered_lessons = 0
 
     for chapter in chapters:
@@ -1730,8 +1577,7 @@ def register_international_trade_content() -> dict[str, int]:
             logger.exception(
                 (
                     "Failed to load lessons "
-                    "for International Trade "
-                    "chapter %s."
+                    "for International Trade chapter %s."
                 ),
                 chapter_id,
             )
@@ -1780,9 +1626,8 @@ def register_international_trade_content() -> dict[str, int]:
 
     logger.info(
         (
-            "International Trade Auto Registry "
-            "complete: module=%s chapters=%s "
-            "lessons=%s"
+            "International Trade Auto Registry complete: "
+            "module=%s chapters=%s lessons=%s"
         ),
         module_id,
         registered_chapters,
@@ -1800,21 +1645,17 @@ def register_international_trade_content() -> dict[str, int]:
 # Psychology Auto Registry
 # ==========================================================
 
-
 def register_psychology_content() -> dict[str, int]:
     """
-    Register complete Psychology &
-    Social Work module.
+    Register complete Psychology & Social Work module.
 
-    Kept for compatibility with the existing
-    bot architecture.
+    Kept for compatibility with the existing bot architecture.
+    Primary content initialization is now handled by
+    core.content_initializer.
     """
 
     logger.info(
-        (
-            "Starting Psychology & Social Work "
-            "Auto Registry..."
-        )
+        "Starting Psychology & Social Work Auto Registry..."
     )
 
     try:
@@ -1826,18 +1667,9 @@ def register_psychology_content() -> dict[str, int]:
                 "Psychology Auto Registry complete: "
                 "modules=%s chapters=%s lessons=%s"
             ),
-            result.get(
-                "modules",
-                0,
-            ),
-            result.get(
-                "chapters",
-                0,
-            ),
-            result.get(
-                "lessons",
-                0,
-            ),
+            result.get("modules", 0),
+            result.get("chapters", 0),
+            result.get("lessons", 0),
         )
 
         return {
@@ -1874,16 +1706,13 @@ def register_psychology_content() -> dict[str, int]:
 # Banking Auto Registry
 # ==========================================================
 
-
 def register_banking_content() -> dict[str, int]:
     """
     Register complete Banking module.
 
-    Kept for compatibility with the existing
-    bot architecture.
-
-    Primary content initialization is now
-    handled by core.content_initializer.
+    Kept for compatibility with the existing bot architecture.
+    Primary content initialization is now handled by
+    core.content_initializer.
     """
 
     logger.info(
@@ -1908,7 +1737,6 @@ def register_banking_content() -> dict[str, int]:
     )
 
     registered_chapters = 0
-
     registered_lessons = 0
 
     try:
@@ -2012,11 +1840,11 @@ def register_banking_content() -> dict[str, int]:
     logger.info(
         (
             "Banking Auto Registry complete: "
-            "module=%s chapters=%s lessons=%s"
+            "modules=%s chapters=%s lessons=%s"
         ),
-        BANKING_MODULE_ID,
-        registered_chapters,
-        registered_lessons,
+        statistics["modules"],
+        statistics["chapters"],
+        statistics["lessons"],
     )
 
     return {
@@ -2030,14 +1858,11 @@ def register_banking_content() -> dict[str, int]:
 # Finance Auto Registry
 # ==========================================================
 
-
 def register_finance_content() -> dict[str, int]:
     """
     Register complete Finance module.
 
-    Kept for compatibility with the existing
-    bot architecture.
-
+    Kept for compatibility with the existing bot architecture.
     Primary content initialization is handled by
     core.content_initializer.
     """
@@ -2064,7 +1889,6 @@ def register_finance_content() -> dict[str, int]:
     )
 
     registered_chapters = 0
-
     registered_lessons = 0
 
     try:
@@ -2079,6 +1903,8 @@ def register_finance_content() -> dict[str, int]:
 
         chapters = []
 
+    lessons = []
+
     try:
 
         lessons = get_finance_lessons()
@@ -2088,8 +1914,6 @@ def register_finance_content() -> dict[str, int]:
         logger.exception(
             "Failed to load Finance lessons."
         )
-
-        lessons = []
 
     lessons_by_chapter: dict[
         str,
@@ -2163,11 +1987,9 @@ def register_finance_content() -> dict[str, int]:
 
         registered_chapters += 1
 
-        for lesson in (
-            lessons_by_chapter.get(
-                chapter_id,
-                [],
-            )
+        for lesson in lessons_by_chapter.get(
+            chapter_id,
+            [],
         ):
 
             lesson_id = (
@@ -2205,11 +2027,11 @@ def register_finance_content() -> dict[str, int]:
     logger.info(
         (
             "Finance Auto Registry complete: "
-            "module=%s chapters=%s lessons=%s"
+            "modules=%s chapters=%s lessons=%s"
         ),
-        FINANCE_MODULE_ID,
-        registered_chapters,
-        registered_lessons,
+        statistics["modules"],
+        statistics["chapters"],
+        statistics["lessons"],
     )
 
     return {
@@ -2223,16 +2045,16 @@ def register_finance_content() -> dict[str, int]:
 # Complete Content Initialization
 # ==========================================================
 
-
 def register_all_content() -> dict[str, int]:
     """
     Initialize all educational content.
 
-    The new architecture uses
-    core.content_initializer as the primary
-    source of truth.
+    The new architecture uses core.content_initializer
+    as the primary source of truth for module content.
 
-    General Exam remains registered separately.
+    General Exam remains registered separately because it is
+    not part of the current CONTENT_PACKAGES handled by the
+    content initializer.
     """
 
     logger.info(
@@ -2336,9 +2158,8 @@ def register_all_content() -> dict[str, int]:
 
     logger.info(
         (
-            "Complete Content Initialization "
-            "finished: modules=%s chapters=%s "
-            "lessons=%s"
+            "Complete Content Initialization finished: "
+            "modules=%s chapters=%s lessons=%s"
         ),
         result["modules"],
         result["chapters"],
@@ -2355,7 +2176,6 @@ def register_all_content() -> dict[str, int]:
 # ==========================================================
 # Core Health Checks
 # ==========================================================
-
 
 def run_core_health_checks() -> bool:
     """
@@ -2445,7 +2265,6 @@ def run_core_health_checks() -> bool:
 # General Exam Health Checks
 # ==========================================================
 
-
 def run_exam_health_checks() -> bool:
     """
     Run General Exam health checks.
@@ -2468,10 +2287,7 @@ def run_exam_health_checks() -> bool:
         if not exam_service_health_check():
 
             logger.error(
-                (
-                    "General Exam service "
-                    "health check failed."
-                )
+                "General Exam service health check failed."
             )
 
             return False
@@ -2479,10 +2295,7 @@ def run_exam_health_checks() -> bool:
         if not exam_handlers_health_check():
 
             logger.error(
-                (
-                    "General Exam handlers "
-                    "health check failed."
-                )
+                "General Exam handlers health check failed."
             )
 
             return False
@@ -2506,17 +2319,13 @@ def run_exam_health_checks() -> bool:
 # International Trade Health Checks
 # ==========================================================
 
-
 def run_international_trade_health_checks() -> bool:
     """
     Run International Trade health checks.
     """
 
     logger.info(
-        (
-            "Running International Trade "
-            "health checks..."
-        )
+        "Running International Trade health checks..."
     )
 
     try:
@@ -2524,10 +2333,7 @@ def run_international_trade_health_checks() -> bool:
         if not international_trade_handlers_health_check():
 
             logger.error(
-                (
-                    "International Trade handlers "
-                    "health check failed."
-                )
+                "International Trade handlers health check failed."
             )
 
             return False
@@ -2540,10 +2346,7 @@ def run_international_trade_health_checks() -> bool:
         ):
 
             logger.error(
-                (
-                    "International Trade module "
-                    "info is invalid."
-                )
+                "International Trade module info is invalid."
             )
 
             return False
@@ -2556,10 +2359,7 @@ def run_international_trade_health_checks() -> bool:
         ):
 
             logger.error(
-                (
-                    "International Trade chapters "
-                    "data is invalid."
-                )
+                "International Trade chapters data is invalid."
             )
 
             return False
@@ -2573,10 +2373,7 @@ def run_international_trade_health_checks() -> bool:
     except Exception:
 
         logger.exception(
-            (
-                "International Trade health "
-                "checks failed."
-            )
+            "International Trade health checks failed."
         )
 
         return False
@@ -2586,17 +2383,13 @@ def run_international_trade_health_checks() -> bool:
 # Psychology Handlers Health Check
 # ==========================================================
 
-
 def run_psychology_handlers_health_check() -> bool:
     """
     Check Psychology callback handlers.
     """
 
     logger.info(
-        (
-            "Running Psychology handlers "
-            "health check..."
-        )
+        "Running Psychology handlers health check..."
     )
 
     try:
@@ -2608,10 +2401,7 @@ def run_psychology_handlers_health_check() -> bool:
         if not result:
 
             logger.error(
-                (
-                    "Psychology handlers "
-                    "health check failed."
-                )
+                "Psychology handlers health check failed."
             )
 
             return False
@@ -2625,10 +2415,7 @@ def run_psychology_handlers_health_check() -> bool:
     except Exception:
 
         logger.exception(
-            (
-                "Psychology handlers health "
-                "check failed."
-            )
+            "Psychology handlers health check failed."
         )
 
         return False
@@ -2638,18 +2425,13 @@ def run_psychology_handlers_health_check() -> bool:
 # Psychology Health Checks
 # ==========================================================
 
-
 def run_psychology_health_checks() -> bool:
     """
-    Run complete Psychology &
-    Social Work health checks.
+    Run complete Psychology & Social Work health checks.
     """
 
     logger.info(
-        (
-            "Running Psychology & Social Work "
-            "health checks..."
-        )
+        "Running Psychology & Social Work health checks..."
     )
 
     try:
@@ -2693,10 +2475,7 @@ def run_psychology_health_checks() -> bool:
         ):
 
             logger.error(
-                (
-                    "Psychology curriculum "
-                    "statistics are invalid."
-                )
+                "Psychology curriculum statistics are invalid."
             )
 
             return False
@@ -2726,9 +2505,8 @@ def run_psychology_health_checks() -> bool:
 
             logger.error(
                 (
-                    "Psychology curriculum "
-                    "incomplete: expected at "
-                    "least 12 chapters, got %s"
+                    "Psychology curriculum incomplete: "
+                    "expected at least 12 chapters, got %s"
                 ),
                 chapters_count,
             )
@@ -2746,15 +2524,13 @@ def run_psychology_health_checks() -> bool:
         if questions_count < 1:
 
             logger.error(
-                (
-                    "Psychology contains no "
-                    "quiz questions."
-                )
+                "Psychology contains no quiz questions."
             )
 
             return False
 
         if not run_psychology_handlers_health_check():
+
             return False
 
         logger.info(
@@ -2781,7 +2557,6 @@ def run_psychology_health_checks() -> bool:
 # ==========================================================
 # Banking Health Checks
 # ==========================================================
-
 
 def run_banking_health_checks() -> bool:
     """
@@ -2819,10 +2594,7 @@ def run_banking_health_checks() -> bool:
         if not banking_handlers_health_check():
 
             logger.error(
-                (
-                    "Banking handlers "
-                    "health check failed."
-                )
+                "Banking handlers health check failed."
             )
 
             return False
@@ -2862,7 +2634,6 @@ def run_banking_health_checks() -> bool:
 # ==========================================================
 # Finance Health Checks
 # ==========================================================
-
 
 def run_finance_health_checks() -> bool:
     """
@@ -2910,10 +2681,7 @@ def run_finance_health_checks() -> bool:
         if not finance_handlers_health_check():
 
             logger.error(
-                (
-                    "Finance handlers "
-                    "health check failed."
-                )
+                "Finance handlers health check failed."
             )
 
             return False
@@ -2968,7 +2736,6 @@ def run_finance_health_checks() -> bool:
 # Profile Health Check
 # ==========================================================
 
-
 def run_profile_health_check() -> bool:
     """
     Run Profile handlers health check.
@@ -2990,10 +2757,7 @@ def run_profile_health_check() -> bool:
         ):
 
             logger.error(
-                (
-                    "Profile handlers health "
-                    "check returned invalid result."
-                )
+                "Profile handlers health check returned invalid result."
             )
 
             return False
@@ -3009,10 +2773,7 @@ def run_profile_health_check() -> bool:
         ):
 
             logger.error(
-                (
-                    "Profile handlers health "
-                    "check failed: %s"
-                ),
+                "Profile handlers health check failed: %s",
                 result,
             )
 
@@ -3037,17 +2798,14 @@ def run_profile_health_check() -> bool:
 # Content Initializer Health Check
 # ==========================================================
 
-
 def run_content_initializer_health_check() -> bool:
     """
-    Verify Content Initializer and Registry.
+    Verify that the content initializer is available and
+    the registry contains educational content.
     """
 
     logger.info(
-        (
-            "Running Content Initializer "
-            "health check..."
-        )
+        "Running Content Initializer health check..."
     )
 
     try:
@@ -3062,10 +2820,7 @@ def run_content_initializer_health_check() -> bool:
         ):
 
             logger.error(
-                (
-                    "Content Initializer "
-                    "registry result is invalid."
-                )
+                "Content Initializer registry result is invalid."
             )
 
             return False
@@ -3094,10 +2849,7 @@ def run_content_initializer_health_check() -> bool:
         if modules < 1:
 
             logger.error(
-                (
-                    "Content Initializer "
-                    "registered no modules."
-                )
+                "Content Initializer registered no modules."
             )
 
             return False
@@ -3105,19 +2857,15 @@ def run_content_initializer_health_check() -> bool:
         if lessons < 1:
 
             logger.error(
-                (
-                    "Content Initializer "
-                    "registered no lessons."
-                )
+                "Content Initializer registered no lessons."
             )
 
             return False
 
         logger.info(
             (
-                "Content Initializer health "
-                "check: OK modules=%s "
-                "chapters=%s lessons=%s"
+                "Content Initializer health check: OK "
+                "modules=%s chapters=%s lessons=%s"
             ),
             modules,
             chapters,
@@ -3129,10 +2877,7 @@ def run_content_initializer_health_check() -> bool:
     except Exception:
 
         logger.exception(
-            (
-                "Content Initializer health "
-                "check failed."
-            )
+            "Content Initializer health check failed."
         )
 
         return False
@@ -3141,7 +2886,6 @@ def run_content_initializer_health_check() -> bool:
 # ==========================================================
 # Core Initialization
 # ==========================================================
-
 
 def initialize_core() -> None:
     """
@@ -3159,10 +2903,7 @@ def initialize_core() -> None:
     init_database()
 
     logger.info(
-        (
-            "SQLite database initialized "
-            "successfully."
-        )
+        "SQLite database initialized successfully."
     )
 
     logger.info(
@@ -3190,10 +2931,7 @@ def initialize_core() -> None:
     initialize_progress_system()
 
     logger.info(
-        (
-            "Progress system initialized "
-            "successfully."
-        )
+        "Progress system initialized successfully."
     )
 
     logger.info(
@@ -3203,10 +2941,7 @@ def initialize_core() -> None:
     initialize_statistics_system()
 
     logger.info(
-        (
-            "Statistics system initialized "
-            "successfully."
-        )
+        "Statistics system initialized successfully."
     )
 
     if not run_core_health_checks():
@@ -3218,37 +2953,25 @@ def initialize_core() -> None:
     if not run_content_initializer_health_check():
 
         raise RuntimeError(
-            (
-                "Content Initializer "
-                "health check failed."
-            )
+            "Content Initializer health check failed."
         )
 
     if not run_exam_health_checks():
 
         raise RuntimeError(
-            (
-                "General Exam health "
-                "checks failed."
-            )
+            "General Exam health checks failed."
         )
 
     if not run_international_trade_health_checks():
 
         raise RuntimeError(
-            (
-                "International Trade "
-                "health checks failed."
-            )
+            "International Trade health checks failed."
         )
 
     if not run_psychology_health_checks():
 
         raise RuntimeError(
-            (
-                "Psychology & Social Work "
-                "health checks failed."
-            )
+            "Psychology & Social Work health checks failed."
         )
 
     if not run_banking_health_checks():
@@ -3282,7 +3005,6 @@ def initialize_core() -> None:
 # Auto User Registry
 # ==========================================================
 
-
 async def register_telegram_user(
     update: Update,
 ) -> bool:
@@ -3295,10 +3017,7 @@ async def register_telegram_user(
     if user is None:
 
         logger.warning(
-            (
-                "Unable to register user: "
-                "effective_user is None."
-            )
+            "Unable to register user: effective_user is None."
         )
 
         return False
@@ -3340,14 +3059,12 @@ async def register_telegram_user(
 # /start
 # ==========================================================
 
-
 async def start(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Handle /start with mandatory
-    channel membership check.
+    Handle /start with mandatory channel membership check.
     """
 
     if update.message is None:
@@ -3372,12 +3089,8 @@ async def start(
     if not registered:
 
         await update.message.reply_text(
-            (
-                "❌ در ثبت اطلاعات شما مشکلی "
-                "پیش آمد.\n\n"
-                "لطفاً چند لحظه بعد دوباره "
-                "/start را ارسال کنید."
-            )
+            "❌ در ثبت اطلاعات شما مشکلی پیش آمد.\n\n"
+            "لطفاً چند لحظه بعد دوباره /start را ارسال کنید."
         )
 
         return
@@ -3392,14 +3105,12 @@ async def start(
 # /menu
 # ==========================================================
 
-
 async def menu_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Handle /menu with mandatory
-    channel membership check.
+    Handle /menu with mandatory channel membership check.
     """
 
     if update.message is None:
@@ -3439,14 +3150,12 @@ async def menu_command(
 # Callback User Auto Registry
 # ==========================================================
 
-
 async def callback_user_registry(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Register users interacting
-    with callback buttons.
+    Register users interacting with callback buttons.
     """
 
     user = update.effective_user
@@ -3478,15 +3187,13 @@ async def callback_user_registry(
 # Membership Guard for Callback Menus
 # ==========================================================
 
-
 async def guarded_menu_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Check mandatory channel membership
-    before allowing access to the
-    main menu callback router.
+    Check mandatory channel membership before allowing
+    access to the main menu callback router.
     """
 
     if not await is_member(
@@ -3511,14 +3218,13 @@ async def guarded_menu_callback(
 # Membership Guard for Profile
 # ==========================================================
 
-
 async def guarded_profile_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Check mandatory channel membership
-    before allowing access to profile.
+    Check mandatory channel membership before allowing
+    access to the user profile/dashboard.
     """
 
     if not await is_member(
@@ -3543,7 +3249,6 @@ async def guarded_profile_callback(
 # Error Handler
 # ==========================================================
 
-
 async def error_handler(
     update: object,
     context: ContextTypes.DEFAULT_TYPE,
@@ -3563,7 +3268,6 @@ async def error_handler(
 # Application Factory
 # ==========================================================
 
-
 def build_application() -> Application:
     """
     Create and configure Telegram application.
@@ -3574,8 +3278,7 @@ def build_application() -> Application:
         Auto User Registry.
 
     Group 0:
-        Commands and module-specific
-        callback routers.
+        Commands and module-specific callback routers.
 
     Group 1:
         Generic central menu router.
@@ -3901,10 +3604,7 @@ def build_application() -> Application:
     )
 
     logger.info(
-        (
-            "Telegram application "
-            "configured successfully."
-        )
+        "Telegram application configured successfully."
     )
 
     return application
@@ -3913,7 +3613,6 @@ def build_application() -> Application:
 # ==========================================================
 # Integration Health Check
 # ==========================================================
-
 
 def integration_health_check() -> bool:
     """
@@ -3951,10 +3650,7 @@ def integration_health_check() -> bool:
         )
 
         logger.info(
-            (
-                "Integration health check: "
-                "ALL TESTS PASSED"
-            )
+            "Integration health check: ALL TESTS PASSED"
         )
 
         logger.info(
@@ -3976,18 +3672,14 @@ def integration_health_check() -> bool:
 # Main Async Runner
 # ==========================================================
 
-
 async def run_bot() -> None:
     """
-    Run Telegram polling and HTTP
-    health server together.
+    Run Telegram polling and HTTP health server together.
     """
 
     application = build_application()
 
-    health_runner = (
-        await start_health_server()
-    )
+    health_runner = await start_health_server()
 
     try:
 
@@ -4006,10 +3698,7 @@ async def run_bot() -> None:
         )
 
         logger.info(
-            (
-                "Telegram Menu Button "
-                "configured successfully."
-            )
+            "Telegram Menu Button configured successfully."
         )
 
         await application.start()
@@ -4033,10 +3722,7 @@ async def run_bot() -> None:
         )
 
         logger.info(
-            (
-                "Andishkadeh Management & Market "
-                "is running."
-            )
+            "Andishkadeh Management & Market is running."
         )
 
         await asyncio.Event().wait()
@@ -4078,7 +3764,6 @@ async def run_bot() -> None:
 # Main
 # ==========================================================
 
-
 def main() -> None:
     """
     Start application.
@@ -4095,10 +3780,7 @@ def main() -> None:
     )
 
     logger.info(
-        (
-            "Starting Telegram Bot + "
-            "HTTP Health Server..."
-        )
+        "Starting Telegram Bot + HTTP Health Server..."
     )
 
     try:
@@ -4126,7 +3808,5 @@ def main() -> None:
 # Entry Point
 # ==========================================================
 
-
 if __name__ == "__main__":
-
     main()
