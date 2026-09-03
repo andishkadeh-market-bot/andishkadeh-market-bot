@@ -11,6 +11,7 @@ Andishkadeh Management & Market
 - بررسی پاسخ
 - نمایش سؤال بعدی
 - ثبت نتیجه نهایی
+- سوابق آزمون
 """
 
 from __future__ import annotations
@@ -34,6 +35,7 @@ from .service import (
     get_quiz_question,
     calculate_quiz_result,
     complete_quiz_attempt,
+    get_finance_quiz_attempts,
     finance_health_check,
 )
 
@@ -47,6 +49,8 @@ FINANCE_CHAPTER_PREFIX = "finance_chapter:"
 FINANCE_LESSON_PREFIX = "finance_lesson:"
 FINANCE_BACK_CALLBACK = "finance_back"
 MAIN_MENU_CALLBACK = "menu_main"
+
+FINANCE_ATTEMPTS_CALLBACK = "finance_attempts"
 
 FINANCE_LESSON_QUIZ_SUFFIX = ":quiz"
 
@@ -121,6 +125,61 @@ def _safe_edit(
     return None
 
 
+def _find_lesson_context(
+    lesson_id: str,
+) -> tuple[str, Optional[Dict[str, Any]]]:
+    """
+    پیدا کردن chapter_id و اطلاعات درس بر اساس lesson_id.
+    """
+    lesson_id = _normalize_text(lesson_id)
+
+    if not lesson_id:
+        return "", None
+
+    for chapter in get_finance_chapters():
+
+        chapter_id = _normalize_text(
+            chapter.get("id")
+        )
+
+        if not chapter_id:
+            continue
+
+        lessons = get_finance_lessons(
+            chapter_id
+        )
+
+        for lesson in lessons:
+
+            current_lesson_id = _normalize_text(
+                lesson.get("id")
+            )
+
+            if current_lesson_id == lesson_id:
+                return chapter_id, lesson
+
+    return "", None
+
+
+def _format_attempt_date(
+    value: Any,
+) -> str:
+    """
+    تبدیل تاریخ ذخیره‌شده به نمایش ساده برای کاربر.
+    """
+    text = _normalize_text(value)
+
+    if not text:
+        return "تاریخ نامشخص"
+
+    # SQLite CURRENT_TIMESTAMP معمولاً به شکل:
+    # 2026-09-02 08:30:00
+    if len(text) >= 19:
+        return text[:16]
+
+    return text
+
+
 # ============================================================
 # Keyboards
 # ============================================================
@@ -179,6 +238,23 @@ def _finance_chapters_keyboard(
                 )
             ]
         )
+
+    # --------------------------------------------------------
+    # Quiz History
+    # --------------------------------------------------------
+
+    buttons.append(
+        [
+            InlineKeyboardButton(
+                "📊 سوابق آزمون",
+                callback_data=FINANCE_ATTEMPTS_CALLBACK,
+            )
+        ]
+    )
+
+    # --------------------------------------------------------
+    # Main Menu
+    # --------------------------------------------------------
 
     buttons.append(
         [
@@ -371,11 +447,37 @@ def _finance_quiz_result_keyboard(
             ],
             [
                 InlineKeyboardButton(
+                    "📊 سوابق آزمون",
+                    callback_data=FINANCE_ATTEMPTS_CALLBACK,
+                )
+            ],
+            [
+                InlineKeyboardButton(
                     "📖 بازگشت به درس",
                     callback_data=(
                         f"{FINANCE_LESSON_PREFIX}"
                         f"{lesson_id}"
                     ),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🏠 منوی اصلی",
+                    callback_data=MAIN_MENU_CALLBACK,
+                )
+            ],
+        ]
+    )
+
+
+def _finance_attempts_keyboard() -> InlineKeyboardMarkup:
+
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "⬅️ بازگشت به فصل‌ها",
+                    callback_data=FINANCE_MENU_CALLBACK,
                 )
             ],
             [
@@ -687,6 +789,203 @@ async def show_finance_chapters(
             reply_markup=_finance_chapters_keyboard(
                 chapters
             ),
+        )
+
+
+# ============================================================
+# Quiz Attempts / History
+# ============================================================
+
+async def show_finance_quiz_attempts(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """
+    نمایش سوابق آزمون‌های مدیریت مالی کاربر.
+    """
+
+    query = update.callback_query
+
+    if query:
+        await query.answer()
+
+    user = update.effective_user
+
+    if user is None:
+
+        if query:
+            await query.edit_message_text(
+                "⚠️ اطلاعات کاربر قابل دریافت نیست.",
+                reply_markup=_finance_attempts_keyboard(),
+            )
+
+        return
+
+    telegram_id = user.id
+
+    attempts = get_finance_quiz_attempts(
+        telegram_id
+    )
+
+    if not attempts:
+
+        text = (
+            "📊 سوابق آزمون مدیریت مالی\n\n"
+            "هنوز هیچ آزمونی برای شما ثبت نشده است.\n\n"
+            "📝 ابتدا یکی از درس‌ها را مطالعه کنید "
+            "و سپس آزمون آن درس را انجام دهید."
+        )
+
+        if query:
+            await query.edit_message_text(
+                text,
+                reply_markup=_finance_attempts_keyboard(),
+            )
+
+        return
+
+    # نمایش جدیدترین آزمون‌ها در ابتدا
+    attempts = list(
+        reversed(attempts)
+    )
+
+    text_parts: List[str] = []
+
+    text_parts.append(
+        "📊 سوابق آزمون مدیریت مالی"
+    )
+
+    text_parts.append(
+        f"\n\n📚 تعداد آزمون‌های ثبت‌شده: {len(attempts)}"
+    )
+
+    for number, attempt in enumerate(
+        attempts,
+        start=1,
+    ):
+
+        attempt_id = attempt.get(
+            "id"
+        )
+
+        chapter_id = _normalize_text(
+            attempt.get("chapter_id")
+        )
+
+        lesson_id = _normalize_text(
+            attempt.get("lesson_id")
+        )
+
+        total_questions = attempt.get(
+            "total_questions",
+            0,
+        )
+
+        correct_answers = attempt.get(
+            "correct_answers",
+            0,
+        )
+
+        score = attempt.get(
+            "score",
+            0,
+        )
+
+        completed_at = _format_attempt_date(
+            attempt.get("completed_at")
+            or attempt.get("started_at")
+        )
+
+        chapter = get_finance_chapter(
+            chapter_id
+        )
+
+        lesson = get_finance_lesson(
+            chapter_id,
+            lesson_id,
+        )
+
+        chapter_title = _normalize_text(
+            chapter.get("title")
+            if chapter
+            else None,
+            chapter_id or "فصل نامشخص",
+        )
+
+        lesson_title = _normalize_text(
+            lesson.get("title")
+            if lesson
+            else None,
+            lesson_id or "درس نامشخص",
+        )
+
+        try:
+            total_questions_int = int(
+                total_questions
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            total_questions_int = 0
+
+        try:
+            correct_answers_int = int(
+                correct_answers
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            correct_answers_int = 0
+
+        try:
+            score_float = float(
+                score
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            score_float = 0.0
+
+        if score_float >= 90:
+            level = "🏆 عالی"
+        elif score_float >= 75:
+            level = "🥇 بسیار خوب"
+        elif score_float >= 50:
+            level = "🥈 متوسط"
+        else:
+            level = "📚 نیازمند مرور"
+
+        attempt_label = (
+            str(attempt_id)
+            if attempt_id is not None
+            else str(number)
+        )
+
+        text_parts.append(
+            "\n\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            f"🧪 آزمون #{attempt_label}\n"
+            f"📚 {chapter_title}\n"
+            f"📖 {lesson_title}\n"
+            f"📅 {completed_at}\n"
+            f"📝 سؤالات: {total_questions_int}\n"
+            f"✅ صحیح: {correct_answers_int}\n"
+            f"📈 امتیاز: {score_float:g}%\n"
+            f"🎯 سطح: {level}"
+        )
+
+    text = "".join(
+        text_parts
+    )
+
+    if query:
+
+        await query.edit_message_text(
+            text,
+            reply_markup=_finance_attempts_keyboard(),
         )
 
 
@@ -1252,9 +1551,6 @@ async def route_finance_callback(
     # --------------------------------------------------------
     # Finance Entry
     # --------------------------------------------------------
-    # مهم:
-    # صفحه واسط قبلی حذف شده است.
-    # با menu_finance مستقیماً فصل‌ها نمایش داده می‌شوند.
 
     if callback_data == "menu_finance":
 
@@ -1263,6 +1559,23 @@ async def route_finance_callback(
         )
 
         await show_finance_chapters(
+            update,
+            context,
+        )
+
+        return
+
+    # --------------------------------------------------------
+    # Quiz Attempts / History
+    # --------------------------------------------------------
+
+    if callback_data == FINANCE_ATTEMPTS_CALLBACK:
+
+        _clear_quiz_state(
+            context
+        )
+
+        await show_finance_quiz_attempts(
             update,
             context,
         )
@@ -1392,37 +1705,9 @@ async def route_finance_callback(
 
             if not chapter_id:
 
-                for chapter in get_finance_chapters():
-
-                    current_chapter_id = _normalize_text(
-                        chapter.get(
-                            "id"
-                        )
-                    )
-
-                    lessons = get_finance_lessons(
-                        current_chapter_id
-                    )
-
-                    for lesson in lessons:
-
-                        if (
-                            _normalize_text(
-                                lesson.get(
-                                    "id"
-                                )
-                            )
-                            == real_lesson_id
-                        ):
-
-                            chapter_id = (
-                                current_chapter_id
-                            )
-
-                            break
-
-                    if chapter_id:
-                        break
+                chapter_id, _ = _find_lesson_context(
+                    real_lesson_id
+                )
 
             if not chapter_id:
 
@@ -1466,39 +1751,9 @@ async def route_finance_callback(
                     context
                 )
 
-        chapter_id = ""
-
-        for chapter in get_finance_chapters():
-
-            current_chapter_id = _normalize_text(
-                chapter.get(
-                    "id"
-                )
-            )
-
-            lessons = get_finance_lessons(
-                current_chapter_id
-            )
-
-            for lesson in lessons:
-
-                if (
-                    _normalize_text(
-                        lesson.get(
-                            "id"
-                        )
-                    )
-                    == lesson_id
-                ):
-
-                    chapter_id = (
-                        current_chapter_id
-                    )
-
-                    break
-
-            if chapter_id:
-                break
+        chapter_id, _ = _find_lesson_context(
+            lesson_id
+        )
 
         if not chapter_id:
 
@@ -1594,6 +1849,7 @@ def finance_handlers_health_check() -> Dict[str, Any]:
             ),
             "service": service_health,
             "quiz_answer_handler": True,
+            "quiz_history_handler": True,
             "quiz_state": FINANCE_QUIZ_STATE_KEY,
         }
 
@@ -1603,6 +1859,7 @@ def finance_handlers_health_check() -> Dict[str, Any]:
             "module_id": "finance",
             "status": "error",
             "quiz_answer_handler": False,
+            "quiz_history_handler": False,
             "error": str(exc),
         }
 
@@ -1617,6 +1874,7 @@ __all__ = [
     "show_finance_chapter",
     "show_finance_lesson",
     "show_finance_lesson_quiz",
+    "show_finance_quiz_attempts",
     "handle_finance_quiz_answer",
     "route_finance_callback",
     "finance_handlers_health_check",
