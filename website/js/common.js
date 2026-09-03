@@ -5,43 +5,31 @@ document.addEventListener(
     () => {
 
         const year =
-
             document.getElementById(
-
                 "currentYear"
-
             );
 
         if (year) {
 
             year.textContent =
-
                 new Date().getFullYear();
 
         }
 
+
         const menuButton =
-
             document.getElementById(
-
                 "mobileMenuBtn"
-
             );
 
         const mobileNav =
-
             document.getElementById(
-
                 "mobileNav"
-
             );
 
         if (
-
             menuButton &&
-
             mobileNav
-
         ) {
 
             menuButton.addEventListener(
@@ -51,9 +39,7 @@ document.addEventListener(
                 () => {
 
                     mobileNav.classList.toggle(
-
                         "open"
-
                     );
 
                 }
@@ -66,14 +52,16 @@ document.addEventListener(
 
 );
 
+
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
+
 function escapeHtml(value) {
 
     if (
-
         value === null ||
-
         value === undefined
-
     ) {
 
         return "";
@@ -82,37 +70,60 @@ function escapeHtml(value) {
 
     return String(value)
 
-        .replaceAll("&", "&amp;")
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
 
-        .replaceAll("<", "&lt;")
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
 
-        .replaceAll(">", "&gt;")
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
 
-        .replaceAll('"', "&quot;")
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
 
-        .replaceAll("'", "&#039;");
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
 
 }
+
+
+/* =========================================================
+   GET QUERY PARAMETER
+========================================================= */
 
 function getQueryParam(name) {
 
     const params =
-
         new URLSearchParams(
-
             window.location.search
-
         );
 
     return params.get(name);
 
 }
 
+
+/* =========================================================
+   SHOW ERROR
+========================================================= */
+
 function showError(
 
     element,
 
-    message = "خطا در دریافت اطلاعات."
+    message =
+        "خطا در دریافت اطلاعات."
 
 ) {
 
@@ -134,11 +145,17 @@ function showError(
 
 }
 
+
+/* =========================================================
+   SHOW TOAST
+========================================================= */
+
 function showToast(message) {
 
     const toast =
-
-        document.getElementById("toast");
+        document.getElementById(
+            "toast"
+        );
 
     if (!toast) {
 
@@ -147,93 +164,102 @@ function showToast(message) {
     }
 
     toast.textContent =
-
         message;
 
-    toast.classList.add("show");
+    toast.classList.add(
+        "show"
+    );
 
-    setTimeout(() => {
+    setTimeout(
 
-        toast.classList.remove("show");
+        () => {
 
-    }, 3000);
+            toast.classList.remove(
+                "show"
+            );
+
+        },
+
+        3000
+
+    );
 
 }
+
+
+/* =========================================================
+   MODULE ICON
+========================================================= */
 
 function getModuleIcon(title = "") {
 
     const text =
+        String(title).toLowerCase();
 
-        title.toLowerCase();
 
     if (
-
         text.includes("بانک")
-
     ) {
 
         return "🏦";
 
     }
 
+
     if (
-
         text.includes("تجارت")
-
     ) {
 
         return "🌍";
 
     }
 
+
     if (
-
         text.includes("مالی")
-
     ) {
 
         return "💰";
 
     }
 
+
     if (
-
         text.includes("مدیریت")
-
     ) {
 
         return "📚";
 
     }
 
+
     if (
-
         text.includes("بازاریابی")
-
     ) {
 
         return "📈";
 
     }
 
+
     if (
-
         text.includes("اقتصاد")
-
     ) {
 
         return "📊";
 
     }
 
+
     if (
-
         text.includes("آزمون")
-
     ) {
 
         return "📝";
 
     }
 
+
     return "🎓";
+
+}
