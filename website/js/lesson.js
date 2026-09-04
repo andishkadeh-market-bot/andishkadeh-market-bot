@@ -1,5 +1,9 @@
 "use strict";
 /* =========================================================
+   TELEGRAM BOT CONFIG
+========================================================= */
+const TELEGRAM_BOT_USERNAME = "YOUR_BOT_USERNAME";
+/* =========================================================
    LOAD LESSON
 ========================================================= */
 document.addEventListener("DOMContentLoaded", async () => {
@@ -70,7 +74,8 @@ async function loadLesson(
         renderLesson(
             lesson,
             moduleId,
-            chapterId
+            chapterId,
+            lessonId
         );
     } catch (error) {
         console.error(
@@ -90,7 +95,8 @@ async function loadLesson(
 function renderLesson(
     lesson,
     moduleId,
-    chapterId
+    chapterId,
+    lessonId
 ) {
     if (!lesson) {
         showError(
@@ -112,8 +118,7 @@ function renderLesson(
      *      content,
      *      special_points,
      *      exam_points,
-     *      example,
-     *      quiz
+     *      example
      *   }
      * }
      */
@@ -130,7 +135,9 @@ function renderLesson(
     document.title =
         `${title} | اندیشکده مدیریت و بازار`;
     const titleElement =
-        document.getElementById("lessonTitle");
+        document.getElementById(
+            "lessonTitle"
+        );
     if (titleElement) {
         titleElement.textContent =
             title;
@@ -226,21 +233,13 @@ function renderLesson(
         examPoints
     );
     /* =====================================================
-       QUIZ
+       TELEGRAM QUIZ CTA
     ===================================================== */
-    const quiz =
-        Array.isArray(data.quiz)
-            ? data.quiz
-            : (
-                Array.isArray(data.questions)
-                    ? data.questions
-                    : []
-            );
-    console.log(
-        "[Lesson] Quiz detected:",
-        quiz
+    renderTelegramQuizButton(
+        moduleId,
+        chapterId,
+        lessonId
     );
-    renderQuiz(quiz);
     console.log(
         "[Lesson] Render completed successfully."
     );
@@ -421,9 +420,13 @@ function renderNotes(
             .join("");
 }
 /* =========================================================
-   QUIZ
+   TELEGRAM QUIZ BUTTON
 ========================================================= */
-function renderQuiz(questions) {
+function renderTelegramQuizButton(
+    moduleId,
+    chapterId,
+    lessonId
+) {
     const section =
         document.getElementById(
             "quizSection"
@@ -434,464 +437,90 @@ function renderQuiz(questions) {
         );
     if (!section || !container) {
         console.warn(
-            "[Lesson] Quiz elements not found in HTML."
+            "[Lesson] Quiz CTA elements not found in HTML."
         );
         return;
     }
-    console.log(
-        "[Lesson] Rendering quiz:",
-        questions
-    );
-    if (
-        !Array.isArray(questions) ||
-        !questions.length
-    ) {
+    const telegramLink =
+        buildTelegramQuizLink(
+            moduleId,
+            chapterId,
+            lessonId
+        );
+    /*
+     * اگر نام کاربری ربات هنوز تنظیم نشده باشد،
+     * بخش آزمون نمایش داده نمی‌شود تا لینک خراب
+     * در سایت منتشر نشود.
+     */
+    if (!telegramLink) {
         section.style.display =
             "none";
         container.innerHTML =
             "";
+        console.warn(
+            "[Lesson] Telegram bot username is not configured."
+        );
         return;
     }
     section.style.display =
         "";
     container.innerHTML = `
-        <div class="quiz-intro">
-            <p>
-                به سوالات زیر پاسخ دهید و دانش خود را محک بزنید.
-            </p>
-        </div>
-        <div class="quiz-list">
-            ${questions
-                .map(
-                    (question, index) =>
-                        createQuestion(
-                            question,
-                            index
-                        )
-                )
-                .join("")}
-        </div>
-        <div
-            id="quizFinalResult"
-            class="quiz-final-result"
-            style="display:none"
-        ></div>
-    `;
-    document
-        .querySelectorAll(".quiz-option")
-        .forEach(button => {
-            button.addEventListener(
-                "click",
-                () => {
-                    handleQuizAnswer(button);
-                }
-            );
-        });
-}
-/* =========================================================
-   CREATE QUESTION
-========================================================= */
-function createQuestion(
-    question,
-    index
-) {
-    const options =
-        Array.isArray(question.options)
-            ? question.options
-            : [];
-    const correctAnswer =
-        normalizeAnswer(
-            question.answer !== undefined
-                ? question.answer
-                : question.correct_answer
-        );
-    const explanation =
-        question.explanation ||
-        question.explain ||
-        "";
-    return `
-        <div
-            class="quiz-question"
-            data-question="${index}"
-            data-answer="${escapeHtml(correctAnswer)}"
-            data-explanation="${escapeHtml(explanation)}"
-        >
-            <h3>
-                ${index + 1}.
-                ${escapeHtml(
-                    question.question ||
-                    "سؤال بدون متن"
-                )}
-            </h3>
-            <div class="quiz-options">
-                ${options
-                    .map(
-                        (option, optionIndex) => {
-                            const normalized =
-                                normalizeOption(
-                                    option,
-                                    optionIndex
-                                );
-                            return `
-                                <button
-                                    type="button"
-                                    class="quiz-option"
-                                    data-option="${escapeHtml(
-                                        normalized.value
-                                    )}"
-                                >
-                                    <strong>
-                                        ${escapeHtml(
-                                            normalized.label
-                                        )}.
-                                    </strong>
-                                    <span>
-                                        ${escapeHtml(
-                                            normalized.text
-                                        )}
-                                    </span>
-                                </button>
-                            `;
-                        }
-                    )
-                    .join("")}
+        <div class="telegram-quiz-box">
+            <div class="telegram-quiz-icon">
+                📝
             </div>
-            <div
-                class="quiz-result"
-                style="display:none"
-            ></div>
+            <div class="telegram-quiz-content">
+                <h3>
+                    آزمون و ارزیابی این درس
+                </h3>
+                <p>
+                    برای شرکت در آزمون چهارگزینه‌ای،
+                    مشاهده نتیجه و ثبت پیشرفت خود،
+                    آزمون این درس را در ربات تلگرام انجام دهید.
+                </p>
+                <a
+                    href="${escapeHtml(telegramLink)}"
+                    class="telegram-quiz-button"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    🚀 شرکت در آزمون در ربات تلگرام
+                </a>
+            </div>
         </div>
     `;
 }
 /* =========================================================
-   NORMALIZE ANSWER
+   BUILD TELEGRAM DEEP LINK
 ========================================================= */
-function normalizeAnswer(answer) {
+function buildTelegramQuizLink(
+    moduleId,
+    chapterId,
+    lessonId
+) {
+    const username =
+        String(
+            TELEGRAM_BOT_USERNAME || ""
+        )
+            .trim()
+            .replace(/^@/, "");
     if (
-        answer === null ||
-        answer === undefined
+        !username ||
+        username ===
+        "YOUR_BOT_USERNAME"
     ) {
         return "";
     }
-    if (
-        typeof answer ===
-        "number"
-    ) {
-        return String(answer);
-    }
-    const text =
-        String(answer).trim();
     /*
-     * A/B/C/D
-     */
-    const upper =
-        text.toUpperCase();
-    const letters = {
-        A: "0",
-        B: "1",
-        C: "2",
-        D: "3"
-    };
-    if (
-        Object.prototype.hasOwnProperty.call(
-            letters,
-            upper
-        )
-    ) {
-        return letters[upper];
-    }
-    /*
-     * اگر پاسخ عددی به صورت رشته باشد
-     */
-    if (
-        /^[0-9]+$/.test(text)
-    ) {
-        return text;
-    }
-    return text;
-}
-/* =========================================================
-   NORMALIZE OPTION
-========================================================= */
-function normalizeOption(
-    option,
-    index
-) {
-    /*
-     * حالت ساده:
+     * Telegram deep-link payload
      *
-     * "گزینه اول"
+     * مثال:
+     *
+     * quiz_international_trade_chapter_01_lesson_01_01
      */
-    if (
-        typeof option ===
-        "string"
-    ) {
-        return {
-            value:
-                String(index),
-            label:
-                getOptionLabel(index),
-            text:
-                option
-        };
-    }
-    /*
-     * حالت object
-     */
-    if (
-        option &&
-        typeof option ===
-        "object"
-    ) {
-        const rawId =
-            option.id ??
-            option.value ??
-            option.key;
-        let value;
-        if (
-            rawId === null ||
-            rawId === undefined
-        ) {
-            value =
-                String(index);
-        } else {
-            value =
-                normalizeAnswer(
-                    rawId
-                );
-        }
-        return {
-            value,
-            label:
-                getOptionLabel(index),
-            text:
-                String(
-                    option.text ??
-                    option.label ??
-                    option.title ??
-                    ""
-                )
-        };
-    }
-    return {
-        value:
-            String(index),
-        label:
-            getOptionLabel(index),
-        text:
-            ""
-    };
-}
-/* =========================================================
-   OPTION LABEL
-========================================================= */
-function getOptionLabel(index) {
-    const labels = [
-        "A",
-        "B",
-        "C",
-        "D"
-    ];
+    const payload =
+        `quiz_${moduleId}_${chapterId}_${lessonId}`;
     return (
-        labels[index] ||
-        String(index + 1)
+        `https://t.me/${encodeURIComponent(username)}?start=${encodeURIComponent(payload)}`
     );
-}
-/* =========================================================
-   HANDLE QUIZ ANSWER
-========================================================= */
-function handleQuizAnswer(button) {
-    const question =
-        button.closest(
-            ".quiz-question"
-        );
-    if (!question) {
-        return;
-    }
-    const correctAnswer =
-        question.dataset.answer;
-    const selected =
-        button.dataset.option;
-    const result =
-        question.querySelector(
-            ".quiz-result"
-        );
-    if (!result) {
-        return;
-    }
-    const options =
-        question.querySelectorAll(
-            ".quiz-option"
-        );
-    /*
-     * جلوگیری از پاسخ دوباره
-     */
-    if (
-        question.dataset.answered ===
-        "true"
-    ) {
-        return;
-    }
-    question.dataset.answered =
-        "true";
-    options.forEach(option => {
-        option.disabled =
-            true;
-    });
-    const correctButton =
-        Array.from(options).find(
-            option =>
-                option.dataset.option ===
-                correctAnswer
-        );
-    const explanation =
-        question.dataset.explanation ||
-        "";
-    /*
-     * پاسخ صحیح
-     */
-    if (
-        selected ===
-        correctAnswer
-    ) {
-        button.classList.add(
-            "correct"
-        );
-        result.innerHTML = `
-            <div class="quiz-success">
-                <strong>
-                    ✅ پاسخ صحیح است.
-                </strong>
-                ${
-                    explanation
-                        ? `<p>${escapeHtml(explanation)}</p>`
-                        : ""
-                }
-            </div>
-        `;
-    } else {
-        /*
-         * پاسخ غلط
-         */
-        button.classList.add(
-            "wrong"
-        );
-        if (correctButton) {
-            correctButton.classList.add(
-                "correct"
-            );
-        }
-        const correctLabel =
-            correctButton
-                ? (
-                    correctButton.querySelector(
-                        "strong"
-                    )?.textContent || ""
-                )
-                : "";
-        result.innerHTML = `
-            <div class="quiz-error">
-                <strong>
-                    ❌ پاسخ شما صحیح نیست.
-                </strong>
-                <p>
-                    پاسخ صحیح:
-                    ${escapeHtml(correctLabel)}
-                </p>
-                ${
-                    explanation
-                        ? `<p>${escapeHtml(explanation)}</p>`
-                        : ""
-                }
-            </div>
-        `;
-    }
-    result.style.display =
-        "block";
-    updateQuizScore();
-}
-/* =========================================================
-   QUIZ SCORE
-========================================================= */
-function updateQuizScore() {
-    const questions =
-        document.querySelectorAll(
-            ".quiz-question"
-        );
-    if (!questions.length) {
-        return;
-    }
-    let answered = 0;
-    let correct = 0;
-    questions.forEach(question => {
-        if (
-            question.dataset.answered !==
-            "true"
-        ) {
-            return;
-        }
-        answered++;
-        const selectedButton =
-            question.querySelector(
-                ".quiz-option.correct"
-            );
-        const selectedWrong =
-            question.querySelector(
-                ".quiz-option.wrong"
-            );
-        /*
-         * اگر گزینه صحیح توسط کاربر انتخاب شده باشد
-         * دکمه correct همان دکمه انتخاب‌شده است.
-         */
-        if (
-            selectedButton &&
-            !selectedWrong
-        ) {
-            correct++;
-        }
-    });
-    /*
-     * تا وقتی همه سؤال‌ها پاسخ داده نشده‌اند،
-     * نتیجه نهایی نمایش داده نمی‌شود.
-     */
-    if (
-        answered !==
-        questions.length
-    ) {
-        return;
-    }
-    const finalResult =
-        document.getElementById(
-            "quizFinalResult"
-        );
-    if (!finalResult) {
-        return;
-    }
-    const percentage =
-        Math.round(
-            (
-                correct /
-                questions.length
-            ) *
-            100
-        );
-    finalResult.innerHTML = `
-        <div class="quiz-score">
-            <h3>
-                🎯 نتیجه آزمون
-            </h3>
-            <p>
-                ${correct}
-                پاسخ صحیح از
-                ${questions.length}
-                سؤال
-            </p>
-            <strong>
-                امتیاز:
-                ${percentage}٪
-            </strong>
-        </div>
-    `;
-    finalResult.style.display =
-        "block";
 }
