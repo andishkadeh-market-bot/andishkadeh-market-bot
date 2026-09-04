@@ -1,47 +1,81 @@
+"use strict";
+
+/* =========================================================
+   LOAD LESSON
+========================================================= */
+
 document.addEventListener(
     "DOMContentLoaded",
     async () => {
 
-        const moduleId =
-            getQueryParam("module");
+        try {
 
-        const chapterId =
-            getQueryParam("chapter");
+            const moduleId =
+                getQueryParam("module");
 
-        const lessonId =
-            getQueryParam("lesson");
+            const chapterId =
+                getQueryParam("chapter");
+
+            const lessonId =
+                getQueryParam("lesson");
 
 
-        if (
-            !moduleId ||
-            !chapterId ||
-            !lessonId
-        ) {
+            console.log(
+                "[Lesson] Parameters:",
+                {
+                    moduleId,
+                    chapterId,
+                    lessonId
+                }
+            );
+
+
+            if (
+                !moduleId ||
+                !chapterId ||
+                !lessonId
+            ) {
+
+                showError(
+                    document.getElementById(
+                        "lessonContent"
+                    ),
+                    "اطلاعات درس کامل نیست."
+                );
+
+                return;
+
+            }
+
+
+            await loadLesson(
+                moduleId,
+                chapterId,
+                lessonId
+            );
+
+        } catch (error) {
+
+            console.error(
+                "[Lesson] Initialization error:",
+                error
+            );
 
             showError(
                 document.getElementById(
                     "lessonContent"
                 ),
-                "اطلاعات درس کامل نیست."
+                "خطایی هنگام آماده‌سازی صفحه درس رخ داد."
             );
 
-            return;
-
         }
-
-
-        await loadLesson(
-            moduleId,
-            chapterId,
-            lessonId
-        );
 
     }
 );
 
 
 /* =========================================================
-   LOAD LESSON
+   LOAD LESSON FROM API
 ========================================================= */
 
 async function loadLesson(
@@ -52,12 +86,54 @@ async function loadLesson(
 
     try {
 
+        console.log(
+            "[Lesson] Loading:",
+            moduleId,
+            chapterId,
+            lessonId
+        );
+
+
         const response =
             await getLesson(
                 moduleId,
                 chapterId,
                 lessonId
             );
+
+
+        console.log(
+            "[Lesson] API response:",
+            response
+        );
+
+
+        if (!response) {
+
+            throw new Error(
+                "پاسخ خالی از API دریافت شد."
+            );
+
+        }
+
+
+        /*
+         * API فعلی به این شکل است:
+         *
+         * {
+         *   id: "...",
+         *   title: "...",
+         *   module_id: "...",
+         *   chapter_id: "...",
+         *   data: {
+         *      title: "...",
+         *      content: "...",
+         *      special_points: [],
+         *      exam_points: [],
+         *      example: "..."
+         *   }
+         * }
+         */
 
 
         const lesson =
@@ -71,19 +147,23 @@ async function loadLesson(
             chapterId
         );
 
-
     } catch (error) {
 
         console.error(
-            "Lesson loading error:",
+            "[Lesson] Loading error:",
             error
         );
 
 
-        showError(
+        const content =
             document.getElementById(
                 "lessonContent"
-            ),
+            );
+
+
+        showError(
+            content,
+            error.message ||
             "امکان دریافت این درس وجود ندارد."
         );
 
@@ -116,20 +196,23 @@ function renderLesson(
     }
 
 
+    /*
+     * اطلاعات محتوایی داخل data قرار دارد.
+     */
+
     const data =
         lesson.data ||
         lesson;
 
 
+    /* =====================================================
+       TITLE
+    ===================================================== */
+
     const title =
         data.title ||
         lesson.title ||
         "درس آموزشی";
-
-
-    const content =
-        data.content ||
-        "محتوای آموزشی برای این درس ثبت نشده است.";
 
 
     document.title =
@@ -141,6 +224,7 @@ function renderLesson(
             "lessonTitle"
         );
 
+
     if (titleElement) {
 
         titleElement.textContent =
@@ -149,10 +233,15 @@ function renderLesson(
     }
 
 
+    /* =====================================================
+       MODULE META
+    ===================================================== */
+
     const moduleMeta =
         document.getElementById(
             "lessonModuleMeta"
         );
+
 
     if (moduleMeta) {
 
@@ -162,10 +251,15 @@ function renderLesson(
     }
 
 
+    /* =====================================================
+       CHAPTER META
+    ===================================================== */
+
     const chapterMeta =
         document.getElementById(
             "lessonChapterMeta"
         );
+
 
     if (chapterMeta) {
 
@@ -174,6 +268,10 @@ function renderLesson(
 
     }
 
+
+    /* =====================================================
+       CHAPTER LINK
+    ===================================================== */
 
     const chapterLink =
         document.getElementById(
@@ -186,11 +284,16 @@ function renderLesson(
         chapterLink.href =
             `chapter.html?module=${encodeURIComponent(moduleId)}&chapter=${encodeURIComponent(chapterId)}`;
 
+
         chapterLink.textContent =
             getChapterTitle(chapterId);
 
     }
 
+
+    /* =====================================================
+       MAIN CONTENT
+    ===================================================== */
 
     const contentElement =
         document.getElementById(
@@ -198,7 +301,17 @@ function renderLesson(
         );
 
 
+    const content =
+        data.content ||
+        "محتوای آموزشی برای این درس ثبت نشده است.";
+
+
     if (contentElement) {
+
+        /*
+         * textContent استفاده شده تا محتوای API
+         * به عنوان HTML اجرا نشود.
+         */
 
         contentElement.textContent =
             content;
@@ -206,27 +319,82 @@ function renderLesson(
     }
 
 
-    renderExample(
-        data
-    );
+    /* =====================================================
+       EXAMPLE
+    ===================================================== */
+
+    renderExample(data);
+
+
+    /* =====================================================
+       SPECIAL POINTS
+    ===================================================== */
+
+    /*
+     * ساختار واقعی API:
+     * special_points
+     *
+     * برای سازگاری با نسخه‌های قدیمی:
+     * specialized_notes
+     * نیز پشتیبانی می‌شود.
+     */
+
+    const specialPoints =
+        Array.isArray(data.special_points)
+            ? data.special_points
+            : data.specialized_notes;
 
 
     renderNotes(
         "specializedNotes",
         "specializedSection",
-        data.specialized_notes
+        specialPoints
     );
+
+
+    /* =====================================================
+       EXAM POINTS
+    ===================================================== */
+
+    /*
+     * ساختار واقعی API:
+     * exam_points
+     *
+     * برای سازگاری با نسخه‌های قدیمی:
+     * exam_notes
+     * نیز پشتیبانی می‌شود.
+     */
+
+    const examPoints =
+        Array.isArray(data.exam_points)
+            ? data.exam_points
+            : data.exam_notes;
 
 
     renderNotes(
         "examNotes",
         "examSection",
-        data.exam_notes
+        examPoints
     );
 
 
+    /* =====================================================
+       QUIZ
+    ===================================================== */
+
+    const questions =
+        Array.isArray(data.questions)
+            ? data.questions
+            : [];
+
+
     renderQuiz(
-        data.questions || []
+        questions
+    );
+
+
+    console.log(
+        "[Lesson] Render completed successfully."
     );
 
 }
@@ -255,7 +423,7 @@ function getModuleTitle(
             "🧠 روانشناسی و مددکاری",
 
         finance:
-            "💰 مالی و اقتصاد",
+            "💰 مدیریت مالی",
 
         general_exam:
             "📝 آزمون استخدامی"
@@ -265,7 +433,8 @@ function getModuleTitle(
 
     return (
         titles[moduleId] ||
-        moduleId
+        moduleId ||
+        "آموزش"
     );
 
 }
@@ -280,6 +449,43 @@ function getChapterTitle(
 ) {
 
     const titles = {
+
+        chapter_01:
+            "مبانی مدیریت",
+
+        chapter_02:
+            "برنامه‌ریزی",
+
+        chapter_03:
+            "سازماندهی",
+
+        chapter_04:
+            "هدایت",
+
+        chapter_05:
+            "کنترل",
+
+        chapter_06:
+            "تصمیم‌گیری",
+
+        chapter_07:
+            "مدیریت منابع انسانی",
+
+        chapter_08:
+            "رفتار سازمانی",
+
+        chapter_09:
+            "رهبری",
+
+        chapter_10:
+            "مدیریت استراتژیک",
+
+        chapter_11:
+            "مدیریت مالی",
+
+        chapter_12:
+            "مدیریت بازاریابی",
+
 
         banking_fundamentals:
             "مبانی و مفاهیم بانکداری",
@@ -322,14 +528,15 @@ function getChapterTitle(
 
     return (
         titles[chapterId] ||
-        chapterId
+        chapterId ||
+        "فصل آموزشی"
     );
 
 }
 
 
 /* =========================================================
-   EXAMPLE
+   RENDER EXAMPLE
 ========================================================= */
 
 function renderExample(
@@ -340,6 +547,7 @@ function renderExample(
         document.getElementById(
             "exampleSection"
         );
+
 
     const box =
         document.getElementById(
@@ -357,11 +565,13 @@ function renderExample(
     }
 
 
+    const example =
+        data.example;
+
+
     if (
-        !data.example ||
-        !String(
-            data.example
-        ).trim()
+        !example ||
+        !String(example).trim()
     ) {
 
         section.style.display =
@@ -377,13 +587,13 @@ function renderExample(
 
 
     box.textContent =
-        data.example;
+        String(example);
 
 }
 
 
 /* =========================================================
-   NOTES
+   RENDER NOTES
 ========================================================= */
 
 function renderNotes(
@@ -396,6 +606,7 @@ function renderNotes(
         document.getElementById(
             sectionId
         );
+
 
     const list =
         document.getElementById(
@@ -421,6 +632,9 @@ function renderNotes(
         section.style.display =
             "none";
 
+        list.innerHTML =
+            "";
+
         return;
 
     }
@@ -442,7 +656,7 @@ function renderNotes(
 
 
 /* =========================================================
-   QUIZ
+   RENDER QUIZ
 ========================================================= */
 
 function renderQuiz(
@@ -453,6 +667,7 @@ function renderQuiz(
         document.getElementById(
             "quizSection"
         );
+
 
     const container =
         document.getElementById(
@@ -478,6 +693,9 @@ function renderQuiz(
         section.style.display =
             "none";
 
+        container.innerHTML =
+            "";
+
         return;
 
     }
@@ -490,7 +708,10 @@ function renderQuiz(
     container.innerHTML =
         questions
             .map(
-                (question, index) =>
+                (
+                    question,
+                    index
+                ) =>
                     createQuestion(
                         question,
                         index
@@ -533,9 +754,7 @@ function createQuestion(
 ) {
 
     const options =
-        Array.isArray(
-            question.options
-        )
+        Array.isArray(question.options)
             ? question.options
             : [];
 
@@ -555,13 +774,11 @@ function createQuestion(
         >
 
             <h3>
-
                 ${index + 1}.
                 ${escapeHtml(
                     question.question ||
                     "سؤال بدون متن"
                 )}
-
             </h3>
 
 
@@ -678,9 +895,8 @@ function handleQuizAnswer(
         );
 
 
-        result.innerHTML =
+        result.textContent =
             "✅ پاسخ شما صحیح است.";
-
 
     } else {
 
@@ -689,7 +905,8 @@ function handleQuizAnswer(
         );
 
 
-        let correctButton = null;
+        let correctButton =
+            null;
 
 
         options.forEach(
@@ -718,10 +935,8 @@ function handleQuizAnswer(
         }
 
 
-        result.innerHTML =
-            `❌ پاسخ صحیح: ${escapeHtml(
-                correctAnswer
-            )}`;
+        result.textContent =
+            `❌ پاسخ صحیح: ${correctAnswer}`;
 
     }
 
