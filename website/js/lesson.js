@@ -1,947 +1,1027 @@
-"use strict";
+“use strict”;
 
 /* =========================================================
-   LOAD LESSON
+LOAD LESSON
 ========================================================= */
 
 document.addEventListener(
-    "DOMContentLoaded",
-    async () => {
+“DOMContentLoaded”,
+async () => {
 
-        try {
-
-            const moduleId =
-                getQueryParam("module");
-
-            const chapterId =
-                getQueryParam("chapter");
-
-            const lessonId =
-                getQueryParam("lesson");
-
-
-            console.log(
-                "[Lesson] Parameters:",
-                {
-                    moduleId,
-                    chapterId,
-                    lessonId
-                }
-            );
-
-
-            if (
-                !moduleId ||
-                !chapterId ||
-                !lessonId
-            ) {
-
-                showError(
-                    document.getElementById(
-                        "lessonContent"
-                    ),
-                    "اطلاعات درس کامل نیست."
-                );
-
-                return;
-
-            }
-
-
-            await loadLesson(
+    try {
+        const moduleId =
+            getQueryParam("module");
+        const chapterId =
+            getQueryParam("chapter");
+        const lessonId =
+            getQueryParam("lesson");
+        console.log(
+            "[Lesson] Parameters:",
+            {
                 moduleId,
                 chapterId,
                 lessonId
-            );
-
-        } catch (error) {
-
-            console.error(
-                "[Lesson] Initialization error:",
-                error
-            );
-
+            }
+        );
+        if (
+            !moduleId ||
+            !chapterId ||
+            !lessonId
+        ) {
             showError(
                 document.getElementById(
                     "lessonContent"
                 ),
-                "خطایی هنگام آماده‌سازی صفحه درس رخ داد."
+                "اطلاعات درس کامل نیست."
             );
-
+            return;
         }
-
-    }
-);
-
-
-/* =========================================================
-   LOAD LESSON FROM API
-========================================================= */
-
-async function loadLesson(
-    moduleId,
-    chapterId,
-    lessonId
-) {
-
-    try {
-
-        console.log(
-            "[Lesson] Loading:",
+        await loadLesson(
             moduleId,
             chapterId,
             lessonId
         );
-
-
-        const response =
-            await getLesson(
-                moduleId,
-                chapterId,
-                lessonId
-            );
-
-
-        console.log(
-            "[Lesson] API response:",
-            response
-        );
-
-
-        if (!response) {
-
-            throw new Error(
-                "پاسخ خالی از API دریافت شد."
-            );
-
-        }
-
-
-        /*
-         * API فعلی به این شکل است:
-         *
-         * {
-         *   id: "...",
-         *   title: "...",
-         *   module_id: "...",
-         *   chapter_id: "...",
-         *   data: {
-         *      title: "...",
-         *      content: "...",
-         *      special_points: [],
-         *      exam_points: [],
-         *      example: "..."
-         *   }
-         * }
-         */
-
-
-        const lesson =
-            response.lesson ||
-            response;
-
-
-        renderLesson(
-            lesson,
-            moduleId,
-            chapterId
-        );
-
     } catch (error) {
-
         console.error(
-            "[Lesson] Loading error:",
+            "[Lesson] Initialization error:",
             error
         );
-
-
-        const content =
-            document.getElementById(
-                "lessonContent"
-            );
-
-
-        showError(
-            content,
-            error.message ||
-            "امکان دریافت این درس وجود ندارد."
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   RENDER LESSON
-========================================================= */
-
-function renderLesson(
-    lesson,
-    moduleId,
-    chapterId
-) {
-
-    if (!lesson) {
-
         showError(
             document.getElementById(
                 "lessonContent"
             ),
-            "اطلاعات این درس یافت نشد."
+            "خطایی هنگام آماده‌سازی صفحه درس رخ داد."
         );
-
-        return;
-
     }
+}
 
+);
 
-    /*
-     * اطلاعات محتوایی داخل data قرار دارد.
-     */
+/* =========================================================
+LOAD LESSON FROM API
+========================================================= */
 
-    const data =
-        lesson.data ||
-        lesson;
+async function loadLesson(
+moduleId,
+chapterId,
+lessonId
+) {
 
-
-    /* =====================================================
-       TITLE
-    ===================================================== */
-
-    const title =
-        data.title ||
-        lesson.title ||
-        "درس آموزشی";
-
-
-    document.title =
-        `${title} | اندیشکده مدیریت و بازار`;
-
-
-    const titleElement =
-        document.getElementById(
-            "lessonTitle"
+try {
+    console.log(
+        "[Lesson] Loading:",
+        moduleId,
+        chapterId,
+        lessonId
+    );
+    const response =
+        await getLesson(
+            moduleId,
+            chapterId,
+            lessonId
         );
-
-
-    if (titleElement) {
-
-        titleElement.textContent =
-            title;
-
-    }
-
-
-    /* =====================================================
-       MODULE META
-    ===================================================== */
-
-    const moduleMeta =
-        document.getElementById(
-            "lessonModuleMeta"
+    console.log(
+        "[Lesson] API response:",
+        response
+    );
+    if (!response) {
+        throw new Error(
+            "پاسخ خالی از API دریافت شد."
         );
-
-
-    if (moduleMeta) {
-
-        moduleMeta.textContent =
-            getModuleTitle(moduleId);
-
     }
-
-
-    /* =====================================================
-       CHAPTER META
-    ===================================================== */
-
-    const chapterMeta =
-        document.getElementById(
-            "lessonChapterMeta"
-        );
-
-
-    if (chapterMeta) {
-
-        chapterMeta.textContent =
-            getChapterTitle(chapterId);
-
-    }
-
-
-    /* =====================================================
-       CHAPTER LINK
-    ===================================================== */
-
-    const chapterLink =
-        document.getElementById(
-            "lessonChapterLink"
-        );
-
-
-    if (chapterLink) {
-
-        chapterLink.href =
-            `chapter.html?module=${encodeURIComponent(moduleId)}&chapter=${encodeURIComponent(chapterId)}`;
-
-
-        chapterLink.textContent =
-            getChapterTitle(chapterId);
-
-    }
-
-
-    /* =====================================================
-       MAIN CONTENT
-    ===================================================== */
-
-    const contentElement =
+    const lesson =
+        response.lesson ||
+        response;
+    renderLesson(
+        lesson,
+        moduleId,
+        chapterId
+    );
+} catch (error) {
+    console.error(
+        "[Lesson] Loading error:",
+        error
+    );
+    showError(
         document.getElementById(
             "lessonContent"
-        );
-
-
-    const content =
-        data.content ||
-        "محتوای آموزشی برای این درس ثبت نشده است.";
-
-
-    if (contentElement) {
-
-        /*
-         * textContent استفاده شده تا محتوای API
-         * به عنوان HTML اجرا نشود.
-         */
-
-        contentElement.textContent =
-            content;
-
-    }
-
-
-    /* =====================================================
-       EXAMPLE
-    ===================================================== */
-
-    renderExample(data);
-
-
-    /* =====================================================
-       SPECIAL POINTS
-    ===================================================== */
-
-    /*
-     * ساختار واقعی API:
-     * special_points
-     *
-     * برای سازگاری با نسخه‌های قدیمی:
-     * specialized_notes
-     * نیز پشتیبانی می‌شود.
-     */
-
-    const specialPoints =
-        Array.isArray(data.special_points)
-            ? data.special_points
-            : data.specialized_notes;
-
-
-    renderNotes(
-        "specializedNotes",
-        "specializedSection",
-        specialPoints
+        ),
+        error.message ||
+        "امکان دریافت این درس وجود ندارد."
     );
-
-
-    /* =====================================================
-       EXAM POINTS
-    ===================================================== */
-
-    /*
-     * ساختار واقعی API:
-     * exam_points
-     *
-     * برای سازگاری با نسخه‌های قدیمی:
-     * exam_notes
-     * نیز پشتیبانی می‌شود.
-     */
-
-    const examPoints =
-        Array.isArray(data.exam_points)
-            ? data.exam_points
-            : data.exam_notes;
-
-
-    renderNotes(
-        "examNotes",
-        "examSection",
-        examPoints
-    );
-
-
-    /* =====================================================
-       QUIZ
-    ===================================================== */
-
-    const questions =
-        Array.isArray(data.questions)
-            ? data.questions
-            : [];
-
-
-    renderQuiz(
-        questions
-    );
-
-
-    console.log(
-        "[Lesson] Render completed successfully."
-    );
+}
 
 }
 
+/* =========================================================
+RENDER LESSON
+========================================================= */
+
+function renderLesson(
+lesson,
+moduleId,
+chapterId
+) {
+
+if (!lesson) {
+    showError(
+        document.getElementById(
+            "lessonContent"
+        ),
+        "اطلاعات این درس یافت نشد."
+    );
+    return;
+}
+/*
+ * ساختار API فعلی:
+ *
+ * {
+ *   id,
+ *   title,
+ *   module_id,
+ *   chapter_id,
+ *   data: {
+ *      title,
+ *      content,
+ *      special_points,
+ *      exam_points,
+ *      example,
+ *      quiz
+ *   }
+ * }
+ */
+const data =
+    lesson.data ||
+    lesson;
+/* =====================================================
+   TITLE
+===================================================== */
+const title =
+    data.title ||
+    lesson.title ||
+    "درس آموزشی";
+document.title =
+    `${title} | اندیشکده مدیریت و بازار`;
+const titleElement =
+    document.getElementById(
+        "lessonTitle"
+    );
+if (titleElement) {
+    titleElement.textContent =
+        title;
+}
+/* =====================================================
+   MODULE
+===================================================== */
+const moduleMeta =
+    document.getElementById(
+        "lessonModuleMeta"
+    );
+if (moduleMeta) {
+    moduleMeta.textContent =
+        getModuleTitle(moduleId);
+}
+/* =====================================================
+   CHAPTER
+===================================================== */
+const chapterMeta =
+    document.getElementById(
+        "lessonChapterMeta"
+    );
+if (chapterMeta) {
+    chapterMeta.textContent =
+        getChapterTitle(chapterId);
+}
+/* =====================================================
+   CHAPTER LINK
+===================================================== */
+const chapterLink =
+    document.getElementById(
+        "lessonChapterLink"
+    );
+if (chapterLink) {
+    chapterLink.href =
+        `chapter.html?module=${encodeURIComponent(moduleId)}&chapter=${encodeURIComponent(chapterId)}`;
+    chapterLink.textContent =
+        getChapterTitle(chapterId);
+}
+/* =====================================================
+   MAIN CONTENT
+===================================================== */
+const contentElement =
+    document.getElementById(
+        "lessonContent"
+    );
+const content =
+    data.content ||
+    data.lesson ||
+    "محتوای آموزشی برای این درس ثبت نشده است.";
+if (contentElement) {
+    contentElement.textContent =
+        String(content);
+}
+/* =====================================================
+   EXAMPLE
+===================================================== */
+renderExample(data);
+/* =====================================================
+   SPECIAL POINTS
+===================================================== */
+const specialPoints =
+    Array.isArray(data.special_points)
+        ? data.special_points
+        : (
+            Array.isArray(data.specialized_points)
+                ? data.specialized_points
+                : (
+                    Array.isArray(data.specialized_notes)
+                        ? data.specialized_notes
+                        : []
+                )
+        );
+renderNotes(
+    "specializedNotes",
+    "specializedSection",
+    specialPoints
+);
+/* =====================================================
+   EXAM POINTS
+===================================================== */
+const examPoints =
+    Array.isArray(data.exam_points)
+        ? data.exam_points
+        : (
+            Array.isArray(data.exam_notes)
+                ? data.exam_notes
+                : []
+        );
+renderNotes(
+    "examNotes",
+    "examSection",
+    examPoints
+);
+/* =====================================================
+   QUIZ
+===================================================== */
+/*
+ * ساختار واقعی درس‌ها:
+ *
+ * quiz: [
+ *   {
+ *      question: "...",
+ *      options: [...],
+ *      answer: 2,
+ *      explanation: "..."
+ *   }
+ * ]
+ */
+const quiz =
+    Array.isArray(data.quiz)
+        ? data.quiz
+        : (
+            Array.isArray(data.questions)
+                ? data.questions
+                : []
+        );
+renderQuiz(
+    quiz
+);
+console.log(
+    "[Lesson] Render completed successfully."
+);
+
+}
 
 /* =========================================================
-   MODULE TITLE
+MODULE TITLE
 ========================================================= */
 
 function getModuleTitle(
-    moduleId
+moduleId
 ) {
 
-    const titles = {
-
-        management:
-            "📚 آموزش مدیریت",
-
-        banking:
-            "🏦 بانکداری تخصصی",
-
-        international_trade:
-            "🌍 تجارت بین‌الملل",
-
-        psychology_socialwork:
-            "🧠 روانشناسی و مددکاری",
-
-        finance:
-            "💰 مدیریت مالی",
-
-        general_exam:
-            "📝 آزمون استخدامی"
-
-    };
-
-
-    return (
-        titles[moduleId] ||
-        moduleId ||
-        "آموزش"
-    );
+const titles = {
+    management:
+        "📚 آموزش مدیریت",
+    banking:
+        "🏦 بانکداری تخصصی",
+    international_trade:
+        "🌍 تجارت بین‌الملل",
+    psychology_socialwork:
+        "🧠 روانشناسی و مددکاری",
+    finance:
+        "💰 مدیریت مالی",
+    general_exam:
+        "📝 آزمون استخدامی"
+};
+return (
+    titles[moduleId] ||
+    moduleId ||
+    "آموزش"
+);
 
 }
 
-
 /* =========================================================
-   CHAPTER TITLE
+CHAPTER TITLE
 ========================================================= */
 
 function getChapterTitle(
-    chapterId
+chapterId
 ) {
 
-    const titles = {
+const titles = {
+    /* مدیریت */
+    chapter_01:
+        "مبانی مدیریت",
+    chapter_02:
+        "برنامه‌ریزی",
+    chapter_03:
+        "سازماندهی",
+    chapter_04:
+        "هدایت",
+    chapter_05:
+        "کنترل",
+    chapter_06:
+        "تصمیم‌گیری",
+    chapter_07:
+        "مدیریت منابع انسانی",
+    chapter_08:
+        "رفتار سازمانی",
+    chapter_09:
+        "رهبری",
+    chapter_10:
+        "مدیریت استراتژیک",
+    chapter_11:
+        "مدیریت مالی",
+    chapter_12:
+        "مدیریت بازاریابی",
+    /* بانکداری */
+    banking_fundamentals:
+        "مبانی و مفاهیم بانکداری",
+    banking_deposits:
+        "سپرده‌های بانکی",
+    banking_islamic_contracts:
+        "عقود و قراردادهای بانکی",
+    banking_facilities:
+        "تسهیلات بانکی",
+    banking_risk:
+        "ریسک در بانکداری",
+    central_bank_monetary_policy:
+        "بانک مرکزی و سیاست پولی",
+    aml_cft:
+        "مبارزه با پولشویی و تأمین مالی تروریسم",
+    international_banking:
+        "بانکداری بین‌الملل",
+    digital_banking:
+        "بانکداری دیجیتال",
+    bank_financial_statements:
+        "صورت‌های مالی بانک",
+    bank_management:
+        "مدیریت بانک",
+    banking_employment_exam:
+        "آزمون استخدامی بانکداری"
+};
+return (
+    titles[chapterId] ||
+    chapterId ||
+    "فصل آموزشی"
+);
 
-        chapter_01:
-            "مبانی مدیریت",
+}
 
-        chapter_02:
-            "برنامه‌ریزی",
+/* =========================================================
+EXAMPLE
+========================================================= */
 
-        chapter_03:
-            "سازماندهی",
+function renderExample(
+data
+) {
 
-        chapter_04:
-            "هدایت",
+const section =
+    document.getElementById(
+        "exampleSection"
+    );
+const box =
+    document.getElementById(
+        "lessonExample"
+    );
+if (
+    !section ||
+    !box
+) {
+    return;
+}
+const example =
+    data.example ||
+    data.practical_example;
+if (
+    !example ||
+    !String(example).trim()
+) {
+    section.style.display =
+        "none";
+    box.textContent =
+        "";
+    return;
+}
+section.style.display =
+    "";
+box.textContent =
+    String(example);
 
-        chapter_05:
-            "کنترل",
+}
 
-        chapter_06:
-            "تصمیم‌گیری",
+/* =========================================================
+NOTES
+========================================================= */
 
-        chapter_07:
-            "مدیریت منابع انسانی",
+function renderNotes(
+listId,
+sectionId,
+notes
+) {
 
-        chapter_08:
-            "رفتار سازمانی",
+const section =
+    document.getElementById(
+        sectionId
+    );
+const list =
+    document.getElementById(
+        listId
+    );
+if (
+    !section ||
+    !list
+) {
+    return;
+}
+if (
+    !Array.isArray(notes) ||
+    !notes.length
+) {
+    section.style.display =
+        "none";
+    list.innerHTML =
+        "";
+    return;
+}
+section.style.display =
+    "";
+list.innerHTML =
+    notes
+        .map(
+            note => {
+                let text =
+                    note;
+                /*
+                 * اگر نکته به صورت object باشد
+                 * عنوان و توضیح آن را نیز پشتیبانی می‌کنیم.
+                 */
+                if (
+                    typeof note ===
+                    "object"
+                ) {
+                    text =
+                        note.title
+                            ? `${note.title}: ${note.description || ""}`
+                            : (
+                                note.description ||
+                                ""
+                            );
+                }
+                return `
+                    <li>
+                        ${escapeHtml(text)}
+                    </li>
+                `;
+            }
+        )
+        .join("");
 
-        chapter_09:
-            "رهبری",
+}
 
-        chapter_10:
-            "مدیریت استراتژیک",
+/* =========================================================
+QUIZ
+========================================================= */
 
-        chapter_11:
-            "مدیریت مالی",
+function renderQuiz(
+questions
+) {
 
-        chapter_12:
-            "مدیریت بازاریابی",
-
-
-        banking_fundamentals:
-            "مبانی و مفاهیم بانکداری",
-
-        banking_deposits:
-            "سپرده‌های بانکی",
-
-        banking_islamic_contracts:
-            "عقود و قراردادهای بانکی",
-
-        banking_facilities:
-            "تسهیلات بانکی",
-
-        banking_risk:
-            "ریسک در بانکداری",
-
-        central_bank_monetary_policy:
-            "بانک مرکزی و سیاست پولی",
-
-        aml_cft:
-            "مبارزه با پولشویی و تأمین مالی تروریسم",
-
-        international_banking:
-            "بانکداری بین‌الملل",
-
-        digital_banking:
-            "بانکداری دیجیتال",
-
-        bank_financial_statements:
-            "صورت‌های مالی بانک",
-
-        bank_management:
-            "مدیریت بانک",
-
-        banking_employment_exam:
-            "آزمون استخدامی بانکداری"
-
-    };
-
-
-    return (
-        titles[chapterId] ||
-        chapterId ||
-        "فصل آموزشی"
+const section =
+    document.getElementById(
+        "quizSection"
+    );
+const container =
+    document.getElementById(
+        "quizContainer"
+    );
+if (
+    !section ||
+    !container
+) {
+    return;
+}
+if (
+    !Array.isArray(questions) ||
+    !questions.length
+) {
+    section.style.display =
+        "none";
+    container.innerHTML =
+        "";
+    return;
+}
+section.style.display =
+    "";
+container.innerHTML =
+    `
+        <div class="quiz-intro">
+            <p>
+                به سوالات زیر پاسخ دهید و دانش خود را محک بزنید.
+            </p>
+        </div>
+        <div class="quiz-list">
+            ${questions
+                .map(
+                    (
+                        question,
+                        index
+                    ) =>
+                        createQuestion(
+                            question,
+                            index
+                        )
+                )
+                .join("")}
+        </div>
+        <div
+            id="quizFinalResult"
+            class="quiz-final-result"
+            style="display:none"
+        ></div>
+    `;
+document
+    .querySelectorAll(
+        ".quiz-option"
+    )
+    .forEach(
+        button => {
+            button.addEventListener(
+                "click",
+                () => {
+                    handleQuizAnswer(
+                        button
+                    );
+                }
+            );
+        }
     );
 
 }
 
-
 /* =========================================================
-   RENDER EXAMPLE
-========================================================= */
-
-function renderExample(
-    data
-) {
-
-    const section =
-        document.getElementById(
-            "exampleSection"
-        );
-
-
-    const box =
-        document.getElementById(
-            "lessonExample"
-        );
-
-
-    if (
-        !section ||
-        !box
-    ) {
-
-        return;
-
-    }
-
-
-    const example =
-        data.example;
-
-
-    if (
-        !example ||
-        !String(example).trim()
-    ) {
-
-        section.style.display =
-            "none";
-
-        return;
-
-    }
-
-
-    section.style.display =
-        "";
-
-
-    box.textContent =
-        String(example);
-
-}
-
-
-/* =========================================================
-   RENDER NOTES
-========================================================= */
-
-function renderNotes(
-    listId,
-    sectionId,
-    notes
-) {
-
-    const section =
-        document.getElementById(
-            sectionId
-        );
-
-
-    const list =
-        document.getElementById(
-            listId
-        );
-
-
-    if (
-        !section ||
-        !list
-    ) {
-
-        return;
-
-    }
-
-
-    if (
-        !Array.isArray(notes) ||
-        !notes.length
-    ) {
-
-        section.style.display =
-            "none";
-
-        list.innerHTML =
-            "";
-
-        return;
-
-    }
-
-
-    section.style.display =
-        "";
-
-
-    list.innerHTML =
-        notes
-            .map(
-                note =>
-                    `<li>${escapeHtml(note)}</li>`
-            )
-            .join("");
-
-}
-
-
-/* =========================================================
-   RENDER QUIZ
-========================================================= */
-
-function renderQuiz(
-    questions
-) {
-
-    const section =
-        document.getElementById(
-            "quizSection"
-        );
-
-
-    const container =
-        document.getElementById(
-            "quizContainer"
-        );
-
-
-    if (
-        !section ||
-        !container
-    ) {
-
-        return;
-
-    }
-
-
-    if (
-        !Array.isArray(questions) ||
-        !questions.length
-    ) {
-
-        section.style.display =
-            "none";
-
-        container.innerHTML =
-            "";
-
-        return;
-
-    }
-
-
-    section.style.display =
-        "";
-
-
-    container.innerHTML =
-        questions
-            .map(
-                (
-                    question,
-                    index
-                ) =>
-                    createQuestion(
-                        question,
-                        index
-                    )
-            )
-            .join("");
-
-
-    document
-        .querySelectorAll(
-            ".quiz-option"
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        handleQuizAnswer(
-                            button
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   CREATE QUESTION
+CREATE QUESTION
 ========================================================= */
 
 function createQuestion(
-    question,
-    index
+question,
+index
 ) {
 
-    const options =
-        Array.isArray(question.options)
-            ? question.options
-            : [];
-
-
-    const correctAnswer =
-        question.correct_answer ||
-        question.answer ||
-        "";
-
-
-    return `
-
-        <div
-            class="quiz-question"
-            data-question="${index}"
-            data-answer="${escapeHtml(correctAnswer)}"
-        >
-
-            <h3>
-                ${index + 1}.
-                ${escapeHtml(
-                    question.question ||
-                    "سؤال بدون متن"
-                )}
-            </h3>
-
-
-            <div class="quiz-options">
-
-                ${options
-                    .map(
-                        option => `
-
+const options =
+    Array.isArray(question.options)
+        ? question.options
+        : [];
+/*
+ * در فایل‌های فعلی management:
+ *
+ * answer = 0 / 1 / 2 / ...
+ *
+ * بنابراین مقدار صحیح را به شکل رشته نگه می‌داریم.
+ */
+const correctAnswer =
+    normalizeAnswer(
+        question.answer !== undefined
+            ? question.answer
+            : question.correct_answer
+    );
+const explanation =
+    question.explanation ||
+    question.explain ||
+    "";
+return `
+    <div
+        class="quiz-question"
+        data-question="${index}"
+        data-answer="${escapeHtml(correctAnswer)}"
+        data-explanation="${escapeHtml(explanation)}"
+    >
+        <h3>
+            ${index + 1}.
+            ${escapeHtml(
+                question.question ||
+                "سؤال بدون متن"
+            )}
+        </h3>
+        <div class="quiz-options">
+            ${options
+                .map(
+                    (
+                        option,
+                        optionIndex
+                    ) => {
+                        const normalized =
+                            normalizeOption(
+                                option,
+                                optionIndex
+                            );
+                        return `
                             <button
                                 type="button"
                                 class="quiz-option"
                                 data-option="${escapeHtml(
-                                    option.id || ""
+                                    normalized.value
                                 )}"
                             >
-
                                 <strong>
                                     ${escapeHtml(
-                                        option.id || ""
+                                        normalized.label
                                     )}.
                                 </strong>
-
-                                ${escapeHtml(
-                                    option.text || ""
-                                )}
-
+                                <span>
+                                    ${escapeHtml(
+                                        normalized.text
+                                    )}
+                                </span>
                             </button>
-
-                        `
-                    )
-                    .join("")}
-
-            </div>
-
-
-            <div
-                class="quiz-result"
-                style="display:none"
-            ></div>
-
+                        `;
+                    }
+                )
+                .join("")}
         </div>
-
-    `;
+        <div
+            class="quiz-result"
+            style="display:none"
+        ></div>
+    </div>
+`;
 
 }
 
+/* =========================================================
+NORMALIZE ANSWER
+========================================================= */
+
+function normalizeAnswer(
+answer
+) {
+
+if (
+    answer === null ||
+    answer === undefined
+) {
+    return "";
+}
+/*
+ * اگر answer عددی باشد:
+ *
+ * 0 = A
+ * 1 = B
+ * 2 = C
+ * 3 = D
+ */
+if (
+    typeof answer ===
+    "number"
+) {
+    return String(answer);
+}
+const text =
+    String(answer).trim();
+/*
+ * اگر پاسخ A/B/C/D باشد
+ * به index عددی تبدیل می‌شود.
+ */
+const upper =
+    text.toUpperCase();
+const letters = {
+    A: "0",
+    B: "1",
+    C: "2",
+    D: "3"
+};
+if (
+    Object.prototype.hasOwnProperty.call(
+        letters,
+        upper
+    )
+) {
+    return letters[upper];
+}
+return text;
+
+}
 
 /* =========================================================
-   HANDLE QUIZ ANSWER
+NORMALIZE OPTION
+========================================================= */
+
+function normalizeOption(
+option,
+index
+) {
+
+/*
+ * حالت ساده:
+ *
+ * "گزینه اول"
+ */
+if (
+    typeof option ===
+    "string"
+) {
+    return {
+        value:
+            String(index),
+        label:
+            getOptionLabel(index),
+        text:
+            option
+    };
+}
+/*
+ * حالت object
+ */
+if (
+    option &&
+    typeof option ===
+    "object"
+) {
+    const rawId =
+        option.id ??
+        option.value ??
+        option.key;
+    let value;
+    if (
+        rawId === null ||
+        rawId === undefined
+    ) {
+        value =
+            String(index);
+    } else {
+        value =
+            normalizeAnswer(
+                rawId
+            );
+    }
+    return {
+        value,
+        label:
+            getOptionLabel(index),
+        text:
+            String(
+                option.text ??
+                option.label ??
+                option.title ??
+                ""
+            )
+    };
+}
+return {
+    value:
+        String(index),
+    label:
+        getOptionLabel(index),
+    text:
+        ""
+};
+
+}
+
+/* =========================================================
+OPTION LABEL
+========================================================= */
+
+function getOptionLabel(
+index
+) {
+
+const labels = [
+    "A",
+    "B",
+    "C",
+    "D"
+];
+return (
+    labels[index] ||
+    String(index + 1)
+);
+
+}
+
+/* =========================================================
+HANDLE QUIZ ANSWER
 ========================================================= */
 
 function handleQuizAnswer(
-    button
+button
 ) {
 
-    const question =
-        button.closest(
-            ".quiz-question"
-        );
-
-
-    if (!question) {
-
-        return;
-
-    }
-
-
-    const correctAnswer =
-        question.dataset.answer;
-
-
-    const selected =
-        button.dataset.option;
-
-
-    const result =
-        question.querySelector(
-            ".quiz-result"
-        );
-
-
-    if (!result) {
-
-        return;
-
-    }
-
-
-    const options =
-        question.querySelectorAll(
-            ".quiz-option"
-        );
-
-
-    options.forEach(
-        option => {
-
-            option.disabled =
-                true;
-
-        }
+const question =
+    button.closest(
+        ".quiz-question"
     );
-
-
-    if (
-        selected ===
-        correctAnswer
-    ) {
-
-        button.classList.add(
+if (!question) {
+    return;
+}
+const correctAnswer =
+    question.dataset.answer;
+const selected =
+    button.dataset.option;
+const result =
+    question.querySelector(
+        ".quiz-result"
+    );
+if (!result) {
+    return;
+}
+const options =
+    question.querySelectorAll(
+        ".quiz-option"
+    );
+/*
+ * جلوگیری از پاسخ دوباره
+ */
+if (
+    question.dataset.answered ===
+    "true"
+) {
+    return;
+}
+question.dataset.answered =
+    "true";
+options.forEach(
+    option => {
+        option.disabled =
+            true;
+    }
+);
+const correctButton =
+    Array.from(
+        options
+    ).find(
+        option =>
+            option.dataset.option ===
+            correctAnswer
+    );
+const explanation =
+    question.dataset.explanation ||
+    "";
+if (
+    selected ===
+    correctAnswer
+) {
+    button.classList.add(
+        "correct"
+    );
+    result.innerHTML =
+        `
+            <div class="quiz-success">
+                <strong>✅ پاسخ صحیح است.</strong>
+                ${
+                    explanation
+                        ? `<p>${escapeHtml(explanation)}</p>`
+                        : ""
+                }
+            </div>
+        `;
+} else {
+    button.classList.add(
+        "wrong"
+    );
+    if (correctButton) {
+        correctButton.classList.add(
             "correct"
         );
-
-
-        result.textContent =
-            "✅ پاسخ شما صحیح است.";
-
-    } else {
-
-        button.classList.add(
-            "wrong"
-        );
-
-
-        let correctButton =
-            null;
-
-
-        options.forEach(
-            option => {
-
-                if (
-                    option.dataset.option ===
-                    correctAnswer
-                ) {
-
-                    correctButton =
-                        option;
-
-                }
-
-            }
-        );
-
-
-        if (correctButton) {
-
-            correctButton.classList.add(
-                "correct"
-            );
-
-        }
-
-
-        result.textContent =
-            `❌ پاسخ صحیح: ${correctAnswer}`;
-
     }
+    const correctLabel =
+        correctButton
+            ? correctButton.querySelector(
+                "strong"
+            )?.textContent || ""
+            : "";
+    result.innerHTML =
+        `
+            <div class="quiz-error">
+                <strong>
+                    ❌ پاسخ شما صحیح نیست.
+                </strong>
+                <p>
+                    پاسخ صحیح:
+                    ${escapeHtml(correctLabel)}
+                </p>
+                ${
+                    explanation
+                        ? `<p>${escapeHtml(explanation)}</p>`
+                        : ""
+                }
+            </div>
+        `;
+}
+result.style.display =
+    "block";
+updateQuizScore();
 
+}
 
-    result.style.display =
-        "block";
+/* =========================================================
+QUIZ SCORE
+========================================================= */
+
+function updateQuizScore() {
+
+const questions =
+    document.querySelectorAll(
+        ".quiz-question"
+    );
+if (!questions.length) {
+    return;
+}
+let answered =
+    0;
+let correct =
+    0;
+questions.forEach(
+    question => {
+        if (
+            question.dataset.answered !==
+            "true"
+        ) {
+            return;
+        }
+        answered++;
+        const selectedButton =
+            question.querySelector(
+                ".quiz-option.correct"
+            );
+        const selectedWrong =
+            question.querySelector(
+                ".quiz-option.wrong"
+            );
+        /*
+         * اگر گزینه صحیح توسط کاربر انتخاب شده باشد
+         * دکمه correct همان دکمه انتخاب‌شده است.
+         */
+        if (
+            selectedButton &&
+            !selectedWrong
+        ) {
+            correct++;
+        }
+    }
+);
+if (
+    answered !==
+    questions.length
+) {
+    return;
+}
+const finalResult =
+    document.getElementById(
+        "quizFinalResult"
+    );
+if (!finalResult) {
+    return;
+}
+const percentage =
+    Math.round(
+        (
+            correct /
+            questions.length
+        ) *
+        100
+    );
+finalResult.innerHTML =
+    `
+        <div class="quiz-score">
+            <h3>
+                🎯 نتیجه آزمون
+            </h3>
+            <p>
+                ${correct}
+                پاسخ صحیح از
+                ${questions.length}
+                سؤال
+            </p>
+            <strong>
+                امتیاز:
+                ${percentage}٪
+            </strong>
+        </div>
+    `;
+finalResult.style.display =
+    "block";
 
 }
