@@ -110,7 +110,9 @@ function escapeHtml(value) {
         value === null ||
         value === undefined
     ) {
+
         return "";
+
     }
 
     return String(value)
@@ -569,11 +571,6 @@ function createModuleCard(
     const moduleId =
         String(
             module?.id || ""
-        );
-
-    const id =
-        escapeHtml(
-            moduleId
         );
 
     const title =
