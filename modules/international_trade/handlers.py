@@ -1,236 +1,2081 @@
 """
-Telegram handlers for the International Trade module.
-Andishkadeh Management & Market
-Responsibilities:
+International Trade Telegram Handlers
+
+Features:
 - International Trade main menu
-- Chapter list
-- Lesson list
-- Lesson content
-- Lesson progress
+- Chapter navigation
+- Lesson navigation
 - Lesson completion
-- Quiz
-- Quiz result registration through service layer
-- Safe callback navigation
-Important:
-This file contains Telegram handlers only.
-Business logic is delegated to service.py.
+- Interactive 4-option quiz
+- Quiz result
+- Quiz cancellation
+- Progress integration
+- Deep Link quiz support
+
+Deep Link format:
+https://t.me/andishkadehmarketbot?start=quiz_international_trade_chapter_01_lesson_01_01
 """
+
 from __future__ import annotations
-import html
+
 import logging
 from typing import Any
-from telegram import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    Update,
-)
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
-from modules.international_trade.service import (
+
+from core.progress import (
+    mark_lesson_completed,
+    mark_lesson_started,
+)
+
+from modules.international_trade.data import (
+    MODULE_ID,
+    MODULE_TITLE,
+    get_chapter,
     get_chapters,
     get_lesson,
     get_lessons,
-    get_module_info,
-    start_lesson,
-    complete_lesson,
-    get_trade_quiz_questions,
+    get_quiz_questions,
+)
+
+from modules.international_trade.service import (
     save_quiz_result,
 )
-# ==========================================================
-# Logging
-# ==========================================================
+
+
 logger = logging.getLogger(__name__)
+
+
 # ==========================================================
 # Constants
 # ==========================================================
-MODULE_ID = "international_trade"
-MODULE_TITLE = "تجارت بین‌الملل"
+
+QUIZ_STATE_KEY = "international_trade_quiz"
+
+QUESTIONS_PER_QUIZ = 5
+
+
 # ==========================================================
-# Safe helpers
+# Safe Helpers
 # ==========================================================
+
 def _safe_text(
     value: Any,
-    default: str = "-",
+    default: str = "",
 ) -> str:
     """
-    Convert a value to safe Telegram HTML text.
+    Safely convert a value to string.
     """
+
     if value is None:
         return default
+
     text = str(value).strip()
-    if not text:
+
+    return text if text else default
+
+
+def _safe_int(
+    value: Any,
+    default: int = 0,
+) -> int:
+    """
+    Safely convert a value to int.
+    """
+
+    try:
+        return int(value)
+
+    except (TypeError, ValueError):
         return default
-    return html.escape(text)
-def _get_id(
-    item: dict[str, Any],
-    primary: str,
-    secondary: str,
-) -> str | None:
+
+
+def _get_user_id(
+    update: Update,
+) -> int | None:
     """
-    Extract an ID from supported data formats.
+    Get Telegram user ID safely.
     """
-    value = (
-        item.get(primary)
-        or item.get(secondary)
-    )
-    if value is None:
+
+    user = update.effective_user
+
+    if user is None:
         return None
-    value = str(value).strip()
-    return value or None
-def _get_chapter_id(
-    chapter: dict[str, Any],
-) -> str | None:
+
+    return user.id
+
+
+# ==========================================================
+# Lesson / Chapter Helpers
+# ==========================================================
+
+def _load_lesson(
+    chapter_id: str,
+    lesson_id: str,
+) -> dict[str, Any] | None:
     """
-    Extract chapter ID.
+    Load one International Trade lesson.
+
+    Supports both direct dictionary return and
+    object-like return values.
     """
-    return _get_id(
-        chapter,
-        "id",
-        "chapter_id",
-    )
-def _get_lesson_id(
-    lesson: dict[str, Any],
-) -> str | None:
-    """
-    Extract lesson ID.
-    """
-    return _get_id(
+
+    try:
+
+        lesson = get_lesson(
+            chapter_id,
+            lesson_id,
+        )
+
+    except Exception:
+
+        logger.exception(
+            (
+                "Failed to load International Trade lesson: "
+                "chapter=%s lesson=%s"
+            ),
+            chapter_id,
+            lesson_id,
+        )
+
+        return None
+
+    if lesson is None:
+        return None
+
+    if isinstance(
         lesson,
+        dict,
+    ):
+
+        return lesson
+
+    # ------------------------------------------------------
+    # Object fallback
+    # ------------------------------------------------------
+
+    result: dict[str, Any] = {}
+
+    for key in (
         "id",
         "lesson_id",
-    )
-def _get_title(
-    item: dict[str, Any],
-    fallback: str = "-",
-) -> str:
-    """
-    Extract title from a curriculum object.
-    """
-    value = (
-        item.get("title")
-        or item.get("name")
-        or item.get("heading")
-        or fallback
-    )
-    return str(value).strip()
-def _get_lesson_content(
-    lesson: dict[str, Any],
-) -> str:
-    """
-    Extract lesson textual content.
-    """
-    content_keys = (
+        "title",
         "content",
-        "text",
-        "lesson",
         "description",
-        "lesson_content",
-        "body",
-        "details",
+        "example",
+        "examples",
+        "tips",
+        "exam_tips",
+        "specialized_tips",
+    ):
+
+        if hasattr(
+            lesson,
+            key,
+        ):
+
+            result[key] = getattr(
+                lesson,
+                key,
+            )
+
+    return result or None
+
+
+def _load_chapter(
+    chapter_id: str,
+) -> dict[str, Any] | None:
+    """
+    Load one International Trade chapter.
+    """
+
+    try:
+
+        chapter = get_chapter(
+            chapter_id
+        )
+
+    except Exception:
+
+        logger.exception(
+            "Failed to load International Trade chapter: %s",
+            chapter_id,
+        )
+
+        return None
+
+    if chapter is None:
+        return None
+
+    if isinstance(
+        chapter,
+        dict,
+    ):
+
+        return chapter
+
+    result: dict[str, Any] = {}
+
+    for key in (
+        "id",
+        "chapter_id",
+        "title",
+        "description",
+    ):
+
+        if hasattr(
+            chapter,
+            key,
+        ):
+
+            result[key] = getattr(
+                chapter,
+                key,
+            )
+
+    return result or None
+
+
+# ==========================================================
+# Quiz Helpers
+# ==========================================================
+
+def _load_quiz_questions(
+    chapter_id: str,
+    lesson_id: str,
+) -> list[dict[str, Any]]:
+    """
+    Load quiz questions for a lesson.
+    """
+
+    try:
+
+        questions = get_quiz_questions(
+            chapter_id,
+            lesson_id,
+        )
+
+    except Exception:
+
+        logger.exception(
+            (
+                "Failed to load quiz questions: "
+                "chapter=%s lesson=%s"
+            ),
+            chapter_id,
+            lesson_id,
+        )
+
+        return []
+
+    if not isinstance(
+        questions,
+        list,
+    ):
+
+        return []
+
+    normalized: list[
+        dict[str, Any]
+    ] = []
+
+    for index, question in enumerate(
+        questions,
+        start=1,
+    ):
+
+        if not isinstance(
+            question,
+            dict,
+        ):
+            continue
+
+        normalized_question = dict(
+            question
+        )
+
+        # --------------------------------------------------
+        # Normalize question ID
+        # --------------------------------------------------
+
+        if not normalized_question.get(
+            "id"
+        ):
+
+            normalized_question[
+                "id"
+            ] = (
+                f"it_{chapter_id}_"
+                f"{lesson_id}_q{index:02d}"
+            )
+
+        # --------------------------------------------------
+        # Normalize question text
+        # --------------------------------------------------
+
+        if not normalized_question.get(
+            "question"
+        ):
+
+            normalized_question[
+                "question"
+            ] = normalized_question.get(
+                "text",
+                "",
+            )
+
+        # --------------------------------------------------
+        # Normalize options
+        # --------------------------------------------------
+
+        options = normalized_question.get(
+            "options",
+            [],
+        )
+
+        normalized_options: list[
+            dict[str, str]
+        ] = []
+
+        if isinstance(
+            options,
+            dict,
+        ):
+
+            for option_id, option_text in options.items():
+
+                normalized_options.append(
+                    {
+                        "id": str(
+                            option_id
+                        ).upper(),
+                        "text": _safe_text(
+                            option_text
+                        ),
+                    }
+                )
+
+        elif isinstance(
+            options,
+            list,
+        ):
+
+            for option_index, option in enumerate(
+                options
+            ):
+
+                if isinstance(
+                    option,
+                    dict,
+                ):
+
+                    option_id = (
+                        option.get("id")
+                        or option.get("key")
+                        or chr(
+                            65 + option_index
+                        )
+                    )
+
+                    option_text = (
+                        option.get("text")
+                        or option.get("title")
+                        or option.get("value")
+                        or ""
+                    )
+
+                    normalized_options.append(
+                        {
+                            "id": str(
+                                option_id
+                            ).upper(),
+                            "text": _safe_text(
+                                option_text
+                            ),
+                        }
+                    )
+
+                else:
+
+                    normalized_options.append(
+                        {
+                            "id": chr(
+                                65 + option_index
+                            ),
+                            "text": _safe_text(
+                                option
+                            ),
+                        }
+                    )
+
+        normalized_question[
+            "options"
+        ] = normalized_options
+
+        # --------------------------------------------------
+        # Normalize answer
+        # --------------------------------------------------
+
+        answer = (
+            normalized_question.get(
+                "answer"
+            )
+            or normalized_question.get(
+                "correct_answer"
+            )
+        )
+
+        if answer is not None:
+
+            answer = str(
+                answer
+            ).strip().upper()
+
+            normalized_question[
+                "answer"
+            ] = answer
+
+            normalized_question[
+                "correct_answer"
+            ] = answer
+
+        # --------------------------------------------------
+        # Explanation
+        # --------------------------------------------------
+
+        if not normalized_question.get(
+            "explanation"
+        ):
+
+            normalized_question[
+                "explanation"
+            ] = ""
+
+        normalized.append(
+            normalized_question
+        )
+
+    return normalized
+
+
+def _question_text(
+    question: dict[str, Any],
+    question_index: int,
+    total_questions: int,
+) -> str:
+    """
+    Build quiz question text.
+    """
+
+    text = _safe_text(
+        question.get(
+            "question"
+        ),
+        "سؤال بدون متن",
     )
-    for key in content_keys:
-        value = lesson.get(key)
-        if isinstance(value, str):
-            cleaned = value.strip()
-            if cleaned:
-                return cleaned
-    return "محتوای این درس هنوز ثبت نشده است."
-# ==========================================================
-# Keyboards
-# ==========================================================
-def international_trade_menu_keyboard() -> InlineKeyboardMarkup:
+
+    return (
+        f"📝 <b>آزمون تجارت بین‌الملل</b>\n\n"
+        f"سؤال {question_index + 1} از "
+        f"{total_questions}\n\n"
+        f"{text}"
+    )
+
+
+def _question_keyboard(
+    chapter_id: str,
+    lesson_id: str,
+    question_index: int,
+    question: dict[str, Any],
+) -> InlineKeyboardMarkup:
     """
-    Main International Trade keyboard.
+    Build answer keyboard.
     """
+
+    options = question.get(
+        "options",
+        [],
+    )
+
+    keyboard: list[
+        list[InlineKeyboardButton]
+    ] = []
+
+    for option in options:
+
+        if not isinstance(
+            option,
+            dict,
+        ):
+            continue
+
+        option_id = _safe_text(
+            option.get(
+                "id"
+            )
+        ).upper()
+
+        option_text = _safe_text(
+            option.get(
+                "text"
+            )
+        )
+
+        if not option_id:
+            continue
+
+        callback_data = (
+            "trade_quiz_answer:"
+            f"{chapter_id}:"
+            f"{lesson_id}:"
+            f"{question_index}:"
+            f"{option_id}"
+        )
+
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    text=(
+                        f"{option_id}) "
+                        f"{option_text}"
+                    ),
+                    callback_data=callback_data,
+                )
+            ]
+        )
+
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                text="❌ لغو آزمون",
+                callback_data=(
+                    "trade_quiz_cancel:"
+                    f"{chapter_id}:"
+                    f"{lesson_id}"
+                ),
+            )
+        ]
+    )
+
     return InlineKeyboardMarkup(
+        keyboard
+    )
+
+
+# ==========================================================
+# Quiz State
+# ==========================================================
+
+def _set_quiz_state(
+    context: ContextTypes.DEFAULT_TYPE,
+    chapter_id: str,
+    lesson_id: str,
+    questions: list[dict[str, Any]],
+) -> None:
+    """
+    Store quiz state in user_data.
+    """
+
+    context.user_data[
+        QUIZ_STATE_KEY
+    ] = {
+        "module_id": MODULE_ID,
+        "chapter_id": chapter_id,
+        "lesson_id": lesson_id,
+        "questions": questions,
+        "current": 0,
+        "correct": 0,
+        "answered": 0,
+    }
+
+
+def _get_quiz_state(
+    context: ContextTypes.DEFAULT_TYPE,
+) -> dict[str, Any] | None:
+    """
+    Get active quiz state.
+    """
+
+    state = context.user_data.get(
+        QUIZ_STATE_KEY
+    )
+
+    if not isinstance(
+        state,
+        dict,
+    ):
+
+        return None
+
+    return state
+
+
+def _clear_quiz_state(
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """
+    Clear active quiz.
+    """
+
+    context.user_data.pop(
+        QUIZ_STATE_KEY,
+        None,
+    )
+
+
+# ==========================================================
+# Common Quiz Starter
+# ==========================================================
+
+async def _start_international_trade_quiz(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    chapter_id: str,
+    lesson_id: str,
+) -> bool:
+    """
+    Common quiz-start logic.
+
+    This function is intentionally independent of whether
+    the quiz was started from:
+
+    - Telegram callback button
+    - Telegram /start Deep Link
+
+    Returns:
+        True  -> quiz started
+        False -> quiz could not be started
+    """
+
+    chapter_id = _safe_text(
+        chapter_id
+    )
+
+    lesson_id = _safe_text(
+        lesson_id
+    )
+
+    if not chapter_id or not lesson_id:
+
+        logger.warning(
+            "Invalid quiz target."
+        )
+
+        return False
+
+    # ------------------------------------------------------
+    # Validate lesson
+    # ------------------------------------------------------
+
+    lesson = _load_lesson(
+        chapter_id,
+        lesson_id,
+    )
+
+    if lesson is None:
+
+        logger.warning(
+            (
+                "Quiz requested for missing lesson: "
+                "chapter=%s lesson=%s"
+            ),
+            chapter_id,
+            lesson_id,
+        )
+
+        target_message = (
+            update.message
+            if update.message is not None
+            else None
+        )
+
+        target_query = (
+            update.callback_query
+            if update.callback_query is not None
+            else None
+        )
+
+        error_text = (
+            "❌ درس موردنظر پیدا نشد.\n\n"
+            "لطفاً از فهرست درس‌ها دوباره وارد شوید."
+        )
+
+        if target_query is not None:
+
+            await target_query.answer(
+                "درس پیدا نشد.",
+                show_alert=True,
+            )
+
+        elif target_message is not None:
+
+            await target_message.reply_text(
+                error_text
+            )
+
+        return False
+
+    # ------------------------------------------------------
+    # Load questions
+    # ------------------------------------------------------
+
+    questions = _load_quiz_questions(
+        chapter_id,
+        lesson_id,
+    )
+
+    if not questions:
+
+        logger.warning(
+            (
+                "No quiz questions found: "
+                "chapter=%s lesson=%s"
+            ),
+            chapter_id,
+            lesson_id,
+        )
+
+        target_message = (
+            update.message
+            if update.message is not None
+            else None
+        )
+
+        target_query = (
+            update.callback_query
+            if update.callback_query is not None
+            else None
+        )
+
+        error_text = (
+            "⚠️ برای این درس هنوز سؤال آزمون ثبت نشده است.\n\n"
+            "لطفاً درس دیگری را انتخاب کنید."
+        )
+
+        if target_query is not None:
+
+            await target_query.answer(
+                "برای این درس سؤال آزمون وجود ندارد.",
+                show_alert=True,
+            )
+
+        elif target_message is not None:
+
+            await target_message.reply_text(
+                error_text
+            )
+
+        return False
+
+    # ------------------------------------------------------
+    # Limit quiz size
+    # ------------------------------------------------------
+
+    questions = questions[
+        :QUESTIONS_PER_QUIZ
+    ]
+
+    # ------------------------------------------------------
+    # Mark lesson started
+    # ------------------------------------------------------
+
+    user_id = _get_user_id(
+        update
+    )
+
+    if user_id is not None:
+
+        try:
+
+            mark_lesson_started(
+                user_id,
+                MODULE_ID,
+                chapter_id,
+                lesson_id,
+            )
+
+        except TypeError:
+
+            # Compatibility with alternate signatures
+            try:
+
+                mark_lesson_started(
+                    telegram_id=user_id,
+                    module_id=MODULE_ID,
+                    chapter_id=chapter_id,
+                    lesson_id=lesson_id,
+                )
+
+            except Exception:
+
+                logger.exception(
+                    "Failed to mark International Trade lesson started."
+                )
+
+        except Exception:
+
+            logger.exception(
+                "Failed to mark International Trade lesson started."
+            )
+
+    # ------------------------------------------------------
+    # Save quiz state
+    # ------------------------------------------------------
+
+    _set_quiz_state(
+        context=context,
+        chapter_id=chapter_id,
+        lesson_id=lesson_id,
+        questions=questions,
+    )
+
+    # ------------------------------------------------------
+    # Show first question
+    # ------------------------------------------------------
+
+    await _show_trade_quiz_question(
+        update,
+        context,
+    )
+
+    return True
+
+
+# ==========================================================
+# Quiz Start From Callback
+# ==========================================================
+
+async def start_international_trade_quiz(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """
+    Start International Trade quiz from callback button.
+
+    Expected callback:
+
+        trade_quiz:<chapter_id>:<lesson_id>
+    """
+
+    query = update.callback_query
+
+    if query is None:
+
+        return
+
+    await query.answer()
+
+    data = _safe_text(
+        query.data
+    )
+
+    prefix = "trade_quiz:"
+
+    if not data.startswith(
+        prefix
+    ):
+
+        return
+
+    payload = data[
+        len(prefix):
+    ]
+
+    parts = payload.split(
+        ":"
+    )
+
+    if len(parts) != 2:
+
+        await query.answer(
+            "اطلاعات آزمون نامعتبر است.",
+            show_alert=True,
+        )
+
+        return
+
+    chapter_id = parts[0]
+    lesson_id = parts[1]
+
+    await _start_international_trade_quiz(
+        update,
+        context,
+        chapter_id,
+        lesson_id,
+    )
+
+
+# ==========================================================
+# Quiz Start From Deep Link
+# ==========================================================
+
+async def start_international_trade_quiz_from_start(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    chapter_id: str,
+    lesson_id: str,
+) -> None:
+    """
+    Start International Trade quiz from /start Deep Link.
+
+    Example:
+
+        /start
+        quiz_international_trade_chapter_01_lesson_01_01
+
+    Unlike callback-based quiz start, there is no
+    callback query here. The first question is therefore
+    sent as a new Telegram message.
+    """
+
+    if update.message is None:
+
+        logger.warning(
+            (
+                "Deep Link quiz start called without message: "
+                "chapter=%s lesson=%s"
+            ),
+            chapter_id,
+            lesson_id,
+        )
+
+        return
+
+    await _start_international_trade_quiz(
+        update,
+        context,
+        chapter_id,
+        lesson_id,
+    )
+
+
+# ==========================================================
+# Show Quiz Question
+# ==========================================================
+
+async def _show_trade_quiz_question(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """
+    Show current quiz question.
+
+    Supports both:
+    - callback query -> edit existing message
+    - /start deep link -> send new message
+    """
+
+    state = _get_quiz_state(
+        context
+    )
+
+    if state is None:
+
+        return
+
+    questions = state.get(
+        "questions",
+        [],
+    )
+
+    current = _safe_int(
+        state.get(
+            "current",
+            0,
+        )
+    )
+
+    chapter_id = _safe_text(
+        state.get(
+            "chapter_id"
+        )
+    )
+
+    lesson_id = _safe_text(
+        state.get(
+            "lesson_id"
+        )
+    )
+
+    if not questions:
+
+        _clear_quiz_state(
+            context
+        )
+
+        if update.message is not None:
+
+            await update.message.reply_text(
+                "❌ سؤالات آزمون در دسترس نیست."
+            )
+
+        return
+
+    # ------------------------------------------------------
+    # Quiz completed
+    # ------------------------------------------------------
+
+    if current >= len(
+        questions
+    ):
+
+        await finish_international_trade_quiz(
+            update,
+            context,
+        )
+
+        return
+
+    question = questions[
+        current
+    ]
+
+    text = _question_text(
+        question=question,
+        question_index=current,
+        total_questions=len(
+            questions
+        ),
+    )
+
+    keyboard = _question_keyboard(
+        chapter_id=chapter_id,
+        lesson_id=lesson_id,
+        question_index=current,
+        question=question,
+    )
+
+    query = update.callback_query
+
+    # ------------------------------------------------------
+    # Callback mode
+    # ------------------------------------------------------
+
+    if query is not None:
+
+        try:
+
+            await query.edit_message_text(
+                text=text,
+                reply_markup=keyboard,
+                parse_mode="HTML",
+            )
+
+            return
+
+        except Exception:
+
+            logger.exception(
+                "Failed to edit quiz question message."
+            )
+
+            with suppress_exceptions():
+
+                await query.message.reply_text(
+                    text=text,
+                    reply_markup=keyboard,
+                    parse_mode="HTML",
+                )
+
+            return
+
+    # ------------------------------------------------------
+    # Deep Link / Message mode
+    # ------------------------------------------------------
+
+    if update.message is not None:
+
+        await update.message.reply_text(
+            text=text,
+            reply_markup=keyboard,
+            parse_mode="HTML",
+        )
+
+
+# ==========================================================
+# Quiz Answer
+# ==========================================================
+
+async def answer_international_trade_quiz(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """
+    Process an International Trade quiz answer.
+
+    Callback format:
+
+        trade_quiz_answer:
+        <chapter_id>:
+        <lesson_id>:
+        <question_index>:
+        <answer>
+    """
+
+    query = update.callback_query
+
+    if query is None:
+
+        return
+
+    await query.answer()
+
+    data = _safe_text(
+        query.data
+    )
+
+    prefix = (
+        "trade_quiz_answer:"
+    )
+
+    if not data.startswith(
+        prefix
+    ):
+
+        return
+
+    payload = data[
+        len(prefix):
+    ]
+
+    parts = payload.split(
+        ":"
+    )
+
+    if len(parts) != 4:
+
+        await query.answer(
+            "پاسخ نامعتبر است.",
+            show_alert=True,
+        )
+
+        return
+
+    chapter_id = parts[0]
+    lesson_id = parts[1]
+
+    question_index = _safe_int(
+        parts[2],
+        default=-1,
+    )
+
+    selected_answer = _safe_text(
+        parts[3]
+    ).upper()
+
+    state = _get_quiz_state(
+        context
+    )
+
+    if state is None:
+
+        await query.answer(
+            "آزمون فعالی وجود ندارد.",
+            show_alert=True,
+        )
+
+        return
+
+    state_chapter = _safe_text(
+        state.get(
+            "chapter_id"
+        )
+    )
+
+    state_lesson = _safe_text(
+        state.get(
+            "lesson_id"
+        )
+    )
+
+    if (
+        state_chapter != chapter_id
+        or state_lesson != lesson_id
+    ):
+
+        await query.answer(
+            "این آزمون دیگر فعال نیست.",
+            show_alert=True,
+        )
+
+        return
+
+    current = _safe_int(
+        state.get(
+            "current",
+            0,
+        )
+    )
+
+    if question_index != current:
+
+        await query.answer(
+            "این سؤال قبلاً پاسخ داده شده است.",
+            show_alert=True,
+        )
+
+        return
+
+    questions = state.get(
+        "questions",
+        [],
+    )
+
+    if not isinstance(
+        questions,
+        list,
+    ):
+
+        await query.answer(
+            "اطلاعات آزمون خراب شده است.",
+            show_alert=True,
+        )
+
+        _clear_quiz_state(
+            context
+        )
+
+        return
+
+    if current < 0 or current >= len(
+        questions
+    ):
+
+        await query.answer(
+            "شماره سؤال نامعتبر است.",
+            show_alert=True,
+        )
+
+        return
+
+    question = questions[
+        current
+    ]
+
+    correct_answer = (
+        question.get(
+            "correct_answer"
+        )
+        or question.get(
+            "answer"
+        )
+    )
+
+    correct_answer = _safe_text(
+        correct_answer
+    ).upper()
+
+    is_correct = (
+        selected_answer
+        == correct_answer
+    )
+
+    if is_correct:
+
+        state[
+            "correct"
+        ] = (
+            _safe_int(
+                state.get(
+                    "correct",
+                    0,
+                )
+            )
+            + 1
+        )
+
+    state[
+        "answered"
+    ] = (
+        _safe_int(
+            state.get(
+                "answered",
+                0,
+            )
+        )
+        + 1
+    )
+
+    # ------------------------------------------------------
+    # Show immediate feedback
+    # ------------------------------------------------------
+
+    explanation = _safe_text(
+        question.get(
+            "explanation"
+        )
+    )
+
+    if is_correct:
+
+        feedback = (
+            "✅ <b>پاسخ صحیح است.</b>"
+        )
+
+    else:
+
+        feedback = (
+            "❌ <b>پاسخ نادرست است.</b>\n"
+            f"پاسخ صحیح: <b>{correct_answer}</b>"
+        )
+
+    if explanation:
+
+        feedback += (
+            "\n\n"
+            f"💡 <b>توضیح:</b>\n"
+            f"{explanation}"
+        )
+
+    next_index = current + 1
+
+    state[
+        "current"
+    ] = next_index
+
+    # ------------------------------------------------------
+    # If this was the final question
+    # ------------------------------------------------------
+
+    if next_index >= len(
+        questions
+    ):
+
+        try:
+
+            await query.edit_message_text(
+                text=feedback,
+                parse_mode="HTML",
+            )
+
+        except Exception:
+
+            logger.exception(
+                "Failed to show final quiz feedback."
+            )
+
+        await finish_international_trade_quiz(
+            update,
+            context,
+        )
+
+        return
+
+    # ------------------------------------------------------
+    # Next question button
+    # ------------------------------------------------------
+
+    next_keyboard = InlineKeyboardMarkup(
         [
             [
                 InlineKeyboardButton(
-                    "📚 فصل‌ها",
-                    callback_data="trade_chapters",
+                    text="➡️ سؤال بعدی",
+                    callback_data=(
+                        "trade_quiz_next:"
+                        f"{chapter_id}:"
+                        f"{lesson_id}"
+                    ),
                 )
             ],
             [
                 InlineKeyboardButton(
-                    "🏠 منوی اصلی",
+                    text="❌ لغو آزمون",
+                    callback_data=(
+                        "trade_quiz_cancel:"
+                        f"{chapter_id}:"
+                        f"{lesson_id}"
+                    ),
+                )
+            ],
+        ]
+    )
+
+    try:
+
+        await query.edit_message_text(
+            text=feedback,
+            reply_markup=next_keyboard,
+            parse_mode="HTML",
+        )
+
+    except Exception:
+
+        logger.exception(
+            "Failed to show quiz feedback."
+        )
+
+
+# ==========================================================
+# Show Next Quiz Question
+# ==========================================================
+
+async def show_next_trade_quiz_question(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """
+    Show next question after answer feedback.
+    """
+
+    query = update.callback_query
+
+    if query is None:
+
+        return
+
+    await query.answer()
+
+    data = _safe_text(
+        query.data
+    )
+
+    prefix = "trade_quiz_next:"
+
+    if not data.startswith(
+        prefix
+    ):
+
+        return
+
+    payload = data[
+        len(prefix):
+    ]
+
+    parts = payload.split(
+        ":"
+    )
+
+    if len(parts) != 2:
+
+        return
+
+    chapter_id = parts[0]
+    lesson_id = parts[1]
+
+    state = _get_quiz_state(
+        context
+    )
+
+    if state is None:
+
+        await query.answer(
+            "آزمون فعال نیست.",
+            show_alert=True,
+        )
+
+        return
+
+    if (
+        _safe_text(
+            state.get(
+                "chapter_id"
+            )
+        )
+        != chapter_id
+    ):
+
+        return
+
+    if (
+        _safe_text(
+            state.get(
+                "lesson_id"
+            )
+        )
+        != lesson_id
+    ):
+
+        return
+
+    await _show_trade_quiz_question(
+        update,
+        context,
+    )
+
+
+# ==========================================================
+# Finish Quiz
+# ==========================================================
+
+async def finish_international_trade_quiz(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """
+    Finish quiz and save result.
+    """
+
+    state = _get_quiz_state(
+        context
+    )
+
+    if state is None:
+
+        return
+
+    chapter_id = _safe_text(
+        state.get(
+            "chapter_id"
+        )
+    )
+
+    lesson_id = _safe_text(
+        state.get(
+            "lesson_id"
+        )
+    )
+
+    questions = state.get(
+        "questions",
+        [],
+    )
+
+    total = len(
+        questions
+    )
+
+    correct = _safe_int(
+        state.get(
+            "correct",
+            0,
+        )
+    )
+
+    answered = _safe_int(
+        state.get(
+            "answered",
+            0,
+        )
+    )
+
+    user_id = _get_user_id(
+        update
+    )
+
+    percentage = 0
+
+    if total > 0:
+
+        percentage = round(
+            (
+                correct
+                / total
+            )
+            * 100
+        )
+
+    # ------------------------------------------------------
+    # Save result
+    # ------------------------------------------------------
+
+    if user_id is not None:
+
+        try:
+
+            save_quiz_result(
+                user_id=user_id,
+                module_id=MODULE_ID,
+                chapter_id=chapter_id,
+                lesson_id=lesson_id,
+                score=correct,
+                total=total,
+                percentage=percentage,
+            )
+
+        except TypeError:
+
+            # Compatibility fallback for alternate service
+            # signatures.
+            try:
+
+                save_quiz_result(
+                    user_id,
+                    MODULE_ID,
+                    chapter_id,
+                    lesson_id,
+                    correct,
+                    total,
+                )
+
+            except Exception:
+
+                logger.exception(
+                    "Failed to save International Trade quiz result."
+                )
+
+        except Exception:
+
+            logger.exception(
+                "Failed to save International Trade quiz result."
+            )
+
+    # ------------------------------------------------------
+    # Mark lesson completed
+    # ------------------------------------------------------
+
+    if (
+        user_id is not None
+        and total > 0
+        and correct == total
+    ):
+
+        try:
+
+            mark_lesson_completed(
+                user_id,
+                MODULE_ID,
+                chapter_id,
+                lesson_id,
+            )
+
+        except TypeError:
+
+            try:
+
+                mark_lesson_completed(
+                    telegram_id=user_id,
+                    module_id=MODULE_ID,
+                    chapter_id=chapter_id,
+                    lesson_id=lesson_id,
+                )
+
+            except Exception:
+
+                logger.exception(
+                    "Failed to mark International Trade lesson completed."
+                )
+
+        except Exception:
+
+            logger.exception(
+                "Failed to mark International Trade lesson completed."
+            )
+
+    # ------------------------------------------------------
+    # Result message
+    # ------------------------------------------------------
+
+    if percentage >= 80:
+
+        level_text = (
+            "🏆 عالی! تسلط شما بسیار خوب است."
+        )
+
+    elif percentage >= 60:
+
+        level_text = (
+            "👍 خوب است، اما مرور دوباره درس مفید خواهد بود."
+        )
+
+    elif percentage >= 40:
+
+        level_text = (
+            "📚 نیاز به مرور و تمرین بیشتری دارید."
+        )
+
+    else:
+
+        level_text = (
+            "🔄 پیشنهاد می‌شود درس را دوباره مطالعه کنید."
+        )
+
+    result_text = (
+        "🎯 <b>نتیجه آزمون تجارت بین‌الملل</b>\n\n"
+        f"📖 فصل: <b>{chapter_id}</b>\n"
+        f"📘 درس: <b>{lesson_id}</b>\n\n"
+        f"✅ پاسخ صحیح: <b>{correct}</b>\n"
+        f"📝 تعداد سؤالات: <b>{total}</b>\n"
+        f"📊 درصد: <b>{percentage}%</b>\n"
+        f"📌 پاسخ داده‌شده: <b>{answered}</b>\n\n"
+        f"{level_text}"
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    text="📚 بازگشت به فصل",
+                    callback_data=(
+                        f"trade_chapter:{chapter_id}"
+                    ),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🌐 تجارت بین‌الملل",
+                    callback_data=(
+                        "menu_international_trade"
+                    ),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🏠 منوی اصلی",
                     callback_data="menu_main",
                 )
             ],
         ]
     )
-def chapters_keyboard(
-    chapters: list[dict[str, Any]],
-) -> InlineKeyboardMarkup:
+
+    query = update.callback_query
+
+    if query is not None:
+
+        try:
+
+            await query.edit_message_text(
+                text=result_text,
+                reply_markup=keyboard,
+                parse_mode="HTML",
+            )
+
+        except Exception:
+
+            logger.exception(
+                "Failed to edit quiz result message."
+            )
+
+            if query.message is not None:
+
+                await query.message.reply_text(
+                    text=result_text,
+                    reply_markup=keyboard,
+                    parse_mode="HTML",
+                )
+
+    elif update.message is not None:
+
+        await update.message.reply_text(
+            text=result_text,
+            reply_markup=keyboard,
+            parse_mode="HTML",
+        )
+
+    _clear_quiz_state(
+        context
+    )
+
+
+# ==========================================================
+# Cancel Quiz
+# ==========================================================
+
+async def cancel_international_trade_quiz(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
     """
-    Build chapter keyboard.
+    Cancel active International Trade quiz.
     """
+
+    query = update.callback_query
+
+    if query is None:
+
+        return
+
+    await query.answer()
+
+    data = _safe_text(
+        query.data
+    )
+
+    prefix = (
+        "trade_quiz_cancel:"
+    )
+
+    if not data.startswith(
+        prefix
+    ):
+
+        return
+
+    payload = data[
+        len(prefix):
+    ]
+
+    parts = payload.split(
+        ":"
+    )
+
+    if len(parts) != 2:
+
+        return
+
+    chapter_id = parts[0]
+    lesson_id = parts[1]
+
+    state = _get_quiz_state(
+        context
+    )
+
+    if state is not None:
+
+        if (
+            _safe_text(
+                state.get(
+                    "chapter_id"
+                )
+            )
+            == chapter_id
+            and
+            _safe_text(
+                state.get(
+                    "lesson_id"
+                )
+            )
+            == lesson_id
+        ):
+
+            _clear_quiz_state(
+                context
+            )
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    text="📖 بازگشت به درس",
+                    callback_data=(
+                        f"trade_lesson:"
+                        f"{chapter_id}:"
+                        f"{lesson_id}"
+                    ),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📚 بازگشت به فصل",
+                    callback_data=(
+                        f"trade_chapter:"
+                        f"{chapter_id}"
+                    ),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🏠 منوی اصلی",
+                    callback_data="menu_main",
+                )
+            ],
+        ]
+    )
+
+    text = (
+        "❌ <b>آزمون لغو شد.</b>\n\n"
+        "پیشرفت فعلی آزمون ثبت نشد."
+    )
+
+    try:
+
+        await query.edit_message_text(
+            text=text,
+            reply_markup=keyboard,
+            parse_mode="HTML",
+        )
+
+    except Exception:
+
+        logger.exception(
+            "Failed to edit quiz cancellation message."
+        )
+
+
+# ==========================================================
+# International Trade Main Menu
+# ==========================================================
+
+async def show_international_trade_menu(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """
+    Show International Trade module menu.
+    """
+
+    query = update.callback_query
+
+    if query is not None:
+
+        await query.answer()
+
+    chapters = get_chapters()
+
     keyboard: list[
         list[InlineKeyboardButton]
     ] = []
+
     for chapter in chapters:
-        chapter_id = _get_chapter_id(
-            chapter
+
+        if not isinstance(
+            chapter,
+            dict,
+        ):
+            continue
+
+        chapter_id = (
+            chapter.get("id")
+            or chapter.get("chapter_id")
         )
+
+        title = (
+            chapter.get("title")
+            or chapter.get("name")
+            or chapter_id
+        )
+
         if not chapter_id:
             continue
-        title = _get_title(
-            chapter,
-            f"فصل {chapter_id}",
-        )
+
         keyboard.append(
             [
                 InlineKeyboardButton(
-                    f"📘 {title}",
+                    text=f"📚 {title}",
                     callback_data=(
                         f"trade_chapter:{chapter_id}"
                     ),
                 )
             ]
         )
+
     keyboard.append(
         [
             InlineKeyboardButton(
-                "🔙 تجارت بین‌الملل",
-                callback_data=(
-                    "menu_international_trade"
-                ),
-            )
-        ]
-    )
-    keyboard.append(
-        [
-            InlineKeyboardButton(
-                "🏠 منوی اصلی",
+                text="🏠 منوی اصلی",
                 callback_data="menu_main",
             )
         ]
     )
-    return InlineKeyboardMarkup(
+
+    text = (
+        "🌍 <b>تجارت بین‌الملل</b>\n\n"
+        "مسیر آموزشی تجارت بین‌الملل را انتخاب کنید:"
+    )
+
+    markup = InlineKeyboardMarkup(
         keyboard
     )
-def lessons_keyboard(
-    chapter_id: str,
-    lessons: list[dict[str, Any]],
-) -> InlineKeyboardMarkup:
+
+    if query is not None:
+
+        try:
+
+            await query.edit_message_text(
+                text=text,
+                reply_markup=markup,
+                parse_mode="HTML",
+            )
+
+        except Exception:
+
+            logger.exception(
+                "Failed to edit International Trade menu."
+            )
+
+    elif update.message is not None:
+
+        await update.message.reply_text(
+            text=text,
+            reply_markup=markup,
+            parse_mode="HTML",
+        )
+
+
+# ==========================================================
+# Show Chapter
+# ==========================================================
+
+async def show_international_trade_chapter(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    chapter_id: str | None = None,
+) -> None:
     """
-    Build lesson keyboard.
+    Show lessons of a chapter.
     """
+
+    query = update.callback_query
+
+    if query is not None:
+
+        await query.answer()
+
+        data = _safe_text(
+            query.data
+        )
+
+        if data.startswith(
+            "trade_chapter:"
+        ):
+
+            chapter_id = data[
+                len("trade_chapter:"):
+            ]
+
+    if not chapter_id:
+
+        return
+
+    chapter = _load_chapter(
+        chapter_id
+    )
+
+    if chapter is None:
+
+        if query is not None:
+
+            await query.answer(
+                "فصل پیدا نشد.",
+                show_alert=True,
+            )
+
+        return
+
+    chapter_title = (
+        chapter.get(
+            "title"
+        )
+        or chapter.get(
+            "name"
+        )
+        or chapter_id
+    )
+
+    lessons = get_lessons(
+        chapter_id
+    )
+
     keyboard: list[
         list[InlineKeyboardButton]
     ] = []
+
     for lesson in lessons:
-        lesson_id = _get_lesson_id(
-            lesson
+
+        if not isinstance(
+            lesson,
+            dict,
+        ):
+            continue
+
+        lesson_id = (
+            lesson.get("id")
+            or lesson.get("lesson_id")
         )
+
+        lesson_title = (
+            lesson.get("title")
+            or lesson.get("name")
+            or lesson_id
+        )
+
         if not lesson_id:
             continue
-        title = _get_title(
-            lesson,
-            f"درس {lesson_id}",
-        )
+
         keyboard.append(
             [
                 InlineKeyboardButton(
-                    f"📖 {title}",
+                    text=f"📖 {lesson_title}",
                     callback_data=(
                         f"trade_lesson:"
                         f"{chapter_id}:"
@@ -239,1348 +2084,674 @@ def lessons_keyboard(
                 )
             ]
         )
+
     keyboard.append(
         [
             InlineKeyboardButton(
-                "🔙 فصل‌ها",
-                callback_data="trade_chapters",
+                text="⬅️ تجارت بین‌الملل",
+                callback_data=(
+                    "menu_international_trade"
+                ),
             )
         ]
     )
+
     keyboard.append(
         [
             InlineKeyboardButton(
-                "🏠 منوی اصلی",
+                text="🏠 منوی اصلی",
                 callback_data="menu_main",
             )
         ]
     )
-    return InlineKeyboardMarkup(
+
+    text = (
+        "📚 <b>"
+        f"{chapter_title}"
+        "</b>\n\n"
+        "درس موردنظر را انتخاب کنید:"
+    )
+
+    markup = InlineKeyboardMarkup(
         keyboard
     )
-def lesson_keyboard(
-    chapter_id: str,
-    lesson_id: str,
-    has_quiz: bool = False,
-) -> InlineKeyboardMarkup:
+
+    if query is not None:
+
+        try:
+
+            await query.edit_message_text(
+                text=text,
+                reply_markup=markup,
+                parse_mode="HTML",
+            )
+
+        except Exception:
+
+            logger.exception(
+                "Failed to show International Trade chapter."
+            )
+
+    elif update.message is not None:
+
+        await update.message.reply_text(
+            text=text,
+            reply_markup=markup,
+            parse_mode="HTML",
+        )
+
+
+# ==========================================================
+# Show Lesson
+# ==========================================================
+
+async def show_international_trade_lesson(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
     """
-    Build lesson navigation keyboard.
+    Show lesson content.
     """
-    keyboard: list[
-        list[InlineKeyboardButton]
-    ] = []
-    if has_quiz:
-        keyboard.append(
+
+    query = update.callback_query
+
+    if query is None:
+
+        return
+
+    await query.answer()
+
+    data = _safe_text(
+        query.data
+    )
+
+    prefix = "trade_lesson:"
+
+    if not data.startswith(
+        prefix
+    ):
+
+        return
+
+    payload = data[
+        len(prefix):
+    ]
+
+    parts = payload.split(
+        ":"
+    )
+
+    if len(parts) != 2:
+
+        return
+
+    chapter_id = parts[0]
+    lesson_id = parts[1]
+
+    lesson = _load_lesson(
+        chapter_id,
+        lesson_id,
+    )
+
+    if lesson is None:
+
+        await query.answer(
+            "درس پیدا نشد.",
+            show_alert=True,
+        )
+
+        return
+
+    title = (
+        lesson.get(
+            "title"
+        )
+        or lesson.get(
+            "name"
+        )
+        or lesson_id
+    )
+
+    content = (
+        lesson.get(
+            "content"
+        )
+        or lesson.get(
+            "text"
+        )
+        or lesson.get(
+            "description"
+        )
+        or ""
+    )
+
+    example = (
+        lesson.get(
+            "example"
+        )
+        or ""
+    )
+
+    exam_tips = (
+        lesson.get(
+            "exam_tips"
+        )
+        or lesson.get(
+            "specialized_tips"
+        )
+        or lesson.get(
+            "tips"
+        )
+        or ""
+    )
+
+    text_parts = [
+        f"📖 <b>{title}</b>",
+    ]
+
+    if content:
+
+        text_parts.append(
+            f"\n{content}"
+        )
+
+    if example:
+
+        text_parts.append(
+            "\n\n💡 <b>مثال:</b>\n"
+            f"{example}"
+        )
+
+    if exam_tips:
+
+        text_parts.append(
+            "\n\n🎯 <b>نکات آزمونی:</b>\n"
+            f"{exam_tips}"
+        )
+
+    text = "".join(
+        text_parts
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        [
             [
                 InlineKeyboardButton(
-                    "📝 آزمون درس",
+                    text="📝 شروع آزمون این درس",
                     callback_data=(
                         f"trade_quiz:"
                         f"{chapter_id}:"
                         f"{lesson_id}"
                     ),
                 )
-            ]
-        )
-    keyboard.append(
-        [
-            InlineKeyboardButton(
-                "✅ تکمیل درس",
-                callback_data=(
-                    f"trade_complete:"
-                    f"{chapter_id}:"
-                    f"{lesson_id}"
-                ),
-            )
-        ]
-    )
-    keyboard.append(
-        [
-            InlineKeyboardButton(
-                "🔙 درس‌ها",
-                callback_data=(
-                    f"trade_chapter:"
-                    f"{chapter_id}"
-                ),
-            )
-        ]
-    )
-    keyboard.append(
-        [
-            InlineKeyboardButton(
-                "🏠 منوی اصلی",
-                callback_data="menu_main",
-            )
-        ]
-    )
-    return InlineKeyboardMarkup(
-        keyboard
-    )
-def quiz_keyboard(
-    chapter_id: str,
-    lesson_id: str,
-    question_index: int,
-    options: list[str],
-) -> InlineKeyboardMarkup:
-    """
-    Build quiz answer keyboard.
-    """
-    keyboard: list[
-        list[InlineKeyboardButton]
-    ] = []
-    for index, option in enumerate(
-        options
-    ):
-        keyboard.append(
+            ],
             [
                 InlineKeyboardButton(
-                    f"{chr(65 + index)}) {option}",
+                    text="⬅️ بازگشت به فصل",
                     callback_data=(
-                        f"trade_quiz_answer:"
-                        f"{chapter_id}:"
-                        f"{lesson_id}:"
-                        f"{question_index}:"
-                        f"{index}"
+                        f"trade_chapter:"
+                        f"{chapter_id}"
                     ),
                 )
-            ]
-        )
-    keyboard.append(
-        [
-            InlineKeyboardButton(
-                "❌ لغو آزمون",
-                callback_data=(
-                    f"trade_quiz_cancel:"
-                    f"{chapter_id}:"
-                    f"{lesson_id}"
-                ),
-            )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🌍 تجارت بین‌الملل",
+                    callback_data=(
+                        "menu_international_trade"
+                    ),
+                )
+            ],
         ]
     )
-    return InlineKeyboardMarkup(
-        keyboard
-    )
-# ==========================================================
-# Main menu
-# ==========================================================
-async def show_international_trade_menu(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    """
-    Show International Trade main menu.
-    """
-    query = update.callback_query
-    if query is not None:
-        await query.answer()
+
     try:
-        module_info = get_module_info()
-        if not isinstance(
-            module_info,
-            dict,
-        ):
-            module_info = {}
-        title = _safe_text(
-            module_info.get(
-                "title",
-                MODULE_TITLE,
-            ),
-            MODULE_TITLE,
-        )
-        description = _safe_text(
-            module_info.get(
-                "description",
-                (
-                    "آموزش تخصصی تجارت بین‌الملل "
-                    "به‌صورت فصل‌به‌فصل و درس‌به‌درس"
-                ),
-            )
-        )
-    except Exception:
-        logger.exception(
-            "Failed to load International Trade module info."
-        )
-        title = MODULE_TITLE
-        description = (
-            "آموزش تخصصی تجارت بین‌الملل "
-            "به‌صورت فصل‌به‌فصل و درس‌به‌درس"
-        )
-    text = (
-        f"🌍 <b>{title}</b>\n"
-        "━━━━━━━━━━━━━━━━━━\n\n"
-        f"{description}\n\n"
-        "در این بخش می‌توانید مباحث تجارت بین‌الملل "
-        "را به‌صورت فصل‌به‌فصل و درس‌به‌درس مطالعه کنید."
-    )
-    if query is not None:
+
         await query.edit_message_text(
-            text,
+            text=text,
+            reply_markup=keyboard,
             parse_mode="HTML",
-            reply_markup=(
-                international_trade_menu_keyboard()
-            ),
         )
-        return
-    if update.message is not None:
-        await update.message.reply_text(
-            text,
-            parse_mode="HTML",
-            reply_markup=(
-                international_trade_menu_keyboard()
-            ),
-        )
-# ==========================================================
-# Chapters
-# ==========================================================
-async def show_international_trade_chapters(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    """
-    Show International Trade chapters.
-    """
-    query = update.callback_query
-    if query is None:
-        return
-    await query.answer()
-    try:
-        chapters = get_chapters()
+
     except Exception:
+
         logger.exception(
-            "Failed to load International Trade chapters."
+            "Failed to show International Trade lesson."
         )
-        await query.edit_message_text(
-            "❌ خطا در دریافت فصل‌های تجارت بین‌الملل.",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "🏠 منوی اصلی",
-                            callback_data="menu_main",
-                        )
-                    ]
-                ]
-            ),
-        )
-        return
-    if not chapters:
-        await query.edit_message_text(
-            (
-                "🌍 <b>تجارت بین‌الملل</b>\n\n"
-                "هنوز فصلی برای این ماژول ثبت نشده است."
-            ),
-            parse_mode="HTML",
-            reply_markup=(
-                international_trade_menu_keyboard()
-            ),
-        )
-        return
-    text_lines = [
-        "🌍 <b>فصل‌های تجارت بین‌الملل</b>",
-        "━━━━━━━━━━━━━━━━━━",
-    ]
-    for index, chapter in enumerate(
-        chapters,
-        start=1,
-    ):
-        title = _safe_text(
-            _get_title(
-                chapter,
-                f"فصل {index}",
-            )
-        )
-        text_lines.append(
-            f"{index}. 📘 {title}"
-        )
-    text_lines.extend(
-        [
-            "━━━━━━━━━━━━━━━━━━",
-            "فصل موردنظر را انتخاب کنید:",
-        ]
-    )
-    await query.edit_message_text(
-        "\n".join(text_lines),
-        parse_mode="HTML",
-        reply_markup=chapters_keyboard(
-            chapters
-        ),
-    )
+
+
 # ==========================================================
-# Chapter lessons
+# Complete Lesson
 # ==========================================================
-async def show_international_trade_chapter(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    """
-    Show lessons inside a chapter.
-    """
-    query = update.callback_query
-    if query is None:
-        return
-    await query.answer()
-    data = query.data or ""
-    try:
-        _, chapter_id = data.split(
-            ":",
-            1,
-        )
-    except ValueError:
-        await query.edit_message_text(
-            "❌ شناسه فصل نامعتبر است.",
-            reply_markup=(
-                international_trade_menu_keyboard()
-            ),
-        )
-        return
-    try:
-        lessons = get_lessons(
-            chapter_id
-        )
-    except Exception:
-        logger.exception(
-            "Failed to load lessons for chapter %s.",
-            chapter_id,
-        )
-        await query.edit_message_text(
-            "❌ خطا در دریافت درس‌های فصل.",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "🔙 فصل‌ها",
-                            callback_data="trade_chapters",
-                        )
-                    ]
-                ]
-            ),
-        )
-        return
-    if not lessons:
-        await query.edit_message_text(
-            (
-                "📘 <b>فصل تجارت بین‌الملل</b>\n"
-                f"شناسه فصل: "
-                f"<code>{_safe_text(chapter_id)}</code>\n\n"
-                "هنوز درسی برای این فصل ثبت نشده است."
-            ),
-            parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "🔙 فصل‌ها",
-                            callback_data="trade_chapters",
-                        )
-                    ]
-                ]
-            ),
-        )
-        return
-    text_lines = [
-        (
-            "📘 <b>درس‌های فصل</b>\n"
-            f"فصل: <code>{_safe_text(chapter_id)}</code>"
-        ),
-        "━━━━━━━━━━━━━━━━━━",
-    ]
-    for index, lesson in enumerate(
-        lessons,
-        start=1,
-    ):
-        title = _safe_text(
-            _get_title(
-                lesson,
-                f"درس {index}",
-            )
-        )
-        text_lines.append(
-            f"{index}. 📖 {title}"
-        )
-    text_lines.extend(
-        [
-            "━━━━━━━━━━━━━━━━━━",
-            "درس موردنظر را انتخاب کنید:",
-        ]
-    )
-    await query.edit_message_text(
-        "\n".join(text_lines),
-        parse_mode="HTML",
-        reply_markup=lessons_keyboard(
-            chapter_id,
-            lessons,
-        ),
-    )
-# ==========================================================
-# Lesson
-# ==========================================================
-async def show_international_trade_lesson(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    """
-    Show lesson content and register lesson start.
-    """
-    query = update.callback_query
-    if query is None:
-        return
-    await query.answer()
-    data = query.data or ""
-    try:
-        _, chapter_id, lesson_id = data.split(
-            ":",
-            2,
-        )
-    except ValueError:
-        await query.edit_message_text(
-            "❌ اطلاعات درس نامعتبر است.",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "🏠 منوی اصلی",
-                            callback_data="menu_main",
-                        )
-                    ]
-                ]
-            ),
-        )
-        return
-    try:
-        lesson = get_lesson(
-            chapter_id,
-            lesson_id,
-        )
-    except Exception:
-        logger.exception(
-            "Failed to load lesson %s/%s.",
-            chapter_id,
-            lesson_id,
-        )
-        await query.edit_message_text(
-            "❌ خطا در دریافت محتوای درس.",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "🔙 درس‌ها",
-                            callback_data=(
-                                f"trade_chapter:"
-                                f"{chapter_id}"
-                            ),
-                        )
-                    ]
-                ]
-            ),
-        )
-        return
-    if not lesson:
-        await query.edit_message_text(
-            "❌ درس موردنظر پیدا نشد.",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "🔙 درس‌ها",
-                            callback_data=(
-                                f"trade_chapter:"
-                                f"{chapter_id}"
-                            ),
-                        )
-                    ]
-                ]
-            ),
-        )
-        return
-    user = update.effective_user
-    if user is not None:
-        try:
-            start_lesson(
-                telegram_id=user.id,
-                chapter_id=chapter_id,
-                lesson_id=lesson_id,
-            )
-        except Exception:
-            logger.exception(
-                (
-                    "Failed to mark International "
-                    "Trade lesson started: %s/%s"
-                ),
-                chapter_id,
-                lesson_id,
-            )
-    title = _safe_text(
-        _get_title(
-            lesson,
-            lesson_id,
-        )
-    )
-    content = _safe_text(
-        _get_lesson_content(
-            lesson
-        )
-    )
-    try:
-        questions = get_trade_quiz_questions(
-            chapter_id,
-            lesson_id,
-        )
-        has_quiz = bool(
-            questions
-        )
-    except Exception:
-        logger.exception(
-            "Failed to load quiz for %s/%s.",
-            chapter_id,
-            lesson_id,
-        )
-        has_quiz = False
-    text = (
-        f"🌍 <b>{title}</b>\n"
-        "━━━━━━━━━━━━━━━━━━\n\n"
-        f"{content}\n\n"
-        "━━━━━━━━━━━━━━━━━━"
-    )
-    await query.edit_message_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=lesson_keyboard(
-            chapter_id,
-            lesson_id,
-            has_quiz=has_quiz,
-        ),
-    )
-# ==========================================================
-# Complete lesson
-# ==========================================================
+
 async def complete_international_trade_lesson(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Mark lesson as completed.
+    Mark lesson as completed manually.
     """
+
     query = update.callback_query
+
     if query is None:
+
         return
+
     await query.answer()
-    data = query.data or ""
-    try:
-        _, chapter_id, lesson_id = data.split(
-            ":",
-            2,
-        )
-    except ValueError:
-        await query.edit_message_text(
-            "❌ اطلاعات درس نامعتبر است.",
-            reply_markup=(
-                international_trade_menu_keyboard()
-            ),
-        )
-        return
-    user = update.effective_user
-    if user is None:
-        return
-    try:
-        success = complete_lesson(
-            telegram_id=user.id,
-            chapter_id=chapter_id,
-            lesson_id=lesson_id,
-        )
-    except Exception:
-        logger.exception(
-            (
-                "Failed to complete International "
-                "Trade lesson: %s/%s"
-            ),
-            chapter_id,
-            lesson_id,
-        )
-        success = False
-    if not success:
-        await query.edit_message_text(
-            "❌ ثبت تکمیل درس انجام نشد.",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "🔙 منوی تجارت بین‌الملل",
-                            callback_data=(
-                                "menu_international_trade"
-                            ),
-                        )
-                    ]
-                ]
-            ),
-        )
-        return
-    await query.edit_message_text(
-        (
-            "✅ <b>درس با موفقیت تکمیل شد</b>\n\n"
-            f"🌍 ماژول: {_safe_text(MODULE_TITLE)}\n"
-            f"📘 فصل: "
-            f"<code>{_safe_text(chapter_id)}</code>\n"
-            f"📖 درس: "
-            f"<code>{_safe_text(lesson_id)}</code>\n\n"
-            "پیشرفت شما در سیستم ثبت شد."
-        ),
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "📖 بازگشت به درس",
-                        callback_data=(
-                            f"trade_lesson:"
-                            f"{chapter_id}:"
-                            f"{lesson_id}"
-                        ),
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "🔙 درس‌ها",
-                        callback_data=(
-                            f"trade_chapter:"
-                            f"{chapter_id}"
-                        ),
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "🏠 منوی اصلی",
-                        callback_data="menu_main",
-                    )
-                ],
-            ]
-        ),
+
+    data = _safe_text(
+        query.data
     )
-# ==========================================================
-# Quiz helpers
-# ==========================================================
-def _extract_questions(
-    lesson: dict[str, Any],
-) -> list[dict[str, Any]]:
-    """
-    Extract quiz questions directly from lesson.
-    """
-    questions = (
-        lesson.get("quiz")
-        or lesson.get("questions")
-        or lesson.get("quiz_questions")
-        or []
+
+    prefix = (
+        "trade_complete:"
     )
-    if isinstance(
-        questions,
-        dict,
+
+    if not data.startswith(
+        prefix
     ):
-        questions = questions.get(
-            "questions",
-            [],
-        )
-    if not isinstance(
-        questions,
-        list,
-    ):
-        return []
-    return [
-        item
-        for item in questions
-        if isinstance(
-            item,
-            dict,
-        )
+
+        return
+
+    payload = data[
+        len(prefix):
     ]
-def _question_text(
-    question: dict[str, Any],
-) -> str:
-    """
-    Extract question text.
-    """
-    return str(
-        question.get("question")
-        or question.get("text")
-        or question.get("title")
-        or "سوال"
+
+    parts = payload.split(
+        ":"
     )
-def _question_options(
-    question: dict[str, Any],
-) -> list[str]:
-    """
-    Extract question options.
-    """
-    options = (
-        question.get("options")
-        or question.get("choices")
-        or question.get("answers")
-        or []
+
+    if len(parts) != 2:
+
+        return
+
+    chapter_id = parts[0]
+    lesson_id = parts[1]
+
+    user_id = _get_user_id(
+        update
     )
-    if not isinstance(
-        options,
-        list,
-    ):
-        return []
-    result: list[str] = []
-    for option in options:
-        if isinstance(
-            option,
-            dict,
-        ):
-            value = (
-                option.get("text")
-                or option.get("label")
-                or option.get("title")
-                or ""
-            )
-            result.append(
-                str(value)
-            )
-        else:
-            result.append(
-                str(option)
-            )
-    return result
-def _correct_option(
-    question: dict[str, Any],
-) -> int | None:
-    """
-    Extract correct answer index.
-    Supported formats:
-    - correct
-    - answer
-    - correct_index
-    - correct_answer
-    """
-    if "correct_index" in question:
-        value = question.get(
-            "correct_index"
-        )
-    elif "correct" in question:
-        value = question.get(
-            "correct"
-        )
-    elif "answer" in question:
-        value = question.get(
-            "answer"
-        )
-    else:
-        value = question.get(
-            "correct_answer"
-        )
-    if isinstance(
-        value,
-        bool,
-    ):
-        return int(value)
-    if isinstance(
-        value,
-        int,
-    ):
-        return value
-    if isinstance(
-        value,
-        str,
-    ):
-        cleaned = value.strip()
-        if cleaned.upper() in {
-            "A",
-            "B",
-            "C",
-            "D",
-        }:
-            return (
-                ord(
-                    cleaned.upper()
-                )
-                - ord("A")
-            )
+
+    if user_id is not None:
+
         try:
-            return int(
-                cleaned
-            )
-        except ValueError:
-            return None
-    return None
-# ==========================================================
-# Start quiz
-# ==========================================================
-async def start_international_trade_quiz(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    """
-    Start International Trade lesson quiz.
-    """
-    query = update.callback_query
-    if query is None:
-        return
-    await query.answer()
-    data = query.data or ""
-    try:
-        _, chapter_id, lesson_id = data.split(
-            ":",
-            2,
-        )
-    except ValueError:
-        await query.edit_message_text(
-            "❌ اطلاعات آزمون نامعتبر است.",
-            reply_markup=(
-                international_trade_menu_keyboard()
-            ),
-        )
-        return
-    try:
-        lesson = get_lesson(
-            chapter_id,
-            lesson_id,
-        )
-    except Exception:
-        logger.exception(
-            "Failed to load quiz lesson."
-        )
-        await query.edit_message_text(
-            "❌ خطا در دریافت آزمون.",
-            reply_markup=(
-                international_trade_menu_keyboard()
-            ),
-        )
-        return
-    if not lesson:
-        await query.edit_message_text(
-            "❌ درس موردنظر پیدا نشد.",
-            reply_markup=(
-                international_trade_menu_keyboard()
-            ),
-        )
-        return
-    try:
-        questions = get_trade_quiz_questions(
-            chapter_id,
-            lesson_id,
-        )
-    except Exception:
-        logger.exception(
-            "Failed to load International Trade quiz."
-        )
-        questions = _extract_questions(
-            lesson
-        )
-    if not questions:
-        await query.edit_message_text(
-            (
-                "📝 برای این درس هنوز آزمونی "
-                "ثبت نشده است."
-            ),
-            reply_markup=lesson_keyboard(
+
+            mark_lesson_completed(
+                user_id,
+                MODULE_ID,
                 chapter_id,
                 lesson_id,
-                has_quiz=False,
-            ),
-        )
-        return
-    context.user_data[
-        "international_trade_quiz"
-    ] = {
-        "module_id": MODULE_ID,
-        "chapter_id": chapter_id,
-        "lesson_id": lesson_id,
-        "questions": questions,
-        "current": 0,
-        "correct": 0,
-    }
-    await _show_trade_quiz_question(
-        update,
-        context,
-    )
-# ==========================================================
-# Show quiz question
-# ==========================================================
-async def _show_trade_quiz_question(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    """
-    Display current quiz question.
-    """
-    query = update.callback_query
-    if query is None:
-        return
-    state = context.user_data.get(
-        "international_trade_quiz"
-    )
-    if not state:
-        await query.edit_message_text(
-            "❌ آزمون فعال نیست.",
-            reply_markup=(
-                international_trade_menu_keyboard()
-            ),
-        )
-        return
-    current = int(
-        state.get(
-            "current",
-            0,
-        )
-    )
-    questions = state.get(
-        "questions",
-        [],
-    )
-    if current >= len(
-        questions
-    ):
-        await finish_international_trade_quiz(
-            update,
-            context,
-        )
-        return
-    question = questions[
-        current
-    ]
-    options = _question_options(
-        question
-    )
-    if not options:
-        await query.edit_message_text(
-            (
-                "❌ این سوال گزینه معتبر ندارد."
-            ),
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "❌ لغو آزمون",
-                            callback_data=(
-                                f"trade_quiz_cancel:"
-                                f"{state['chapter_id']}:"
-                                f"{state['lesson_id']}"
-                            ),
-                        )
-                    ]
-                ]
-            ),
-        )
-        return
-    text = (
-        "📝 <b>آزمون تجارت بین‌الملل</b>\n"
-        f"سوال {current + 1} از "
-        f"{len(questions)}\n"
-        "━━━━━━━━━━━━━━━━━━\n\n"
-        f"{_safe_text(_question_text(question))}"
-    )
-    await query.edit_message_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=quiz_keyboard(
-            state["chapter_id"],
-            state["lesson_id"],
-            current,
-            options,
-        ),
-    )
-# ==========================================================
-# Answer quiz
-# ==========================================================
-async def answer_international_trade_quiz(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    """
-    Process quiz answer.
-    """
-    query = update.callback_query
-    if query is None:
-        return
-    await query.answer()
-    state = context.user_data.get(
-        "international_trade_quiz"
-    )
-    if not state:
-        await query.edit_message_text(
-            "❌ آزمون فعال نیست.",
-            reply_markup=(
-                international_trade_menu_keyboard()
-            ),
-        )
-        return
-    data = query.data or ""
-    try:
-        parts = data.split(":")
-        question_index = int(
-            parts[3]
-        )
-        selected_index = int(
-            parts[4]
-        )
-    except (
-        ValueError,
-        IndexError,
-    ):
-        await query.edit_message_text(
-            "❌ پاسخ آزمون نامعتبر است.",
-            reply_markup=(
-                international_trade_menu_keyboard()
-            ),
-        )
-        return
-    current = int(
-        state.get(
-            "current",
-            0,
-        )
-    )
-    if question_index != current:
-        await _show_trade_quiz_question(
-            update,
-            context,
-        )
-        return
-    questions = state.get(
-        "questions",
-        [],
-    )
-    if current >= len(
-        questions
-    ):
-        await finish_international_trade_quiz(
-            update,
-            context,
-        )
-        return
-    question = questions[
-        current
-    ]
-    correct_index = _correct_option(
-        question
-    )
-    if (
-        correct_index is not None
-        and selected_index == correct_index
-    ):
-        state["correct"] = int(
-            state.get(
-                "correct",
-                0,
             )
-        ) + 1
-    state["current"] = (
-        current + 1
-    )
-    if state["current"] >= len(
-        questions
-    ):
-        await finish_international_trade_quiz(
-            update,
-            context,
-        )
-        return
-    await _show_trade_quiz_question(
-        update,
-        context,
-    )
-# ==========================================================
-# Finish quiz
-# ==========================================================
-async def finish_international_trade_quiz(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    """
-    Finish quiz and save result through service layer.
-    """
-    query = update.callback_query
-    if query is None:
-        return
-    state = context.user_data.get(
-        "international_trade_quiz"
-    )
-    if not state:
-        await query.edit_message_text(
-            "❌ آزمون فعال نیست.",
-            reply_markup=(
-                international_trade_menu_keyboard()
-            ),
-        )
-        return
-    user = update.effective_user
-    questions = state.get(
-        "questions",
-        [],
-    )
-    total = len(
-        questions
-    )
-    correct = int(
-        state.get(
-            "correct",
-            0,
-        )
-    )
-    wrong = max(
-        total - correct,
-        0,
-    )
-    score = (
-        (correct / total) * 100
-        if total
-        else 0.0
-    )
-    if user is not None:
-        try:
-            save_quiz_result(
-                telegram_id=user.id,
-                chapter_id=state[
-                    "chapter_id"
-                ],
-                lesson_id=state[
-                    "lesson_id"
-                ],
-                total_questions=total,
-                correct_answers=correct,
-                score=score,
-            )
-        except Exception:
-            logger.exception(
-                (
-                    "Failed to save International "
-                    "Trade quiz result."
+
+        except TypeError:
+
+            try:
+
+                mark_lesson_completed(
+                    telegram_id=user_id,
+                    module_id=MODULE_ID,
+                    chapter_id=chapter_id,
+                    lesson_id=lesson_id,
                 )
+
+            except Exception:
+
+                logger.exception(
+                    "Failed to complete International Trade lesson."
+                )
+
+        except Exception:
+
+            logger.exception(
+                "Failed to complete International Trade lesson."
             )
-    chapter_id = state[
-        "chapter_id"
-    ]
-    lesson_id = state[
-        "lesson_id"
-    ]
-    context.user_data.pop(
-        "international_trade_quiz",
-        None,
-    )
-    await query.edit_message_text(
-        (
-            "🏁 <b>آزمون به پایان رسید</b>\n"
-            "━━━━━━━━━━━━━━━━━━\n\n"
-            f"📚 تعداد سوالات: <b>{total}</b>\n"
-            f"✅ پاسخ صحیح: <b>{correct}</b>\n"
-            f"❌ پاسخ غلط: <b>{wrong}</b>\n"
-            f"📊 نمره: <b>{score:.2f}%</b>\n\n"
-            "نتیجه آزمون ثبت شد."
-        ),
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(
+
+    keyboard = InlineKeyboardMarkup(
+        [
             [
-                [
-                    InlineKeyboardButton(
-                        "📖 بازگشت به درس",
-                        callback_data=(
-                            f"trade_lesson:"
-                            f"{chapter_id}:"
-                            f"{lesson_id}"
-                        ),
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "🔙 فصل‌ها",
-                        callback_data="trade_chapters",
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "🏠 منوی اصلی",
-                        callback_data="menu_main",
-                    )
-                ],
-            ]
-        ),
+                InlineKeyboardButton(
+                    text="📝 آزمون این درس",
+                    callback_data=(
+                        f"trade_quiz:"
+                        f"{chapter_id}:"
+                        f"{lesson_id}"
+                    ),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⬅️ بازگشت به فصل",
+                    callback_data=(
+                        f"trade_chapter:"
+                        f"{chapter_id}"
+                    ),
+                )
+            ],
+        ]
     )
-# ==========================================================
-# Cancel quiz
-# ==========================================================
-async def cancel_international_trade_quiz(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-) -> None:
-    """
-    Cancel active quiz.
-    """
-    query = update.callback_query
-    if query is None:
-        return
-    await query.answer(
-        "آزمون لغو شد.",
-        show_alert=False,
+
+    text = (
+        "✅ <b>درس با موفقیت تکمیل شد.</b>\n\n"
+        "پیشرفت شما ثبت شد.\n\n"
+        "حالا می‌توانید در آزمون این درس شرکت کنید."
     )
-    data = query.data or ""
+
     try:
-        _, chapter_id, lesson_id = data.split(
-            ":",
-            2,
-        )
-    except ValueError:
-        context.user_data.pop(
-            "international_trade_quiz",
-            None,
-        )
+
         await query.edit_message_text(
-            "❌ آزمون لغو شد.",
-            reply_markup=(
-                international_trade_menu_keyboard()
-            ),
+            text=text,
+            reply_markup=keyboard,
+            parse_mode="HTML",
         )
-        return
-    context.user_data.pop(
-        "international_trade_quiz",
-        None,
-    )
-    await query.edit_message_text(
-        (
-            "❌ <b>آزمون لغو شد</b>\n\n"
-            "نتیجه‌ای برای این آزمون ثبت نشد."
-        ),
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "📖 بازگشت به درس",
-                        callback_data=(
-                            f"trade_lesson:"
-                            f"{chapter_id}:"
-                            f"{lesson_id}"
-                        ),
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "🏠 منوی اصلی",
-                        callback_data="menu_main",
-                    )
-                ],
-            ]
-        ),
-    )
+
+    except Exception:
+
+        logger.exception(
+            "Failed to show lesson completion message."
+        )
+
+
 # ==========================================================
-# Callback router
+# Callback Router
 # ==========================================================
+
 async def route_international_trade_callback(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Route International Trade callbacks.
+    Central International Trade callback router.
     """
+
     query = update.callback_query
+
     if query is None:
+
         return
-    data = query.data or ""
-    if data == "menu_international_trade":
+
+    data = _safe_text(
+        query.data
+    )
+
+    logger.info(
+        "International Trade callback: %s",
+        data,
+    )
+
+    # ------------------------------------------------------
+    # Main Menu
+    # ------------------------------------------------------
+
+    if data in (
+        "menu_international_trade",
+        "menu_trade",
+    ):
+
         await show_international_trade_menu(
             update,
             context,
         )
+
         return
-    if data == "trade_chapters":
-        await show_international_trade_chapters(
-            update,
-            context,
-        )
-        return
+
+    # ------------------------------------------------------
+    # Chapter
+    # ------------------------------------------------------
+
     if data.startswith(
         "trade_chapter:"
     ):
+
         await show_international_trade_chapter(
             update,
             context,
         )
+
         return
+
+    # ------------------------------------------------------
+    # Lesson
+    # ------------------------------------------------------
+
     if data.startswith(
         "trade_lesson:"
     ):
+
         await show_international_trade_lesson(
             update,
             context,
         )
+
         return
+
+    # ------------------------------------------------------
+    # Complete Lesson
+    # ------------------------------------------------------
+
     if data.startswith(
         "trade_complete:"
     ):
+
         await complete_international_trade_lesson(
             update,
             context,
         )
+
         return
-    if data.startswith(
-        "trade_quiz_answer:"
-    ):
-        await answer_international_trade_quiz(
-            update,
-            context,
-        )
-        return
-    if data.startswith(
-        "trade_quiz_cancel:"
-    ):
-        await cancel_international_trade_quiz(
-            update,
-            context,
-        )
-        return
+
+    # ------------------------------------------------------
+    # Quiz Start
+    # ------------------------------------------------------
+
     if data.startswith(
         "trade_quiz:"
     ):
+
         await start_international_trade_quiz(
             update,
             context,
         )
+
         return
+
+    # ------------------------------------------------------
+    # Quiz Answer
+    # ------------------------------------------------------
+
+    if data.startswith(
+        "trade_quiz_answer:"
+    ):
+
+        await answer_international_trade_quiz(
+            update,
+            context,
+        )
+
+        return
+
+    # ------------------------------------------------------
+    # Next Question
+    # ------------------------------------------------------
+
+    if data.startswith(
+        "trade_quiz_next:"
+    ):
+
+        await show_next_trade_quiz_question(
+            update,
+            context,
+        )
+
+        return
+
+    # ------------------------------------------------------
+    # Quiz Cancel
+    # ------------------------------------------------------
+
+    if data.startswith(
+        "trade_quiz_cancel:"
+    ):
+
+        await cancel_international_trade_quiz(
+            update,
+            context,
+        )
+
+        return
+
+    logger.warning(
+        "Unhandled International Trade callback: %s",
+        data,
+    )
+
+    await query.answer(
+        "دستور ناشناخته است.",
+        show_alert=True,
+    )
+
+
 # ==========================================================
-# Health check
+# Health Check
 # ==========================================================
+
 def international_trade_handlers_health_check() -> bool:
     """
-    Basic handler-layer health check.
+    Verify International Trade handlers.
     """
-    required_functions = (
+
+    required_handlers = (
+        route_international_trade_callback,
+        start_international_trade_quiz,
+        start_international_trade_quiz_from_start,
+        answer_international_trade_quiz,
+        cancel_international_trade_quiz,
+        finish_international_trade_quiz,
         show_international_trade_menu,
-        show_international_trade_chapters,
         show_international_trade_chapter,
         show_international_trade_lesson,
         complete_international_trade_lesson,
-        start_international_trade_quiz,
-        answer_international_trade_quiz,
-        cancel_international_trade_quiz,
     )
-    return all(
-        callable(function)
-        for function in required_functions
+
+    for handler in required_handlers:
+
+        if not callable(
+            handler
+        ):
+
+            logger.error(
+                "International Trade handler is not callable: %r",
+                handler,
+            )
+
+            return False
+
+    try:
+
+        chapters = get_chapters()
+
+        if not isinstance(
+            chapters,
+            list,
+        ):
+
+            logger.error(
+                "International Trade chapters are invalid."
+            )
+
+            return False
+
+        if len(chapters) < 1:
+
+            logger.error(
+                "International Trade contains no chapters."
+            )
+
+            return False
+
+    except Exception:
+
+        logger.exception(
+            "International Trade handler health check failed."
+        )
+
+        return False
+
+    logger.info(
+        "International Trade handlers health check: OK"
     )
+
+    return True
+
+
 # ==========================================================
-# Public exports
+# Compatibility Alias
 # ==========================================================
+
+# Some parts of the project may use shorter function names.
+# Keep aliases to avoid breaking existing imports.
+
+show_trade_menu = (
+    show_international_trade_menu
+)
+
+show_trade_chapter = (
+    show_international_trade_chapter
+)
+
+show_trade_lesson = (
+    show_international_trade_lesson
+)
+
+complete_trade_lesson = (
+    complete_international_trade_lesson
+)
+
+
+# ==========================================================
+# Simple Context Manager Helper
+# ==========================================================
+
+class suppress_exceptions:
+    """
+    Small local context manager used only for UI fallback
+    operations where the original Telegram message may no
+    longer be editable.
+    """
+
+    def __enter__(
+        self,
+    ):
+        return self
+
+    def __exit__(
+        self,
+        exc_type,
+        exc_value,
+        traceback,
+    ):
+        return True
+
+
+# ==========================================================
+# Public Exports
+# ==========================================================
+
 __all__ = [
+    "start_international_trade_quiz",
+    "start_international_trade_quiz_from_start",
+    "answer_international_trade_quiz",
+    "cancel_international_trade_quiz",
+    "finish_international_trade_quiz",
+    "show_next_trade_quiz_question",
     "show_international_trade_menu",
-    "show_international_trade_chapters",
     "show_international_trade_chapter",
     "show_international_trade_lesson",
     "complete_international_trade_lesson",
-    "start_international_trade_quiz",
-    "answer_international_trade_quiz",
-    "finish_international_trade_quiz",
-    "cancel_international_trade_quiz",
     "route_international_trade_callback",
-    "international_trade_menu_keyboard",
-    "chapters_keyboard",
-    "lessons_keyboard",
-    "lesson_keyboard",
-    "quiz_keyboard",
     "international_trade_handlers_health_check",
+    "show_trade_menu",
+    "show_trade_chapter",
+    "show_trade_lesson",
+    "complete_trade_lesson",
 ]
-# ==========================================================
-# Local test
-# ==========================================================
-if __name__ == "__main__":
-    print(
-        "International Trade Handlers Health:",
-        international_trade_handlers_health_check(),
-    )
