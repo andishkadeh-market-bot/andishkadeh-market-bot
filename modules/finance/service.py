@@ -2,31 +2,54 @@
 Finance Service Layer
 Andishkadeh Management & Market
 
-لایه سرویس حرفه‌ای مدیریت مالی
+لایه سرویس مدیریت مالی
 
-مسئولیت‌ها:
-- اتصال امن Handler به Data و Content
-- مدیریت فصل‌ها و درس‌ها
-- دریافت محتوای کامل آموزشی
-- دریافت نکات تخصصی و آزمونی
-- دریافت مثال‌های کاربردی
-- مدیریت آزمون‌ها
-- محاسبه نتیجه آزمون
-- ثبت Attempt آزمون
-- بازیابی سوابق آزمون
-- جست‌وجوی محتوای مدیریت مالی
-- محاسبه آمار دوره
-- اعتبارسنجی ساختار آموزشی
-- Health Check
-- سازگاری با نسخه‌های مختلف data.py و content.py
+Responsibilities:
+- Module information
+- Chapters
+- Lessons
+- Lesson content
+- Quiz questions
+- Quiz normalization
+- Quiz scoring
+- Quiz attempts
+- Search
+- Statistics
+- Validation
+- Health check
+- Compatibility APIs for handlers
 """
 
 from __future__ import annotations
 
+import logging
+from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
 from . import data
-from . import content
+
+try:
+    from . import content
+except Exception:
+    content = None
+
+
+logger = logging.getLogger(__name__)
+
+
+# ============================================================
+# Constants
+# ============================================================
+
+MODULE_ID = "finance"
+DEFAULT_MODULE_TITLE = "💰 مدیریت مالی"
+
+DEFAULT_MODULE_DESCRIPTION = (
+    "دوره تخصصی مدیریت مالی شامل مبانی مالی، "
+    "تحلیل صورت‌های مالی، تصمیم‌گیری مالی، "
+    "بودجه‌بندی، سرمایه‌گذاری، تأمین مالی، "
+    "مدیریت سرمایه در گردش و مدیریت ریسک."
+)
 
 
 # ============================================================
@@ -44,16 +67,36 @@ except Exception:
 
 
 # ============================================================
-# Constants
-# ============================================================
-
-MODULE_ID = "finance"
-DEFAULT_MODULE_TITLE = "💰 مدیریت مالی"
-
-
-# ============================================================
 # Generic Helpers
 # ============================================================
+
+def _normalize_text(
+    value: Any,
+    default: str = "",
+) -> str:
+    if value is None:
+        return default
+
+    return str(value).strip()
+
+
+def _normalize_list(
+    value: Any,
+) -> List[Any]:
+    if value is None:
+        return []
+
+    if isinstance(value, list):
+        return value
+
+    if isinstance(value, tuple):
+        return list(value)
+
+    if isinstance(value, set):
+        return list(value)
+
+    return [value]
+
 
 def _safe_call(
     function_name: str,
@@ -61,9 +104,6 @@ def _safe_call(
     default: Any = None,
     **kwargs: Any,
 ) -> Any:
-    """
-    اجرای امن تابع از data.py.
-    """
     function = getattr(
         data,
         function_name,
@@ -78,8 +118,11 @@ def _safe_call(
             *args,
             **kwargs,
         )
-
     except Exception:
+        logger.exception(
+            "Finance data function failed: %s",
+            function_name,
+        )
         return default
 
 
@@ -89,9 +132,9 @@ def _safe_content_call(
     default: Any = None,
     **kwargs: Any,
 ) -> Any:
-    """
-    اجرای امن تابع از content.py.
-    """
+    if content is None:
+        return default
+
     function = getattr(
         content,
         function_name,
@@ -106,65 +149,18 @@ def _safe_content_call(
             *args,
             **kwargs,
         )
-
     except Exception:
+        logger.exception(
+            "Finance content function failed: %s",
+            function_name,
+        )
         return default
-
-
-def _normalize_text(
-    value: Any,
-    default: str = "",
-) -> str:
-    """
-    نرمال‌سازی متن.
-    """
-    if value is None:
-        return default
-
-    return str(value).strip()
-
-
-def _normalize_list(
-    value: Any,
-) -> List[Any]:
-    """
-    تبدیل خروجی‌های مختلف به لیست.
-    """
-    if value is None:
-        return []
-
-    if isinstance(
-        value,
-        list,
-    ):
-        return value
-
-    if isinstance(
-        value,
-        tuple,
-    ):
-        return list(value)
-
-    if isinstance(
-        value,
-        set,
-    ):
-        return list(value)
-
-    return [value]
 
 
 def _get_id(
     item: Any,
 ) -> str:
-    """
-    دریافت شناسه از dict/object.
-    """
-    if isinstance(
-        item,
-        dict,
-    ):
-
+    if isinstance(item, dict):
         return _normalize_text(
             item.get("id")
             or item.get("chapter_id")
@@ -173,35 +169,16 @@ def _get_id(
         )
 
     return _normalize_text(
-        getattr(
-            item,
-            "id",
-            None,
-        )
-        or getattr(
-            item,
-            "chapter_id",
-            None,
-        )
-        or getattr(
-            item,
-            "lesson_id",
-            None,
-        )
+        getattr(item, "id", None)
+        or getattr(item, "chapter_id", None)
+        or getattr(item, "lesson_id", None)
     )
 
 
 def _get_title(
     item: Any,
 ) -> str:
-    """
-    دریافت عنوان از dict/object.
-    """
-    if isinstance(
-        item,
-        dict,
-    ):
-
+    if isinstance(item, dict):
         return _normalize_text(
             item.get("title")
             or item.get("name")
@@ -210,82 +187,243 @@ def _get_title(
         )
 
     return _normalize_text(
-        getattr(
-            item,
-            "title",
-            None,
-        )
-        or getattr(
-            item,
-            "name",
-            None,
-        )
+        getattr(item, "title", None)
+        or getattr(item, "name", None)
     )
 
 
-def _get_quiz_correct_index(
-    question: Dict[str, Any],
-) -> Optional[int]:
-    """
-    دریافت index پاسخ صحیح سؤال.
+# ============================================================
+# Quiz Normalization
+# ============================================================
 
-    پشتیبانی از:
-    - correct_index
-    - answer_index
-    - correct_answer
-    - answer
+def _answer_to_index(
+    value: Any,
+    options: List[str],
+) -> int:
     """
+    Convert supported answer formats into zero-based index.
+
+    Supported:
+    - 0 / 1 / 2 / 3
+    - "0" / "1" / "2" / "3"
+    - A / B / C / D
+    - a / b / c / d
+    - الف / ب / ج / د
+    - complete option text
+    """
+
+    if value is None:
+        return 0
+
+    if isinstance(value, bool):
+        return int(value)
+
+    if isinstance(value, int):
+        return value
+
+    if isinstance(value, float):
+        try:
+            return int(value)
+        except Exception:
+            return 0
+
+    text = _normalize_text(
+        value
+    )
+
+    if not text:
+        return 0
+
+    english = {
+        "A": 0,
+        "B": 1,
+        "C": 2,
+        "D": 3,
+    }
+
+    if text.upper() in english:
+        return english[text.upper()]
+
+    persian = {
+        "الف": 0,
+        "ب": 1,
+        "ج": 2,
+        "د": 3,
+    }
+
+    if text in persian:
+        return persian[text]
+
+    try:
+        return int(text)
+    except Exception:
+        pass
+
+    normalized_text = text.casefold()
+
+    for index, option in enumerate(options):
+        if (
+            _normalize_text(option).casefold()
+            == normalized_text
+        ):
+            return index
+
+    return 0
+
+
+def _normalize_question(
+    question: Any,
+) -> Dict[str, Any]:
+    """
+    Normalize one Finance quiz question.
+    """
+
     if not isinstance(
         question,
         dict,
     ):
-        return None
+        return {
+            "id": "",
+            "question": _normalize_text(
+                question
+            ),
+            "options": [],
+            "correct_index": 0,
+            "explanation": "",
+        }
 
-    raw_value = None
+    result = deepcopy(
+        question
+    )
+
+    result["id"] = _normalize_text(
+        result.get("id")
+        or result.get("question_id")
+        or result.get("key")
+    )
+
+    result["question"] = _normalize_text(
+        result.get("question")
+        or result.get("text")
+        or result.get("question_text")
+        or result.get("title")
+    )
+
+    raw_options = (
+        result.get("options")
+        or result.get("choices")
+        or result.get("answers")
+        or result.get("variants")
+        or []
+    )
+
+    options: List[str] = []
+
+    for option in _normalize_list(
+        raw_options
+    ):
+        if isinstance(
+            option,
+            dict,
+        ):
+            option = (
+                option.get("text")
+                or option.get("label")
+                or option.get("answer")
+                or option.get("title")
+                or ""
+            )
+
+        options.append(
+            _normalize_text(
+                option
+            )
+        )
+
+    result["options"] = options
+
+    raw_correct = None
 
     for key in (
         "correct_index",
         "answer_index",
+        "correct_option",
+        "correct_answer_index",
         "correct_answer",
         "answer",
     ):
-
-        if key in question:
-
-            value = question.get(
-                key
-            )
+        if key in result:
+            value = result.get(key)
 
             if value is not None:
-
-                raw_value = value
+                raw_correct = value
                 break
 
-    if raw_value is None:
-        return None
+    result["correct_index"] = _answer_to_index(
+        raw_correct,
+        options,
+    )
 
-    try:
+    result["explanation"] = _normalize_text(
+        result.get("explanation")
+        or result.get("answer_explanation")
+        or result.get("solution")
+        or result.get("solution_text")
+        or result.get("reason")
+    )
 
-        return int(
-            raw_value
+    return result
+
+
+def _validate_questions(
+    questions: Any,
+) -> List[Dict[str, Any]]:
+    result: List[Dict[str, Any]] = []
+
+    for question in _normalize_list(
+        questions
+    ):
+        item = _normalize_question(
+            question
         )
 
-    except (
-        TypeError,
-        ValueError,
-    ):
+        options = item.get(
+            "options",
+            [],
+        )
 
-        return None
+        correct_index = item.get(
+            "correct_index",
+            -1,
+        )
+
+        if not item.get("question"):
+            continue
+
+        if len(options) < 2:
+            continue
+
+        if not (
+            0 <= correct_index < len(options)
+        ):
+            continue
+
+        result.append(
+            item
+        )
+
+    return result
 
 
 # ============================================================
 # Module Information
 # ============================================================
 
+def get_module_id() -> str:
+    return MODULE_ID
+
+
 def get_module_title() -> str:
-    """
-    عنوان ماژول مدیریت مالی.
-    """
     title = getattr(
         data,
         "MODULE_TITLE",
@@ -299,34 +437,20 @@ def get_module_title() -> str:
 
 
 def get_module_description() -> str:
-    """
-    توضیحات ماژول.
-    """
     description = getattr(
         data,
         "MODULE_DESCRIPTION",
         None,
     )
 
-    if description:
-
-        return _normalize_text(
-            description
-        )
-
-    return (
-        "دوره تخصصی مدیریت مالی شامل مبانی مالی، "
-        "تحلیل صورت‌های مالی، تصمیم‌گیری مالی، "
-        "بودجه‌بندی، سرمایه‌گذاری، تأمین مالی، "
-        "مدیریت سرمایه در گردش و مدیریت ریسک."
+    return _normalize_text(
+        description,
+        DEFAULT_MODULE_DESCRIPTION,
     )
 
 
 def get_module_info() -> Dict[str, Any]:
-    """
-    اطلاعات کامل ماژول.
-    """
-    info: Dict[str, Any] = {}
+    result: Dict[str, Any] = {}
 
     raw_info = getattr(
         data,
@@ -334,76 +458,60 @@ def get_module_info() -> Dict[str, Any]:
         None,
     )
 
-    if callable(
-        raw_info
-    ):
-
+    if callable(raw_info):
         try:
-
-            result = raw_info()
+            value = raw_info()
 
             if isinstance(
-                result,
+                value,
                 dict,
             ):
-
-                info.update(
-                    result
+                result.update(
+                    value
                 )
-
         except Exception:
-            pass
+            logger.exception(
+                "Unable to load Finance module info."
+            )
 
-    info.setdefault(
+    stats = get_curriculum_stats()
+
+    result.setdefault(
         "module_id",
         MODULE_ID,
     )
 
-    info.setdefault(
+    result.setdefault(
         "id",
         MODULE_ID,
     )
 
-    info.setdefault(
+    result.setdefault(
         "title",
         get_module_title(),
     )
 
-    info.setdefault(
+    result.setdefault(
         "description",
         get_module_description(),
     )
 
-    chapters = get_finance_chapters()
-
-    info.setdefault(
+    result.setdefault(
         "chapter_count",
-        len(chapters),
+        stats["chapters"],
     )
 
-    info.setdefault(
-        "chapters",
-        len(chapters),
-    )
-
-    info.setdefault(
+    result.setdefault(
         "lesson_count",
-        get_total_lesson_count(),
+        stats["lessons"],
     )
 
-    info.setdefault(
-        "lessons",
-        get_total_lesson_count(),
-    )
-
-    info.setdefault(
+    result.setdefault(
         "quiz_count",
-        len(
-            get_all_quiz_questions()
-        ),
+        stats["quiz_questions"],
     )
 
-    return info
+    return result
 
 
 # ============================================================
@@ -411,34 +519,12 @@ def get_module_info() -> Dict[str, Any]:
 # ============================================================
 
 def get_finance_chapters() -> List[Dict[str, Any]]:
-    """
-    دریافت تمام فصل‌های مدیریت مالی.
-    """
-    chapters = None
-
-    raw_get_chapters = getattr(
-        data,
+    chapters = _safe_call(
         "get_chapters",
-        None,
+        default=None,
     )
 
-    if callable(
-        raw_get_chapters
-    ):
-
-        try:
-
-            chapters = raw_get_chapters()
-
-        except (
-            TypeError,
-            Exception,
-        ):
-
-            chapters = None
-
     if chapters is None:
-
         chapters = getattr(
             data,
             "CHAPTERS",
@@ -446,39 +532,28 @@ def get_finance_chapters() -> List[Dict[str, Any]]:
         )
 
     if chapters is None:
-
         chapters = getattr(
             data,
             "FINANCE_CHAPTERS",
-            None,
+            [],
         )
 
-    chapters = _normalize_list(
+    result: List[Dict[str, Any]] = []
+
+    for chapter in _normalize_list(
         chapters
-    )
-
-    normalized: List[Dict[str, Any]] = []
-
-    for chapter in chapters:
-
+    ):
         if isinstance(
             chapter,
             dict,
         ):
-
             item = dict(
                 chapter
             )
-
         else:
-
             item = {
-                "id": _get_id(
-                    chapter
-                ),
-                "title": _get_title(
-                    chapter
-                ),
+                "id": _get_id(chapter),
+                "title": _get_title(chapter),
             }
 
         item["id"] = _normalize_text(
@@ -486,24 +561,21 @@ def get_finance_chapters() -> List[Dict[str, Any]]:
         )
 
         item["title"] = _normalize_text(
-            item.get("title")
+            item.get("title"),
+            item["id"],
         )
 
         if item["id"]:
-
-            normalized.append(
+            result.append(
                 item
             )
 
-    return normalized
+    return result
 
 
 def get_finance_chapter(
     chapter_id: str,
 ) -> Optional[Dict[str, Any]]:
-    """
-    دریافت یک فصل مشخص.
-    """
     chapter_id = _normalize_text(
         chapter_id
     )
@@ -511,67 +583,41 @@ def get_finance_chapter(
     if not chapter_id:
         return None
 
-    raw_get_chapter = getattr(
-        data,
+    chapter = _safe_call(
         "get_chapter",
-        None,
+        chapter_id,
+        default=None,
     )
 
-    if callable(
-        raw_get_chapter
-    ):
-
-        try:
-
-            chapter = raw_get_chapter(
-                chapter_id
-            )
-
-            if chapter is not None:
-
-                if isinstance(
-                    chapter,
-                    dict,
-                ):
-
-                    result = dict(
-                        chapter
-                    )
-
-                else:
-
-                    result = {
-                        "id": _get_id(
-                            chapter
-                        ),
-                        "title": _get_title(
-                            chapter
-                        ),
-                    }
-
-                result["id"] = _normalize_text(
-                    result.get("id"),
-                    chapter_id,
-                )
-
-                result["title"] = _normalize_text(
-                    result.get("title")
-                )
-
-                return result
-
-        except Exception:
-            pass
-
-    for chapter in get_finance_chapters():
-
-        if chapter.get(
-            "id"
-        ) == chapter_id:
-
-            return dict(
+    if chapter is not None:
+        if isinstance(
+            chapter,
+            dict,
+        ):
+            result = dict(
                 chapter
             )
+        else:
+            result = {
+                "id": _get_id(chapter),
+                "title": _get_title(chapter),
+            }
+
+        result["id"] = _normalize_text(
+            result.get("id"),
+            chapter_id,
+        )
+
+        result["title"] = _normalize_text(
+            result.get("title"),
+            result["id"],
+        )
+
+        return result
+
+    for item in get_finance_chapters():
+        if item.get("id") == chapter_id:
+            return item
 
     return None
 
@@ -580,146 +626,9 @@ def get_finance_chapter(
 # Lessons
 # ============================================================
 
-def _get_all_finance_lessons_from_data() -> List[Dict[str, Any]]:
-    """
-    دریافت تمام درس‌ها از data.py.
-    """
-    lessons = None
-
-    raw_get_lessons = getattr(
-        data,
-        "get_lessons",
-        None,
-    )
-
-    if callable(
-        raw_get_lessons
-    ):
-
-        try:
-
-            lessons = raw_get_lessons()
-
-        except (
-            TypeError,
-            Exception,
-        ):
-
-            lessons = None
-
-    if lessons is None:
-
-        lessons = getattr(
-            data,
-            "LESSONS",
-            None,
-        )
-
-    if lessons is None:
-
-        lessons = getattr(
-            data,
-            "FINANCE_LESSONS",
-            None,
-        )
-
-    if isinstance(
-        lessons,
-        dict,
-    ):
-
-        flattened: List[Any] = []
-
-        for key, value in lessons.items():
-
-            values = _normalize_list(
-                value
-            )
-
-            for lesson in values:
-
-                if isinstance(
-                    lesson,
-                    dict,
-                ):
-
-                    item = dict(
-                        lesson
-                    )
-
-                    if not item.get(
-                        "chapter_id"
-                    ):
-
-                        item["chapter_id"] = key
-
-                    flattened.append(
-                        item
-                    )
-
-                else:
-
-                    flattened.append(
-                        lesson
-                    )
-
-        lessons = flattened
-
-    lessons = _normalize_list(
-        lessons
-    )
-
-    normalized: List[Dict[str, Any]] = []
-
-    for lesson in lessons:
-
-        if isinstance(
-            lesson,
-            dict,
-        ):
-
-            item = dict(
-                lesson
-            )
-
-        else:
-
-            item = {
-                "id": _get_id(
-                    lesson
-                ),
-                "title": _get_title(
-                    lesson
-                ),
-            }
-
-        item["id"] = _normalize_text(
-            item.get("id")
-        )
-
-        item["title"] = _normalize_text(
-            item.get("title")
-        )
-
-        item["chapter_id"] = _normalize_text(
-            item.get("chapter_id")
-        )
-
-        if item["id"]:
-
-            normalized.append(
-                item
-            )
-
-    return normalized
-
-
 def get_finance_lessons(
     chapter_id: str,
 ) -> List[Dict[str, Any]]:
-    """
-    دریافت درس‌های یک فصل.
-    """
     chapter_id = _normalize_text(
         chapter_id
     )
@@ -727,43 +636,117 @@ def get_finance_lessons(
     if not chapter_id:
         return []
 
-    all_lessons = (
-        _get_all_finance_lessons_from_data()
+    lessons = _safe_call(
+        "get_lessons",
+        chapter_id,
+        default=None,
     )
 
-    normalized: List[Dict[str, Any]] = []
-
-    for lesson in all_lessons:
-
-        lesson_chapter_id = _normalize_text(
-            lesson.get(
-                "chapter_id"
-            )
+    if lessons is None:
+        lessons = _safe_call(
+            "get_lessons",
+            default=None,
         )
 
-        if lesson_chapter_id != chapter_id:
+    if lessons is None:
+        lessons = getattr(
+            data,
+            "LESSONS",
+            None,
+        )
+
+    if lessons is None:
+        lessons = getattr(
+            data,
+            "FINANCE_LESSONS",
+            [],
+        )
+
+    result: List[Dict[str, Any]] = []
+
+    if isinstance(
+        lessons,
+        dict,
+    ):
+        iterable = []
+
+        for key, values in lessons.items():
+            for lesson in _normalize_list(
+                values
+            ):
+                if isinstance(
+                    lesson,
+                    dict,
+                ):
+                    item = dict(
+                        lesson
+                    )
+
+                    item.setdefault(
+                        "chapter_id",
+                        key,
+                    )
+
+                    iterable.append(
+                        item
+                    )
+                else:
+                    iterable.append(
+                        lesson
+                    )
+    else:
+        iterable = _normalize_list(
+            lessons
+        )
+
+    for lesson in iterable:
+        if not isinstance(
+            lesson,
+            dict,
+        ):
             continue
 
         item = dict(
             lesson
         )
 
-        item["chapter_id"] = chapter_id
-
-        normalized.append(
-            item
+        item["id"] = _normalize_text(
+            item.get("id")
+            or item.get("lesson_id")
         )
 
-    return normalized
+        item["title"] = _normalize_text(
+            item.get("title")
+            or item.get("name"),
+            item["id"],
+        )
+
+        item["chapter_id"] = _normalize_text(
+            item.get("chapter_id")
+            or item.get("chapter")
+            or item.get("parent_id")
+        )
+
+        if (
+            item["chapter_id"]
+            and item["chapter_id"] != chapter_id
+        ):
+            continue
+
+        item["chapter_id"] = chapter_id
+
+        if item["id"]:
+            result.append(
+                item
+            )
+
+    return result
 
 
 def get_finance_lesson(
     chapter_id: str,
     lesson_id: str,
 ) -> Optional[Dict[str, Any]]:
-    """
-    دریافت یک درس مشخص.
-    """
     chapter_id = _normalize_text(
         chapter_id
     )
@@ -775,315 +758,155 @@ def get_finance_lesson(
     if not chapter_id or not lesson_id:
         return None
 
-    raw_get_lesson = getattr(
-        data,
+    lesson = _safe_call(
         "get_lesson",
-        None,
+        chapter_id,
+        lesson_id,
+        default=None,
     )
 
-    if callable(
-        raw_get_lesson
-    ):
-
-        try:
-
-            lesson = raw_get_lesson(
-                chapter_id,
-                lesson_id,
-            )
-
-            if lesson is not None:
-
-                if isinstance(
-                    lesson,
-                    dict,
-                ):
-
-                    result = dict(
-                        lesson
-                    )
-
-                else:
-
-                    result = {
-                        "id": _get_id(
-                            lesson
-                        ),
-                        "title": _get_title(
-                            lesson
-                        ),
-                    }
-
-                result["id"] = _normalize_text(
-                    result.get("id"),
-                    lesson_id,
-                )
-
-                result["title"] = _normalize_text(
-                    result.get("title")
-                )
-
-                result["chapter_id"] = chapter_id
-
-                return result
-
-        except (
-            TypeError,
-            Exception,
+    if lesson is not None:
+        if isinstance(
+            lesson,
+            dict,
         ):
-
-            pass
-
-    for lesson in get_finance_lessons(
-        chapter_id
-    ):
-
-        if lesson.get(
-            "id"
-        ) == lesson_id:
-
-            return dict(
+            result = dict(
                 lesson
             )
+        else:
+            result = {
+                "id": _get_id(lesson),
+                "title": _get_title(lesson),
+            }
+
+        result["id"] = _normalize_text(
+            result.get("id"),
+            lesson_id,
+        )
+
+        result["chapter_id"] = _normalize_text(
+            result.get("chapter_id"),
+            chapter_id,
+        )
+
+        result["title"] = _normalize_text(
+            result.get("title"),
+            lesson_id,
+        )
+
+        return result
+
+    for item in get_finance_lessons(
+        chapter_id
+    ):
+        if item.get("id") == lesson_id:
+            return item
 
     return None
 
 
 # ============================================================
-# Educational Content
+# Complete Lesson
 # ============================================================
-
-def get_lesson_content(
-    lesson_id: str,
-) -> Optional[Dict[str, Any]]:
-    """
-    دریافت محتوای کامل یک درس از content.py.
-    """
-    lesson_id = _normalize_text(
-        lesson_id
-    )
-
-    if not lesson_id:
-        return None
-
-    result = _safe_content_call(
-        "get_lesson_content",
-        lesson_id,
-        default=None,
-    )
-
-    if result is None:
-        return None
-
-    if not isinstance(
-        result,
-        dict,
-    ):
-
-        return {
-            "lesson_id": lesson_id,
-            "lesson_text": _normalize_text(
-                result
-            ),
-        }
-
-    content_data = dict(
-        result
-    )
-
-    content_data.setdefault(
-        "lesson_id",
-        lesson_id,
-    )
-
-    content_data.setdefault(
-        "lesson_text",
-        content_data.get(
-            "content",
-            "",
-        ),
-    )
-
-    content_data.setdefault(
-        "subtopics",
-        [],
-    )
-
-    content_data.setdefault(
-        "detailed_content",
-        "",
-    )
-
-    content_data.setdefault(
-        "specialized_points",
-        [],
-    )
-
-    content_data.setdefault(
-        "exam_points",
-        [],
-    )
-
-    content_data.setdefault(
-        "practical_example",
-        "",
-    )
-
-    content_data.setdefault(
-        "review",
-        [],
-    )
-
-    return content_data
-
 
 def get_complete_lesson(
     chapter_id: str,
     lesson_id: str,
-) -> Dict[str, Any]:
+) -> Optional[Dict[str, Any]]:
     """
-    ترکیب اطلاعات Data و Content.
+    Return a complete normalized lesson.
+
+    Supports both data.py and content.py.
     """
+
     lesson = get_finance_lesson(
         chapter_id,
         lesson_id,
     )
 
     if lesson is None:
-        return {}
-
-    lesson_content = get_lesson_content(
-        lesson_id
-    )
+        return None
 
     result = dict(
         lesson
     )
 
-    if lesson_content:
+    content_result = _safe_content_call(
+        "get_lesson_content",
+        chapter_id,
+        lesson_id,
+        default=None,
+    )
 
-        result.update(
-            lesson_content
+    if content_result is None:
+        content_result = _safe_content_call(
+            "get_complete_lesson",
+            chapter_id,
+            lesson_id,
+            default=None,
         )
-
-    result["chapter_id"] = chapter_id
-    result["lesson_id"] = lesson_id
-
-    return result
-
-
-def get_specialized_tips(
-    lesson_id: str,
-) -> List[str]:
-    """
-    دریافت نکات تخصصی.
-    """
-    lesson_content = get_lesson_content(
-        lesson_id
-    )
-
-    if not lesson_content:
-        return []
-
-    return [
-        _normalize_text(item)
-        for item in _normalize_list(
-            lesson_content.get(
-                "specialized_points"
-            )
-        )
-        if _normalize_text(item)
-    ]
-
-
-def get_exam_tips(
-    lesson_id: str,
-) -> List[str]:
-    """
-    دریافت نکات آزمونی.
-    """
-    lesson_content = get_lesson_content(
-        lesson_id
-    )
-
-    if not lesson_content:
-        return []
-
-    return [
-        _normalize_text(item)
-        for item in _normalize_list(
-            lesson_content.get(
-                "exam_points"
-            )
-        )
-        if _normalize_text(item)
-    ]
-
-
-def get_examples(
-    lesson_id: str,
-) -> List[str]:
-    """
-    دریافت مثال‌های کاربردی.
-    """
-    lesson_content = get_lesson_content(
-        lesson_id
-    )
-
-    if not lesson_content:
-        return []
-
-    examples = lesson_content.get(
-        "practical_example"
-    )
 
     if isinstance(
-        examples,
-        list,
+        content_result,
+        dict,
     ):
-
-        return [
-            _normalize_text(item)
-            for item in examples
-            if _normalize_text(item)
-        ]
-
-    if examples:
-
-        return [
-            _normalize_text(
-                examples
-            )
-        ]
-
-    return []
-
-
-def get_keywords(
-    lesson_id: str,
-) -> List[str]:
-    """
-    دریافت کلیدواژه‌های درس.
-    """
-    lesson_content = get_lesson_content(
-        lesson_id
-    )
-
-    if not lesson_content:
-        return []
-
-    keywords = lesson_content.get(
-        "keywords",
-        [],
-    )
-
-    return [
-        _normalize_text(item)
-        for item in _normalize_list(
-            keywords
+        result.update(
+            content_result
         )
-        if _normalize_text(item)
-    ]
+
+    elif content_result:
+        result["lesson_text"] = _normalize_text(
+            content_result
+        )
+
+    result.setdefault(
+        "lesson_text",
+        _normalize_text(
+            result.get("content")
+            or result.get("text")
+            or result.get("body")
+            or result.get("description")
+        ),
+    )
+
+    result.setdefault(
+        "detailed_content",
+        _normalize_text(
+            result.get("detailed_content")
+            or result.get("content")
+        ),
+    )
+
+    result.setdefault(
+        "subtopics",
+        _normalize_list(
+            result.get("subtopics")
+        ),
+    )
+
+    result.setdefault(
+        "specialized_points",
+        _normalize_list(
+            result.get("specialized_points")
+        ),
+    )
+
+    result.setdefault(
+        "exam_points",
+        _normalize_list(
+            result.get("exam_points")
+        ),
+    )
+
+    result.setdefault(
+        "practical_example",
+        result.get(
+            "practical_example",
+            [],
+        ),
+    )
+
+    return result
 
 
 # ============================================================
@@ -1094,9 +917,6 @@ def get_finance_quiz(
     chapter_id: str,
     lesson_id: str,
 ) -> List[Dict[str, Any]]:
-    """
-    دریافت آزمون یک درس.
-    """
     chapter_id = _normalize_text(
         chapter_id
     )
@@ -1116,1215 +936,86 @@ def get_finance_quiz(
     )
 
     if questions is None:
-
-        quiz_map = getattr(
-            data,
-            "FINANCE_QUIZ_QUESTIONS",
-            None,
+        questions = _safe_call(
+            "get_quiz_questions",
+            chapter_id,
+            lesson_id,
+            default=None,
         )
-
-        if isinstance(
-            quiz_map,
-            dict,
-        ):
-
-            questions = quiz_map.get(
-                (
-                    chapter_id,
-                    lesson_id,
-                ),
-                [],
-            )
 
     if questions is None:
-
-        lesson_content = get_lesson_content(
-            lesson_id
+        questions = _safe_content_call(
+            "get_quiz",
+            chapter_id,
+            lesson_id,
+            default=None,
         )
 
-        if lesson_content:
+    if questions is None:
+        lesson = get_finance_lesson(
+            chapter_id,
+            lesson_id,
+        )
 
-            questions = lesson_content.get(
-                "quiz",
-                [],
+        if lesson:
+            questions = (
+                lesson.get("quiz")
+                or lesson.get("questions")
+                or lesson.get("quiz_questions")
+                or []
             )
 
-    questions = _normalize_list(
+    return _validate_questions(
         questions
     )
 
-    normalized: List[Dict[str, Any]] = []
 
-    for question in questions:
+def get_quiz_question(
+    chapter_id: str,
+    lesson_id: str,
+    question_index: int,
+) -> Optional[Dict[str, Any]]:
+    questions = get_finance_quiz(
+        chapter_id,
+        lesson_id,
+    )
 
-        if not isinstance(
-            question,
-            dict,
-        ):
-            continue
-
-        item = dict(
-            question
+    try:
+        index = int(
+            question_index
         )
+    except Exception:
+        return None
 
-        item.setdefault(
-            "question",
-            "",
-        )
+    if index < 0 or index >= len(questions):
+        return None
 
-        item.setdefault(
-            "options",
-            [],
-        )
-
-        item.setdefault(
-            "correct_index",
-            0,
-        )
-
-        item["question"] = _normalize_text(
-            item["question"]
-        )
-
-        item["options"] = [
-            _normalize_text(option)
-            for option in _normalize_list(
-                item["options"]
-            )
-        ]
-
-        try:
-
-            item["correct_index"] = int(
-                item["correct_index"]
-            )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
-
-            item["correct_index"] = 0
-
-        if (
-            item["question"]
-            and item["options"]
-        ):
-
-            item["chapter_id"] = chapter_id
-            item["lesson_id"] = lesson_id
-
-            normalized.append(
-                item
-            )
-
-    return normalized
+    return questions[index]
 
 
 def get_all_quiz_questions() -> List[Dict[str, Any]]:
     """
-    دریافت تمام سوالات آزمون مدیریت مالی.
+    Return every Finance quiz question.
     """
-    questions = _safe_call(
+
+    direct = _safe_call(
         "get_all_quiz_questions",
         default=None,
     )
 
-    if questions is None:
-
-        quiz_map = getattr(
-            data,
-            "FINANCE_QUIZ_QUESTIONS",
-            {},
+    if direct is not None:
+        return _validate_questions(
+            direct
         )
 
-        questions = []
-
-        if isinstance(
-            quiz_map,
-            dict,
-        ):
-
-            for key, values in quiz_map.items():
-
-                chapter_id = ""
-                lesson_id = ""
-
-                if (
-                    isinstance(key, tuple)
-                    and len(key) >= 2
-                ):
-
-                    chapter_id = _normalize_text(
-                        key[0]
-                    )
-
-                    lesson_id = _normalize_text(
-                        key[1]
-                    )
-
-                for question in _normalize_list(
-                    values
-                ):
-
-                    if not isinstance(
-                        question,
-                        dict,
-                    ):
-                        continue
-
-                    item = dict(
-                        question
-                    )
-
-                    item.setdefault(
-                        "chapter_id",
-                        chapter_id,
-                    )
-
-                    item.setdefault(
-                        "lesson_id",
-                        lesson_id,
-                    )
-
-                    questions.append(
-                        item
-                    )
-
-    normalized: List[Dict[str, Any]] = []
-
-    for question in _normalize_list(
-        questions
-    ):
-
-        if not isinstance(
-            question,
-            dict,
-        ):
-            continue
-
-        item = dict(
-            question
-        )
-
-        item.setdefault(
-            "question",
-            "",
-        )
-
-        item.setdefault(
-            "options",
-            [],
-        )
-
-        item.setdefault(
-            "correct_index",
-            0,
-        )
-
-        item["question"] = _normalize_text(
-            item.get("question")
-        )
-
-        item["options"] = [
-            _normalize_text(option)
-            for option in _normalize_list(
-                item.get(
-                    "options",
-                    [],
-                )
-            )
-        ]
-
-        try:
-
-            item["correct_index"] = int(
-                item.get(
-                    "correct_index",
-                    0,
-                )
-            )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
-
-            item["correct_index"] = 0
-
-        if item["question"]:
-
-            normalized.append(
-                item
-            )
-
-    return normalized
-
-
-def get_finance_chapter_quiz(
-    chapter_id: str,
-) -> List[Dict[str, Any]]:
-    """
-    دریافت تمام سوالات یک فصل.
-    """
-    chapter_id = _normalize_text(
-        chapter_id
-    )
-
-    if not chapter_id:
-        return []
-
-    questions: List[Dict[str, Any]] = []
-
-    for lesson in get_finance_lessons(
-        chapter_id
-    ):
-
-        lesson_id = lesson.get(
-            "id"
-        )
-
-        if not lesson_id:
-            continue
-
-        for question in get_finance_quiz(
-            chapter_id,
-            lesson_id,
-        ):
-
-            item = dict(
-                question
-            )
-
-            item.setdefault(
-                "chapter_id",
-                chapter_id,
-            )
-
-            item.setdefault(
-                "lesson_id",
-                lesson_id,
-            )
-
-            questions.append(
-                item
-            )
-
-    return questions
-
-
-# ============================================================
-# Quiz Result
-# ============================================================
-
-def calculate_quiz_score(
-    total_questions: int,
-    correct_answers: int,
-) -> float:
-    """
-    محاسبه درصد آزمون.
-    """
-    try:
-
-        total_questions = int(
-            total_questions
-        )
-
-        correct_answers = int(
-            correct_answers
-        )
-
-    except (
-        TypeError,
-        ValueError,
-    ):
-
-        return 0.0
-
-    if total_questions <= 0:
-        return 0.0
-
-    correct_answers = max(
-        0,
-        min(
-            correct_answers,
-            total_questions,
-        ),
-    )
-
-    return round(
-        (
-            correct_answers
-            / total_questions
-        )
-        * 100,
-        2,
-    )
-
-
-def calculate_quiz_result(
-    quiz: List[Dict[str, Any]],
-    answers: List[int],
-) -> Dict[str, Any]:
-    """
-    محاسبه نتیجه کامل آزمون.
-    """
-    questions = _normalize_list(
-        quiz
-    )
-
-    submitted_answers = _normalize_list(
-        answers
-    )
-
-    total_questions = len(
-        questions
-    )
-
-    correct_answers = 0
-    answered_questions = 0
-
-    results: List[Dict[str, Any]] = []
-
-    for index, question in enumerate(
-        questions
-    ):
-
-        selected_index = None
-
-        if index < len(
-            submitted_answers
-        ):
-
-            raw_answer = submitted_answers[
-                index
-            ]
-
-            if raw_answer is not None:
-
-                try:
-
-                    selected_index = int(
-                        raw_answer
-                    )
-
-                except (
-                    TypeError,
-                    ValueError,
-                ):
-
-                    selected_index = None
-
-        correct_index = _get_quiz_correct_index(
-            question
-        )
-
-        options = _normalize_list(
-            question.get(
-                "options",
-                [],
-            )
-        )
-
-        if (
-            correct_index is not None
-            and (
-                correct_index < 0
-                or correct_index >= len(options)
-            )
-        ):
-
-            correct_index = None
-
-        is_answered = (
-            selected_index is not None
-        )
-
-        if is_answered:
-
-            answered_questions += 1
-
-        is_correct = (
-            is_answered
-            and correct_index is not None
-            and selected_index == correct_index
-        )
-
-        if is_correct:
-
-            correct_answers += 1
-
-        results.append(
-            {
-                "question_index": index,
-                "selected_index": selected_index,
-                "correct_index": correct_index,
-                "answered": is_answered,
-                "correct": is_correct,
-            }
-        )
-
-    wrong_answers = (
-        answered_questions
-        - correct_answers
-    )
-
-    unanswered_questions = (
-        total_questions
-        - answered_questions
-    )
-
-    score = calculate_quiz_score(
-        total_questions,
-        correct_answers,
-    )
-
-    return {
-        "total_questions": total_questions,
-        "answered_questions": answered_questions,
-        "correct_answers": correct_answers,
-        "wrong_answers": wrong_answers,
-        "unanswered_questions": unanswered_questions,
-        "score": score,
-        "results": results,
-    }
-
-
-# ============================================================
-# Quiz Attempts
-# ============================================================
-
-def start_quiz_attempt(
-    telegram_id: int,
-    module_id: str,
-    chapter_id: str,
-    lesson_id: str,
-    total_questions: int,
-) -> Dict[str, Any]:
-    """
-    ایجاد وضعیت اولیه Attempt آزمون.
-    """
-    try:
-
-        telegram_id = int(
-            telegram_id
-        )
-
-    except (
-        TypeError,
-        ValueError,
-    ):
-
-        telegram_id = 0
-
-    try:
-
-        total_questions = int(
-            total_questions
-        )
-
-    except (
-        TypeError,
-        ValueError,
-    ):
-
-        total_questions = 0
-
-    return {
-        "telegram_id": telegram_id,
-        "module_id": _normalize_text(
-            module_id,
-            MODULE_ID,
-        ),
-        "chapter_id": _normalize_text(
-            chapter_id
-        ),
-        "lesson_id": _normalize_text(
-            lesson_id
-        ),
-        "total_questions": max(
-            0,
-            total_questions,
-        ),
-        "current_question": 0,
-        "answers": [],
-        "correct_answers": 0,
-        "completed": False,
-    }
-
-
-def save_quiz_attempt(
-    telegram_id: int,
-    module_id: str,
-    chapter_id: str,
-    lesson_id: str,
-    total_questions: int,
-    correct_answers: int,
-    score: float | None = None,
-) -> Optional[int]:
-    """
-    ثبت Attempt تکمیل‌شده در دیتابیس.
-    """
-    if db_save_quiz_attempt is None:
-        return None
-
-    try:
-
-        telegram_id = int(
-            telegram_id
-        )
-
-        total_questions = int(
-            total_questions
-        )
-
-        correct_answers = int(
-            correct_answers
-        )
-
-    except (
-        TypeError,
-        ValueError,
-    ):
-
-        return None
-
-    total_questions = max(
-        0,
-        total_questions,
-    )
-
-    correct_answers = max(
-        0,
-        min(
-            correct_answers,
-            total_questions,
-        ),
-    )
-
-    if score is None:
-
-        score = calculate_quiz_score(
-            total_questions,
-            correct_answers,
-        )
-
-    try:
-
-        score = float(
-            score
-        )
-
-    except (
-        TypeError,
-        ValueError,
-    ):
-
-        score = calculate_quiz_score(
-            total_questions,
-            correct_answers,
-        )
-
-    score = max(
-        0.0,
-        min(
-            score,
-            100.0,
-        ),
-    )
-
-    try:
-
-        return db_save_quiz_attempt(
-            telegram_id=telegram_id,
-            module_id=_normalize_text(
-                module_id,
-                MODULE_ID,
-            ),
-            chapter_id=_normalize_text(
-                chapter_id
-            ),
-            lesson_id=_normalize_text(
-                lesson_id
-            ),
-            total_questions=total_questions,
-            correct_answers=correct_answers,
-            score=score,
-        )
-
-    except Exception:
-
-        return None
-
-
-def get_finance_quiz_attempts(
-    telegram_id: int,
-) -> List[Dict[str, Any]]:
-    """
-    دریافت تمام سوابق آزمون‌های مدیریت مالی
-    برای یک کاربر.
-
-    خروجی شامل رکوردهای ذخیره‌شده در:
-        quiz_attempts
-
-    است.
-    """
-    if db_get_quiz_attempts is None:
-        return []
-
-    try:
-
-        telegram_id = int(
-            telegram_id
-        )
-
-    except (
-        TypeError,
-        ValueError,
-    ):
-
-        return []
-
-    if telegram_id <= 0:
-        return []
-
-    try:
-
-        attempts = db_get_quiz_attempts(
-            telegram_id=telegram_id,
-            module_id=MODULE_ID,
-        )
-
-    except TypeError:
-
-        try:
-
-            attempts = db_get_quiz_attempts(
-                telegram_id,
-                MODULE_ID,
-            )
-
-        except Exception:
-
-            return []
-
-    except Exception:
-
-        return []
-
-    attempts = _normalize_list(
-        attempts
-    )
-
-    normalized: List[Dict[str, Any]] = []
-
-    for attempt in attempts:
-
-        if isinstance(
-            attempt,
-            dict,
-        ):
-
-            item = dict(
-                attempt
-            )
-
-        else:
-
-            item = {
-                "id": getattr(
-                    attempt,
-                    "id",
-                    None,
-                ),
-            }
-
-        item.setdefault(
-            "module_id",
-            MODULE_ID,
-        )
-
-        normalized.append(
-            item
-        )
-
-    return normalized
-
-
-def get_finance_quiz_attempt(
-    telegram_id: int,
-    attempt_id: int,
-) -> Optional[Dict[str, Any]]:
-    """
-    دریافت یک سابقه آزمون مشخص.
-    """
-    try:
-
-        attempt_id = int(
-            attempt_id
-        )
-
-    except (
-        TypeError,
-        ValueError,
-    ):
-
-        return None
-
-    if attempt_id <= 0:
-        return None
-
-    attempts = get_finance_quiz_attempts(
-        telegram_id
-    )
-
-    for attempt in attempts:
-
-        try:
-
-            current_id = int(
-                attempt.get(
-                    "id",
-                    0,
-                )
-            )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
-
-            continue
-
-        if current_id == attempt_id:
-
-            return dict(
-                attempt
-            )
-
-    return None
-
-
-def get_finance_attempt_statistics(
-    telegram_id: int,
-) -> Dict[str, Any]:
-    """
-    محاسبه آمار سوابق آزمون‌های مدیریت مالی.
-    """
-    attempts = get_finance_quiz_attempts(
-        telegram_id
-    )
-
-    total_attempts = len(
-        attempts
-    )
-
-    total_questions = 0
-    total_correct = 0
-    total_score = 0.0
-
-    best_score = 0.0
-
-    for attempt in attempts:
-
-        try:
-
-            questions = int(
-                attempt.get(
-                    "total_questions",
-                    0,
-                )
-            )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
-
-            questions = 0
-
-        try:
-
-            correct = int(
-                attempt.get(
-                    "correct_answers",
-                    0,
-                )
-            )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
-
-            correct = 0
-
-        try:
-
-            score = float(
-                attempt.get(
-                    "score",
-                    0,
-                )
-            )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
-
-            score = 0.0
-
-        total_questions += max(
-            0,
-            questions,
-        )
-
-        total_correct += max(
-            0,
-            correct,
-        )
-
-        total_score += score
-
-        best_score = max(
-            best_score,
-            score,
-        )
-
-    average_score = (
-        round(
-            total_score
-            / total_attempts,
-            2,
-        )
-        if total_attempts
-        else 0.0
-    )
-
-    overall_score = (
-        round(
-            (
-                total_correct
-                / total_questions
-            )
-            * 100,
-            2,
-        )
-        if total_questions
-        else 0.0
-    )
-
-    return {
-        "module_id": MODULE_ID,
-        "total_attempts": total_attempts,
-        "total_questions": total_questions,
-        "total_correct_answers": total_correct,
-        "average_score": average_score,
-        "best_score": best_score,
-        "overall_score": overall_score,
-    }
-
-
-def complete_quiz_attempt(
-    telegram_id: int,
-    module_id: str,
-    chapter_id: str,
-    lesson_id: str,
-    quiz: List[Dict[str, Any]],
-    answers: List[int],
-) -> Dict[str, Any]:
-    """
-    محاسبه نتیجه و ثبت Attempt آزمون.
-    """
-    result = calculate_quiz_result(
-        quiz,
-        answers,
-    )
-
-    attempt_id = save_quiz_attempt(
-        telegram_id=telegram_id,
-        module_id=module_id,
-        chapter_id=chapter_id,
-        lesson_id=lesson_id,
-        total_questions=result[
-            "total_questions"
-        ],
-        correct_answers=result[
-            "correct_answers"
-        ],
-        score=result[
-            "score"
-        ],
-    )
-
-    result["attempt_id"] = attempt_id
-
-    result["saved"] = (
-        attempt_id is not None
-    )
-
-    return result
-
-
-# ============================================================
-# Quiz Question
-# ============================================================
-
-def get_quiz_question(
-    quiz: List[Dict[str, Any]],
-    question_index: int,
-) -> Optional[Dict[str, Any]]:
-    """
-    دریافت یک سؤال بر اساس index.
-    """
-    try:
-
-        question_index = int(
-            question_index
-        )
-
-    except (
-        TypeError,
-        ValueError,
-    ):
-
-        return None
-
-    if question_index < 0:
-        return None
-
-    questions = _normalize_list(
-        quiz
-    )
-
-    if question_index >= len(
-        questions
-    ):
-
-        return None
-
-    question = questions[
-        question_index
-    ]
-
-    if not isinstance(
-        question,
-        dict,
-    ):
-
-        return None
-
-    return dict(
-        question
-    )
-
-
-def validate_quiz_answer(
-    question: Dict[str, Any],
-    selected_index: int,
-) -> Dict[str, Any]:
-    """
-    بررسی یک پاسخ آزمون بدون ثبت دیتابیس.
-    """
-    if not isinstance(
-        question,
-        dict,
-    ):
-
-        return {
-            "valid": False,
-            "answered": False,
-            "correct": False,
-            "selected_index": None,
-            "correct_index": None,
-        }
-
-    try:
-
-        selected_index = int(
-            selected_index
-        )
-
-    except (
-        TypeError,
-        ValueError,
-    ):
-
-        return {
-            "valid": False,
-            "answered": False,
-            "correct": False,
-            "selected_index": None,
-            "correct_index": None,
-        }
-
-    options = _normalize_list(
-        question.get(
-            "options",
-            [],
-        )
-    )
-
-    correct_index = _get_quiz_correct_index(
-        question
-    )
-
-    if (
-        correct_index is not None
-        and (
-            correct_index < 0
-            or correct_index >= len(options)
-        )
-    ):
-
-        correct_index = None
-
-    if not options:
-
-        return {
-            "valid": False,
-            "answered": False,
-            "correct": False,
-            "selected_index": selected_index,
-            "correct_index": correct_index,
-        }
-
-    if (
-        selected_index < 0
-        or selected_index >= len(options)
-    ):
-
-        return {
-            "valid": False,
-            "answered": False,
-            "correct": False,
-            "selected_index": selected_index,
-            "correct_index": correct_index,
-        }
-
-    is_correct = (
-        correct_index is not None
-        and selected_index == correct_index
-    )
-
-    return {
-        "valid": True,
-        "answered": True,
-        "correct": is_correct,
-        "selected_index": selected_index,
-        "correct_index": correct_index,
-    }
-
-
-# ============================================================
-# Statistics
-# ============================================================
-
-def get_total_lesson_count() -> int:
-    """
-    تعداد کل درس‌ها.
-    """
-    return len(
-        _get_all_finance_lessons_from_data()
-    )
-
-
-def get_total_quiz_count() -> int:
-    """
-    تعداد کل سوالات آزمون.
-    """
-    return len(
-        get_all_quiz_questions()
-    )
-
-
-def get_curriculum_stats() -> Dict[str, Any]:
-    """
-    آمار کامل دوره مدیریت مالی.
-    """
-    chapters = get_finance_chapters()
-
-    lesson_count = get_total_lesson_count()
-    quiz_count = get_total_quiz_count()
-
-    return {
-        "module_id": MODULE_ID,
-        "title": get_module_title(),
-        "chapter_count": len(
-            chapters
-        ),
-        "lesson_count": lesson_count,
-        "quiz_count": quiz_count,
-        "average_lessons_per_chapter": (
-            round(
-                lesson_count
-                / len(chapters),
-                2,
-            )
-            if chapters
-            else 0
-        ),
-    }
-
-
-def get_finance_statistics() -> Dict[str, Any]:
-    """
-    Alias آماری.
-    """
-    return get_curriculum_stats()
-
-
-def get_curriculum_statistics() -> Dict[str, Any]:
-    """
-    سازگاری با data.py.
-    """
-    return get_curriculum_stats()
-
-
-# ============================================================
-# Search
-# ============================================================
-
-def search_content(
-    query: str,
-    limit: int = 20,
-) -> List[Dict[str, Any]]:
-    """
-    جست‌وجوی محتوای مدیریت مالی.
-    """
-    query = _normalize_text(
-        query
-    ).lower()
-
-    if not query:
-        return []
-
-    try:
-
-        limit = max(
-            1,
-            int(limit),
-        )
-
-    except (
-        TypeError,
-        ValueError,
-    ):
-
-        limit = 20
-
-    results: List[Dict[str, Any]] = []
+    result: List[
+        Dict[str, Any]
+    ] = []
 
     for chapter in get_finance_chapters():
 
         chapter_id = chapter.get(
             "id",
-            "",
-        )
-
-        chapter_title = chapter.get(
-            "title",
             "",
         )
 
@@ -2337,362 +1028,558 @@ def search_content(
                 "",
             )
 
-            lesson_title = lesson.get(
-                "title",
-                "",
+            result.extend(
+                get_finance_quiz(
+                    chapter_id,
+                    lesson_id,
+                )
             )
 
-            complete = get_complete_lesson(
+    return result
+
+
+# Compatibility aliases
+
+get_quiz = get_finance_quiz
+get_finance_quiz_questions = get_finance_quiz
+
+
+# ============================================================
+# Quiz Scoring
+# ============================================================
+
+def calculate_quiz_result(
+    questions: List[Dict[str, Any]],
+    answers: List[Any],
+) -> Dict[str, Any]:
+    """
+    Calculate quiz result.
+
+    answers:
+        zero-based indexes or supported answer formats.
+    """
+
+    normalized_questions = _validate_questions(
+        questions
+    )
+
+    total = len(
+        normalized_questions
+    )
+
+    if total == 0:
+        return {
+            "score": 0,
+            "correct": 0,
+            "wrong": 0,
+            "total": 0,
+            "percentage": 0,
+        }
+
+    correct = 0
+
+    normalized_answers = _normalize_list(
+        answers
+    )
+
+    for index, question in enumerate(
+        normalized_questions
+    ):
+
+        if index >= len(
+            normalized_answers
+        ):
+            continue
+
+        selected_index = _answer_to_index(
+            normalized_answers[index],
+            question.get(
+                "options",
+                [],
+            ),
+        )
+
+        if selected_index == question.get(
+            "correct_index"
+        ):
+            correct += 1
+
+    wrong = total - correct
+
+    percentage = round(
+        (correct / total) * 100,
+        2,
+    )
+
+    return {
+        "score": correct,
+        "correct": correct,
+        "wrong": wrong,
+        "total": total,
+        "percentage": percentage,
+    }
+
+
+# ============================================================
+# Quiz Attempt Persistence
+# ============================================================
+
+def _save_attempt_to_database(
+    user_id: Any,
+    chapter_id: str,
+    lesson_id: str,
+    score: int,
+    total: int,
+    percentage: float,
+) -> Any:
+    if db_save_quiz_attempt is None:
+        return None
+
+    try:
+        return db_save_quiz_attempt(
+            user_id=user_id,
+            module_id=MODULE_ID,
+            chapter_id=chapter_id,
+            lesson_id=lesson_id,
+            score=score,
+            total=total,
+            percentage=percentage,
+        )
+    except TypeError:
+        try:
+            return db_save_quiz_attempt(
+                user_id,
+                MODULE_ID,
                 chapter_id,
                 lesson_id,
+                score,
+                total,
+                percentage,
+            )
+        except Exception:
+            logger.exception(
+                "Unable to save Finance quiz attempt."
+            )
+            return None
+
+    except Exception:
+        logger.exception(
+            "Unable to save Finance quiz attempt."
+        )
+        return None
+
+
+def complete_quiz_attempt(
+    user_id: Any,
+    chapter_id: str,
+    lesson_id: str,
+    answers: List[Any],
+    questions: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """
+    Calculate and persist a completed quiz attempt.
+    """
+
+    if questions is None:
+        questions = get_finance_quiz(
+            chapter_id,
+            lesson_id,
+        )
+
+    result = calculate_quiz_result(
+        questions,
+        answers,
+    )
+
+    _save_attempt_to_database(
+        user_id=user_id,
+        chapter_id=chapter_id,
+        lesson_id=lesson_id,
+        score=result["score"],
+        total=result["total"],
+        percentage=result["percentage"],
+    )
+
+    result.update(
+        {
+            "module_id": MODULE_ID,
+            "chapter_id": chapter_id,
+            "lesson_id": lesson_id,
+        }
+    )
+
+    return result
+
+
+def get_finance_quiz_attempts(
+    user_id: Any,
+    limit: int = 20,
+) -> List[Dict[str, Any]]:
+    """
+    Return previous Finance quiz attempts.
+    """
+
+    if db_get_quiz_attempts is None:
+        return []
+
+    try:
+        attempts = db_get_quiz_attempts(
+            user_id=user_id,
+            module_id=MODULE_ID,
+            limit=limit,
+        )
+
+    except TypeError:
+
+        try:
+            attempts = db_get_quiz_attempts(
+                user_id,
+                MODULE_ID,
+                limit,
             )
 
-            searchable_parts: List[Any] = [
-                chapter_title,
-                lesson_title,
-                complete.get(
-                    "lesson_text",
-                    "",
-                ),
-                complete.get(
-                    "detailed_content",
-                    "",
-                ),
-                complete.get(
-                    "practical_example",
-                    "",
-                ),
-            ]
+        except Exception:
+            logger.exception(
+                "Unable to read Finance quiz attempts."
+            )
+            return []
 
-            searchable_parts.extend(
-                _normalize_list(
-                    complete.get(
-                        "subtopics",
-                        [],
-                    )
-                )
+    except Exception:
+        logger.exception(
+            "Unable to read Finance quiz attempts."
+        )
+        return []
+
+    return _normalize_list(
+        attempts
+    )
+
+
+# Compatibility alias
+
+get_quiz_attempts = get_finance_quiz_attempts
+
+
+# ============================================================
+# Curriculum Statistics
+# ============================================================
+
+def get_total_lesson_count() -> int:
+    total = 0
+
+    for chapter in get_finance_chapters():
+        total += len(
+            get_finance_lessons(
+                chapter.get("id", "")
+            )
+        )
+
+    return total
+
+
+def get_curriculum_stats() -> Dict[str, int]:
+    chapters = get_finance_chapters()
+
+    lesson_count = 0
+
+    for chapter in chapters:
+        lesson_count += len(
+            get_finance_lessons(
+                chapter.get("id", "")
+            )
+        )
+
+    return {
+        "chapters": len(chapters),
+        "lessons": lesson_count,
+        "quiz_questions": len(
+            get_all_quiz_questions()
+        ),
+    }
+
+
+def get_finance_statistics() -> Dict[str, int]:
+    return get_curriculum_stats()
+
+
+def get_module_statistics() -> Dict[str, int]:
+    return get_curriculum_stats()
+
+
+# ============================================================
+# Search
+# ============================================================
+
+def _search_text(
+    value: Any,
+) -> str:
+
+    if value is None:
+        return ""
+
+    if isinstance(
+        value,
+        dict,
+    ):
+        return " ".join(
+            _search_text(item)
+            for item in value.values()
+        )
+
+    if isinstance(
+        value,
+        (list, tuple, set),
+    ):
+        return " ".join(
+            _search_text(item)
+            for item in value
+        )
+
+    return _normalize_text(
+        value
+    )
+
+
+def search_finance(
+    query: str,
+) -> List[Dict[str, Any]]:
+    term = _normalize_text(
+        query
+    ).casefold()
+
+    if not term:
+        return []
+
+    results: List[
+        Dict[str, Any]
+    ] = []
+
+    for chapter in get_finance_chapters():
+
+        chapter_id = chapter.get(
+            "id",
+            "",
+        )
+
+        chapter_title = _normalize_text(
+            chapter.get(
+                "title"
+            )
+        )
+
+        chapter_description = _normalize_text(
+            chapter.get(
+                "description"
+            )
+        )
+
+        if (
+            term in chapter_title.casefold()
+            or term in chapter_description.casefold()
+        ):
+            results.append(
+                {
+                    "type": "chapter",
+                    "chapter_id": chapter_id,
+                    "title": chapter_title,
+                    "description": chapter_description,
+                }
             )
 
-            searchable_parts.extend(
-                _normalize_list(
-                    complete.get(
-                        "specialized_points",
-                        [],
-                    )
-                )
+        for lesson in get_finance_lessons(
+            chapter_id
+        ):
+
+            searchable = _search_text(
+                lesson
             )
 
-            searchable_parts.extend(
-                _normalize_list(
-                    complete.get(
-                        "exam_points",
-                        [],
-                    )
-                )
+            if term not in searchable.casefold():
+                continue
+
+            results.append(
+                {
+                    "type": "lesson",
+                    "chapter_id": chapter_id,
+                    "lesson_id": lesson.get(
+                        "id",
+                        "",
+                    ),
+                    "title": lesson.get(
+                        "title",
+                        "",
+                    ),
+                    "content": lesson.get(
+                        "content",
+                        lesson.get(
+                            "lesson_text",
+                            "",
+                        ),
+                    ),
+                }
             )
-
-            searchable_parts.extend(
-                _normalize_list(
-                    complete.get(
-                        "keywords",
-                        [],
-                    )
-                )
-            )
-
-            searchable_text = " ".join(
-                _normalize_text(part)
-                for part in searchable_parts
-                if _normalize_text(part)
-            ).lower()
-
-            if query in searchable_text:
-
-                results.append(
-                    {
-                        "chapter_id": chapter_id,
-                        "chapter_title": chapter_title,
-                        "lesson_id": lesson_id,
-                        "lesson_title": lesson_title,
-                        "content": complete,
-                    }
-                )
-
-                if len(results) >= limit:
-
-                    return results
 
     return results
+
+
+search = search_finance
 
 
 # ============================================================
 # Validation
 # ============================================================
 
-def validate_curriculum() -> Dict[str, Any]:
-    """
-    اعتبارسنجی ساختار آموزشی مدیریت مالی.
-    """
-    chapters = get_finance_chapters()
-
+def validate_module() -> Dict[str, Any]:
     errors: List[str] = []
     warnings: List[str] = []
 
-    if not chapters:
+    try:
+        chapters = get_finance_chapters()
 
-        errors.append(
-            "هیچ فصلی برای ماژول مدیریت مالی یافت نشد."
-        )
-
-    chapter_ids = set()
-
-    for chapter in chapters:
-
-        chapter_id = _normalize_text(
-            chapter.get("id")
-        )
-
-        chapter_title = _normalize_text(
-            chapter.get("title")
-        )
-
-        if not chapter_id:
-
-            errors.append(
-                "یک فصل فاقد شناسه است."
-            )
-
-            continue
-
-        if chapter_id in chapter_ids:
-
-            errors.append(
-                f"شناسه فصل تکراری است: {chapter_id}"
-            )
-
-        chapter_ids.add(
-            chapter_id
-        )
-
-        if not chapter_title:
-
+        if not chapters:
             warnings.append(
-                f"فصل {chapter_id} فاقد عنوان است."
+                "No Finance chapters found."
             )
 
-        lessons = get_finance_lessons(
-            chapter_id
-        )
+        chapter_ids = set()
 
-        if not lessons:
+        for chapter in chapters:
 
-            warnings.append(
-                f"فصل {chapter_id} فاقد درس است."
+            chapter_id = chapter.get(
+                "id",
+                "",
             )
 
-        lesson_ids = set()
-
-        for lesson in lessons:
-
-            lesson_id = _normalize_text(
-                lesson.get("id")
-            )
-
-            lesson_title = _normalize_text(
-                lesson.get("title")
-            )
-
-            if not lesson_id:
-
+            if not chapter_id:
                 errors.append(
-                    f"فصل {chapter_id} دارای درس بدون شناسه است."
+                    "Chapter without id."
                 )
-
                 continue
 
-            if lesson_id in lesson_ids:
-
+            if chapter_id in chapter_ids:
                 errors.append(
-                    f"درس تکراری در فصل {chapter_id}: "
-                    f"{lesson_id}"
+                    f"Duplicate chapter id: {chapter_id}"
                 )
 
-            lesson_ids.add(
-                lesson_id
+            chapter_ids.add(
+                chapter_id
             )
 
-            if not lesson_title:
-
-                warnings.append(
-                    f"درس {lesson_id} فاقد عنوان است."
-                )
-
-            lesson_content = get_lesson_content(
-                lesson_id
+            lessons = get_finance_lessons(
+                chapter_id
             )
 
-            if not lesson_content:
-
+            if not lessons:
                 warnings.append(
-                    f"برای درس {lesson_id} "
-                    f"محتوای آموزشی یافت نشد."
+                    f"No lessons in chapter: {chapter_id}"
                 )
 
-            quiz = get_finance_quiz(
-                chapter_id,
-                lesson_id,
-            )
+            lesson_ids = set()
 
-            if not quiz:
+            for lesson in lessons:
 
-                warnings.append(
-                    f"برای درس {lesson_id} "
-                    f"آزمون یافت نشد."
+                lesson_id = lesson.get(
+                    "id",
+                    "",
                 )
 
-            for question in quiz:
-
-                options = _normalize_list(
-                    question.get(
-                        "options",
-                        [],
+                if not lesson_id:
+                    errors.append(
+                        f"Lesson without id: {chapter_id}"
                     )
-                )
-
-                correct_index = _get_quiz_correct_index(
-                    question
-                )
-
-                if len(options) != 4:
-
-                    warnings.append(
-                        f"سؤال آزمون درس {lesson_id} "
-                        f"دقیقاً ۴ گزینه ندارد."
-                    )
-
-                if correct_index is None:
-
-                    warnings.append(
-                        f"سؤال آزمون درس {lesson_id} "
-                        f"دارای correct_index نامعتبر است."
-                    )
-
                     continue
 
-                if (
-                    correct_index < 0
-                    or correct_index >= len(options)
-                ):
-
-                    warnings.append(
-                        f"سؤال آزمون درس {lesson_id} "
-                        f"دارای پاسخ صحیح خارج از محدوده گزینه‌هاست."
+                if lesson_id in lesson_ids:
+                    errors.append(
+                        f"Duplicate lesson id: "
+                        f"{chapter_id}/{lesson_id}"
                     )
 
-    if len(chapters) != 12:
+                lesson_ids.add(
+                    lesson_id
+                )
 
-        warnings.append(
-            f"تعداد فصل‌ها ۱۲ نیست: {len(chapters)}"
+                quiz = get_finance_quiz(
+                    chapter_id,
+                    lesson_id,
+                )
+
+                if not quiz:
+                    warnings.append(
+                        f"No quiz: "
+                        f"{chapter_id}/{lesson_id}"
+                    )
+
+        return {
+            "valid": not errors,
+            "module": MODULE_ID,
+            "errors": errors,
+            "warnings": warnings,
+            "statistics": get_curriculum_stats(),
+        }
+
+    except Exception as exc:
+
+        logger.exception(
+            "Finance validation failed."
         )
 
-    total_lessons = get_total_lesson_count()
-
-    if total_lessons != 48:
-
-        warnings.append(
-            f"تعداد درس‌ها ۴۸ نیست: {total_lessons}"
-        )
-
-    return {
-        "valid": len(errors) == 0,
-        "errors": errors,
-        "warnings": warnings,
-        "chapter_count": len(chapters),
-        "lesson_count": total_lessons,
-        "quiz_count": get_total_quiz_count(),
-    }
+        return {
+            "valid": False,
+            "module": MODULE_ID,
+            "errors": [
+                str(exc)
+            ],
+            "warnings": warnings,
+            "statistics": {
+                "chapters": 0,
+                "lessons": 0,
+                "quiz_questions": 0,
+            },
+        }
 
 
 # ============================================================
 # Health Check
 # ============================================================
 
-def finance_health_check() -> Dict[str, Any]:
-    """
-    بررسی سلامت ماژول مدیریت مالی.
-    """
+def finance_health_check() -> bool:
     try:
 
-        validation = validate_curriculum()
+        required = (
+            get_module_id,
+            get_module_title,
+            get_module_description,
+            get_module_info,
+            get_finance_chapters,
+            get_finance_chapter,
+            get_finance_lessons,
+            get_finance_lesson,
+            get_complete_lesson,
+            get_finance_quiz,
+            get_quiz_question,
+            calculate_quiz_result,
+            complete_quiz_attempt,
+            get_finance_quiz_attempts,
+            get_curriculum_stats,
+            search_finance,
+            validate_module,
+        )
 
-        return {
-            "module_id": MODULE_ID,
-            "status": (
-                "healthy"
-                if validation["valid"]
-                else "warning"
-            ),
-            "valid": validation["valid"],
-            "chapters": validation[
-                "chapter_count"
-            ],
-            "lessons": validation[
-                "lesson_count"
-            ],
-            "quizzes": validation[
-                "quiz_count"
-            ],
-            "errors": validation[
-                "errors"
-            ],
-            "warnings": validation[
-                "warnings"
-            ],
-            "quiz_answer_service": (
-                db_save_quiz_attempt
-                is not None
-            ),
-            "quiz_history_service": (
-                db_get_quiz_attempts
-                is not None
-            ),
-        }
+        return all(
+            callable(function)
+            for function in required
+        )
 
-    except Exception as exc:
-
-        return {
-            "module_id": MODULE_ID,
-            "status": "error",
-            "valid": False,
-            "chapters": 0,
-            "lessons": 0,
-            "quizzes": 0,
-            "errors": [
-                f"Finance service error: {exc}"
-            ],
-            "warnings": [],
-            "quiz_answer_service": False,
-            "quiz_history_service": False,
-        }
+    except Exception:
+        logger.exception(
+            "Finance health check failed."
+        )
+        return False
 
 
-# ============================================================
-# Compatibility Aliases
-# ============================================================
-
-get_chapters = get_finance_chapters
-get_chapter = get_finance_chapter
-get_lessons = get_finance_lessons
-get_lesson = get_finance_lesson
-get_quiz = get_finance_quiz
-get_all_questions = get_all_quiz_questions
-get_chapter_quiz = get_finance_chapter_quiz
-get_statistics = get_curriculum_stats
-health_check = finance_health_check
-
-get_quiz_attempts = get_finance_quiz_attempts
-get_quiz_attempt = get_finance_quiz_attempt
-get_attempt_statistics = get_finance_attempt_statistics
+service_health_check = finance_health_check
+module_health_check = finance_health_check
 
 
 # ============================================================
@@ -2700,75 +1587,43 @@ get_attempt_statistics = get_finance_attempt_statistics
 # ============================================================
 
 __all__ = [
-    # Module
+    "MODULE_ID",
+
+    "get_module_id",
     "get_module_title",
     "get_module_description",
     "get_module_info",
 
-    # Chapters
     "get_finance_chapters",
     "get_finance_chapter",
 
-    # Lessons
     "get_finance_lessons",
     "get_finance_lesson",
-
-    # Content
     "get_complete_lesson",
-    "get_lesson_content",
-    "get_specialized_tips",
-    "get_exam_tips",
-    "get_examples",
-    "get_keywords",
 
-    # Quiz
     "get_finance_quiz",
-    "get_finance_chapter_quiz",
+    "get_finance_quiz_questions",
+    "get_quiz",
     "get_all_quiz_questions",
     "get_quiz_question",
 
-    # Quiz result
-    "calculate_quiz_score",
     "calculate_quiz_result",
-    "validate_quiz_answer",
-
-    # Quiz attempt
-    "start_quiz_attempt",
-    "save_quiz_attempt",
-    "get_finance_quiz_attempts",
-    "get_finance_quiz_attempt",
-    "get_finance_attempt_statistics",
     "complete_quiz_attempt",
 
-    # Statistics
+    "get_finance_quiz_attempts",
+    "get_quiz_attempts",
+
     "get_total_lesson_count",
-    "get_total_quiz_count",
     "get_curriculum_stats",
     "get_finance_statistics",
-    "get_curriculum_statistics",
+    "get_module_statistics",
 
-    # Search
-    "search_content",
+    "search_finance",
+    "search",
 
-    # Validation
-    "validate_curriculum",
+    "validate_module",
 
-    # Health
     "finance_health_check",
-
-    # Compatibility
-    "get_chapters",
-    "get_chapter",
-    "get_lessons",
-    "get_lesson",
-    "get_quiz",
-    "get_all_questions",
-    "get_chapter_quiz",
-    "get_statistics",
-    "health_check",
-
-    # History compatibility
-    "get_quiz_attempts",
-    "get_quiz_attempt",
-    "get_attempt_statistics",
+    "service_health_check",
+    "module_health_check",
 ]
