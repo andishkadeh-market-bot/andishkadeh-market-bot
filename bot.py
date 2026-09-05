@@ -22,6 +22,9 @@ Modules:
 - Finance
 - Random Quiz
 - Profile
+
+Deep Link Quiz:
+- /start quiz_<module_id>_<chapter_id>_<lesson_id>
 """
 
 from __future__ import annotations
@@ -136,6 +139,7 @@ from modules.exam.service import (
 from modules.international_trade.handlers import (
     route_international_trade_callback,
     international_trade_handlers_health_check,
+    start_international_trade_quiz_from_start,
 )
 
 from modules.international_trade.service import (
@@ -297,9 +301,110 @@ INTERNATIONAL_TRADE_MODULE_ID = "international_trade"
 INTERNATIONAL_TRADE_MODULE_TITLE = "تجارت بین‌الملل"
 
 # ==========================================================
-# Website API Helpers
+# Deep Link Configuration
 # ==========================================================
 
+TELEGRAM_BOT_USERNAME = "andishkadehmarketbot"
+
+QUIZ_START_PREFIX = "quiz_"
+
+
+# ==========================================================
+# Deep Link Parser
+# ==========================================================
+
+def parse_quiz_deep_link(
+    payload: str,
+) -> tuple[str, str, str] | None:
+    """
+    Parse quiz deep-link payload.
+
+    Expected format:
+
+        quiz_<module_id>_<chapter_id>_<lesson_id>
+
+    Example:
+
+        quiz_international_trade_chapter_01_lesson_01_01
+
+    Returns:
+        (module_id, chapter_id, lesson_id)
+
+    or None when the payload is invalid.
+    """
+
+    if not payload:
+        return None
+
+    payload = payload.strip()
+
+    if not payload.startswith(
+        QUIZ_START_PREFIX
+    ):
+        return None
+
+    parts = payload.split("_")
+
+    if len(parts) < 5:
+        return None
+
+    # ------------------------------------------------------
+    # International Trade
+    #
+    # quiz_international_trade_chapter_01_lesson_01_01
+    #
+    # split:
+    # 0 quiz
+    # 1 international
+    # 2 trade
+    # 3 chapter
+    # 4 01
+    # 5 lesson
+    # 6 01
+    # 7 01
+    # ------------------------------------------------------
+
+    if (
+        len(parts) >= 8
+        and parts[1] == "international"
+        and parts[2] == "trade"
+        and parts[3] == "chapter"
+        and parts[5] == "lesson"
+    ):
+
+        module_id = (
+            "international_trade"
+        )
+
+        chapter_id = (
+            f"chapter_{parts[4]}"
+        )
+
+        lesson_id = (
+            f"lesson_{parts[6]}_{parts[7]}"
+        )
+
+        return (
+            module_id,
+            chapter_id,
+            lesson_id,
+        )
+
+    # ------------------------------------------------------
+    # Generic module format
+    #
+    # quiz_<module>_<chapter>_<lesson>
+    #
+    # This branch is intentionally conservative.
+    # International Trade uses the explicit parser above.
+    # ------------------------------------------------------
+
+    return None
+
+
+# ==========================================================
+# Website API Helpers
+# ==========================================================
 
 def _safe_text(value: Any) -> str:
     """
@@ -323,7 +428,9 @@ def _safe_dict(value: Any) -> dict[str, Any]:
     return {}
 
 
-def _get_module_description(module: Any) -> str:
+def _get_module_description(
+    module: Any,
+) -> str:
     """
     Read module description safely from Registry.
     """
@@ -335,12 +442,16 @@ def _get_module_description(module: Any) -> str:
     )
 
     if description:
-        return _safe_text(description)
+        return _safe_text(
+            description
+        )
 
     return ""
 
 
-def _lesson_payload(lesson: Any) -> dict[str, Any]:
+def _lesson_payload(
+    lesson: Any,
+) -> dict[str, Any]:
     """
     Convert a Registry LessonRecord to API-safe data.
     """
@@ -394,7 +505,9 @@ def _lesson_payload(lesson: Any) -> dict[str, Any]:
     }
 
 
-def _chapter_payload(chapter: Any) -> dict[str, Any]:
+def _chapter_payload(
+    chapter: Any,
+) -> dict[str, Any]:
     """
     Convert a Registry ChapterRecord to API-safe data.
     """
@@ -452,7 +565,9 @@ def _chapter_payload(chapter: Any) -> dict[str, Any]:
     }
 
 
-def _module_payload(module: Any) -> dict[str, Any]:
+def _module_payload(
+    module: Any,
+) -> dict[str, Any]:
     """
     Convert a Registry ModuleRecord to API-safe data.
     """
@@ -483,6 +598,7 @@ def _module_payload(module: Any) -> dict[str, Any]:
             chapter_lessons,
             dict,
         ):
+
             lesson_count += len(
                 chapter_lessons
             )
@@ -879,8 +995,10 @@ async def api_search(
             )
         )
 
-        module_description = _get_module_description(
-            module
+        module_description = (
+            _get_module_description(
+                module
+            )
         )
 
         module_search_text = (
@@ -1067,15 +1185,8 @@ def register_web_api(
     app: web.Application,
 ) -> None:
     """
-    Register Website API routes on the existing
-    aiohttp application.
-
-    The API uses the same Registry as the Telegram bot.
+    Register Website API routes.
     """
-
-    # ------------------------------------------------------
-    # API information
-    # ------------------------------------------------------
 
     app.router.add_get(
         "/api",
@@ -1086,10 +1197,6 @@ def register_web_api(
         "/api",
         api_options,
     )
-
-    # ------------------------------------------------------
-    # Modules
-    # ------------------------------------------------------
 
     app.router.add_get(
         "/api/modules",
@@ -1111,10 +1218,6 @@ def register_web_api(
         api_options,
     )
 
-    # ------------------------------------------------------
-    # Chapters
-    # ------------------------------------------------------
-
     app.router.add_get(
         "/api/modules/{module_id}/chapters",
         api_chapters,
@@ -1135,10 +1238,6 @@ def register_web_api(
         api_options,
     )
 
-    # ------------------------------------------------------
-    # Lessons
-    # ------------------------------------------------------
-
     app.router.add_get(
         "/api/modules/{module_id}/chapters/{chapter_id}/lessons",
         api_lessons,
@@ -1158,10 +1257,6 @@ def register_web_api(
         "/api/modules/{module_id}/chapters/{chapter_id}/lessons/{lesson_id}",
         api_options,
     )
-
-    # ------------------------------------------------------
-    # Search
-    # ------------------------------------------------------
 
     app.router.add_get(
         "/api/search",
@@ -1186,7 +1281,7 @@ async def website_index_handler(
     request: web.Request,
 ) -> web.StreamResponse:
     """
-    Serve the main website index page.
+    Serve main website index page.
     """
 
     website_dir = os.path.join(
@@ -1201,7 +1296,9 @@ async def website_index_handler(
         "index.html",
     )
 
-    if not os.path.isfile(index_file):
+    if not os.path.isfile(
+        index_file
+    ):
 
         logger.error(
             "Website index.html not found: %s",
@@ -1224,10 +1321,6 @@ async def website_html_handler(
 ) -> web.StreamResponse:
     """
     Serve individual website HTML pages.
-
-    The filename is extracted directly from the request path.
-    This avoids using unsupported kwargs= arguments in aiohttp
-    route registration.
     """
 
     website_dir = os.path.join(
@@ -1237,17 +1330,9 @@ async def website_html_handler(
         "website",
     )
 
-    # ------------------------------------------------------
-    # Get filename directly from URL path
-    # ------------------------------------------------------
-
     filename = os.path.basename(
         request.path
     )
-
-    # ------------------------------------------------------
-    # Security / allowed files
-    # ------------------------------------------------------
 
     allowed_files = {
         "index.html",
@@ -1265,16 +1350,14 @@ async def website_html_handler(
             content_type="text/plain",
         )
 
-    # ------------------------------------------------------
-    # Build safe file path
-    # ------------------------------------------------------
-
     file_path = os.path.join(
         website_dir,
         filename,
     )
 
-    if not os.path.isfile(file_path):
+    if not os.path.isfile(
+        file_path
+    ):
 
         logger.error(
             "Website file not found: %s",
@@ -1318,7 +1401,7 @@ async def root_handler(
     request: web.Request,
 ) -> web.StreamResponse:
     """
-    Serve the website homepage.
+    Serve website homepage.
     """
 
     return await website_index_handler(
@@ -1357,32 +1440,15 @@ async def start_health_server() -> web.AppRunner:
 
     app = web.Application()
 
-    # ------------------------------------------------------
-    # Website root
-    # ------------------------------------------------------
-
     app.router.add_get(
         "/",
         root_handler,
     )
 
-    # ------------------------------------------------------
-    # Health endpoint
-    # ------------------------------------------------------
-
     app.router.add_get(
         "/health",
         health_handler,
     )
-
-    # ------------------------------------------------------
-    # Website HTML pages
-    #
-    # IMPORTANT:
-    # Do NOT use kwargs= here.
-    # aiohttp does not support kwargs in add_get().
-    # The handler reads the filename from request.path.
-    # ------------------------------------------------------
 
     app.router.add_get(
         "/index.html",
@@ -1409,10 +1475,6 @@ async def start_health_server() -> web.AppRunner:
         website_html_handler,
     )
 
-    # ------------------------------------------------------
-    # Website directory
-    # ------------------------------------------------------
-
     website_dir = os.path.join(
         os.path.dirname(
             os.path.abspath(__file__)
@@ -1420,16 +1482,14 @@ async def start_health_server() -> web.AppRunner:
         "website",
     )
 
-    # ------------------------------------------------------
-    # Website CSS
-    # ------------------------------------------------------
-
     css_dir = os.path.join(
         website_dir,
         "css",
     )
 
-    if os.path.isdir(css_dir):
+    if os.path.isdir(
+        css_dir
+    ):
 
         app.router.add_static(
             "/css",
@@ -1448,16 +1508,14 @@ async def start_health_server() -> web.AppRunner:
             css_dir,
         )
 
-    # ------------------------------------------------------
-    # Website JavaScript
-    # ------------------------------------------------------
-
     js_dir = os.path.join(
         website_dir,
         "js",
     )
 
-    if os.path.isdir(js_dir):
+    if os.path.isdir(
+        js_dir
+    ):
 
         app.router.add_static(
             "/js",
@@ -1476,17 +1534,9 @@ async def start_health_server() -> web.AppRunner:
             js_dir,
         )
 
-    # ------------------------------------------------------
-    # Website API
-    # ------------------------------------------------------
-
     register_web_api(
         app
     )
-
-    # ------------------------------------------------------
-    # Start server
-    # ------------------------------------------------------
 
     runner = web.AppRunner(
         app,
@@ -1513,31 +1563,11 @@ async def start_health_server() -> web.AppRunner:
     )
 
     logger.info(
-        "Website index page available at /index.html"
-    )
-
-    logger.info(
-        "Website modules page available at /modules.html"
-    )
-
-    logger.info(
-        "Website chapter page available at /chapter.html"
-    )
-
-    logger.info(
-        "Website lesson page available at /lesson.html"
-    )
-
-    logger.info(
-        "Website search page available at /search.html"
+        "Website API available at /api"
     )
 
     logger.info(
         "Health endpoint available at /health"
-    )
-
-    logger.info(
-        "Website API available at /api"
     )
 
     return runner
@@ -1551,9 +1581,7 @@ def register_management_content() -> dict[str, int]:
     """
     Register complete Management module.
 
-    Kept for compatibility with the existing bot architecture.
-    Primary content initialization is now handled by
-    core.content_initializer.
+    Kept for compatibility with existing architecture.
     """
 
     logger.info(
@@ -1701,10 +1729,6 @@ def register_general_exam_content() -> dict[str, int]:
 def register_international_trade_content() -> dict[str, int]:
     """
     Register complete International Trade module.
-
-    Kept for compatibility with the existing bot architecture.
-    Primary content initialization is now handled by
-    core.content_initializer.
     """
 
     logger.info(
@@ -1889,10 +1913,6 @@ def register_international_trade_content() -> dict[str, int]:
 def register_psychology_content() -> dict[str, int]:
     """
     Register complete Psychology & Social Work module.
-
-    Kept for compatibility with the existing bot architecture.
-    Primary content initialization is now handled by
-    core.content_initializer.
     """
 
     logger.info(
@@ -1950,10 +1970,6 @@ def register_psychology_content() -> dict[str, int]:
 def register_banking_content() -> dict[str, int]:
     """
     Register complete Banking module.
-
-    Kept for compatibility with the existing bot architecture.
-    Primary content initialization is now handled by
-    core.content_initializer.
     """
 
     logger.info(
@@ -2102,10 +2118,6 @@ def register_banking_content() -> dict[str, int]:
 def register_finance_content() -> dict[str, int]:
     """
     Register complete Finance module.
-
-    Kept for compatibility with the existing bot architecture.
-    Primary content initialization is handled by
-    core.content_initializer.
     """
 
     logger.info(
@@ -2289,13 +2301,6 @@ def register_finance_content() -> dict[str, int]:
 def register_all_content() -> dict[str, int]:
     """
     Initialize all educational content.
-
-    The new architecture uses core.content_initializer
-    as the primary source of truth for module content.
-
-    General Exam remains registered separately because it is
-    not part of the current CONTENT_PACKAGES handled by the
-    content initializer.
     """
 
     logger.info(
@@ -2604,6 +2609,27 @@ def run_international_trade_health_checks() -> bool:
             )
 
             return False
+
+        # --------------------------------------------------
+        # Deep Link handler availability
+        # --------------------------------------------------
+
+        if not callable(
+            start_international_trade_quiz_from_start
+        ):
+
+            logger.error(
+                (
+                    "International Trade Deep Link "
+                    "quiz handler is not available."
+                )
+            )
+
+            return False
+
+        logger.info(
+            "International Trade Deep Link handler: OK"
+        )
 
         logger.info(
             "International Trade health checks: OK"
@@ -3041,8 +3067,7 @@ def run_profile_health_check() -> bool:
 
 def run_content_initializer_health_check() -> bool:
     """
-    Verify that the content initializer is available and
-    the registry contains educational content.
+    Verify content initializer and registry.
     """
 
     logger.info(
@@ -3297,6 +3322,116 @@ async def register_telegram_user(
 
 
 # ==========================================================
+# /start Deep Link Handler
+# ==========================================================
+
+async def handle_start_payload(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> bool:
+    """
+    Process /start payloads.
+
+    Returns:
+        True  -> payload was recognized and handled
+        False -> no supported payload was found
+    """
+
+    if update.message is None:
+        return False
+
+    args = context.args or []
+
+    if not args:
+        return False
+
+    payload = args[0].strip()
+
+    if not payload:
+        return False
+
+    parsed = parse_quiz_deep_link(
+        payload
+    )
+
+    if parsed is None:
+
+        logger.info(
+            "Unsupported /start payload received: %s",
+            payload,
+        )
+
+        return False
+
+    module_id, chapter_id, lesson_id = parsed
+
+    logger.info(
+        (
+            "Quiz Deep Link received: "
+            "module=%s chapter=%s lesson=%s"
+        ),
+        module_id,
+        chapter_id,
+        lesson_id,
+    )
+
+    # ------------------------------------------------------
+    # Currently supported Deep Link module
+    # ------------------------------------------------------
+
+    if module_id != INTERNATIONAL_TRADE_MODULE_ID:
+
+        logger.warning(
+            (
+                "Unsupported quiz Deep Link module: %s"
+            ),
+            module_id,
+        )
+
+        return False
+
+    try:
+
+        await start_international_trade_quiz_from_start(
+            update,
+            context,
+            chapter_id,
+            lesson_id,
+        )
+
+        logger.info(
+            (
+                "International Trade quiz started "
+                "successfully from Deep Link: "
+                "%s / %s"
+            ),
+            chapter_id,
+            lesson_id,
+        )
+
+        return True
+
+    except Exception:
+
+        logger.exception(
+            (
+                "Failed to start International Trade "
+                "quiz from Deep Link: "
+                "chapter=%s lesson=%s"
+            ),
+            chapter_id,
+            lesson_id,
+        )
+
+        await update.message.reply_text(
+            "❌ در باز کردن آزمون این درس مشکلی پیش آمد.\n\n"
+            "لطفاً دوباره از صفحه درس وارد آزمون شوید."
+        )
+
+        return True
+
+
+# ==========================================================
 # /start
 # ==========================================================
 
@@ -3305,11 +3440,23 @@ async def start(
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Handle /start with mandatory channel membership check.
+    Handle /start.
+
+    Flow:
+
+    1. Check mandatory membership.
+    2. Register Telegram user.
+    3. If a supported Deep Link payload exists,
+       open the requested quiz.
+    4. Otherwise show main menu.
     """
 
     if update.message is None:
         return
+
+    # ------------------------------------------------------
+    # Mandatory Membership Check
+    # ------------------------------------------------------
 
     if not await is_member(
         update,
@@ -3323,6 +3470,10 @@ async def start(
 
         return
 
+    # ------------------------------------------------------
+    # Auto User Registry
+    # ------------------------------------------------------
+
     registered = await register_telegram_user(
         update
     )
@@ -3335,6 +3486,23 @@ async def start(
         )
 
         return
+
+    # ------------------------------------------------------
+    # Deep Link
+    # ------------------------------------------------------
+
+    payload_handled = await handle_start_payload(
+        update,
+        context,
+    )
+
+    if payload_handled:
+
+        return
+
+    # ------------------------------------------------------
+    # Normal /start
+    # ------------------------------------------------------
 
     await show_main_menu(
         update,
@@ -3351,7 +3519,7 @@ async def menu_command(
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Handle /menu with mandatory channel membership check.
+    Handle /menu with mandatory membership check.
     """
 
     if update.message is None:
@@ -3433,8 +3601,7 @@ async def guarded_menu_callback(
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Check mandatory channel membership before allowing
-    access to the main menu callback router.
+    Check mandatory channel membership.
     """
 
     if not await is_member(
@@ -3464,8 +3631,7 @@ async def guarded_profile_callback(
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     """
-    Check mandatory channel membership before allowing
-    access to the user profile/dashboard.
+    Check mandatory channel membership.
     """
 
     if not await is_member(
@@ -3512,17 +3678,6 @@ async def error_handler(
 def build_application() -> Application:
     """
     Create and configure Telegram application.
-
-    Handler groups:
-
-    Group -1:
-        Auto User Registry.
-
-    Group 0:
-        Commands and module-specific callback routers.
-
-    Group 1:
-        Generic central menu router.
     """
 
     if not BOT_TOKEN:
@@ -3848,6 +4003,13 @@ def build_application() -> Application:
         "Telegram application configured successfully."
     )
 
+    logger.info(
+        (
+            "International Trade Deep Link enabled: "
+            "quiz_<module_id>_<chapter_id>_<lesson_id>"
+        )
+    )
+
     return application
 
 
@@ -3964,6 +4126,15 @@ async def run_bot() -> None:
 
         logger.info(
             "Andishkadeh Management & Market is running."
+        )
+
+        logger.info(
+            (
+                "International Trade Deep Link example: "
+                "https://t.me/%s?start="
+                "quiz_international_trade_chapter_01_lesson_01_01"
+            ),
+            TELEGRAM_BOT_USERNAME,
         )
 
         await asyncio.Event().wait()
