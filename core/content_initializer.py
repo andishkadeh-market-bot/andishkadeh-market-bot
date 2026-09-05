@@ -1,20 +1,26 @@
 """
 Andishkadeh Management & Market
-Content Initializer
+Universal Content Initializer
 
-مسئول:
-- کشف محتوای ماژول‌ها
+مسئولیت‌ها:
+- کشف خودکار ماژول‌ها
 - ثبت Module / Chapter / Lesson در Registry
-- انتقال محتوای کامل درس‌ها به Registry
-- انتقال آزمون درس‌ها به Registry
-- همگام‌سازی محتوا با SQLite
-- پشتیبانی از ساختارهای قدیمی و جدید ماژول‌ها
-- پشتیبانی از ساختار Banking با lessons تو در تو
+- انتقال محتوای کامل درس‌ها
+- انتقال Quiz هر درس
+- پشتیبانی از ساختارهای قدیمی و جدید
+- پشتیبانی از CHAPTER_01 / CHAPTERS / LESSONS
+- پشتیبانی از lessons تو در تو
+- پشتیبانی از Management
+- پشتیبانی از Banking
+- پشتیبانی از International Trade
+- پشتیبانی از Psychology & Social Work
+- پشتیبانی از Finance
+- پشتیبانی از Accounting
+- پشتیبانی از Marketing
 - Health Check
 - Statistics
 
-نکته:
-این فایل فقط مسئول Initialization و Registration محتواست.
+این فایل فقط مسئول Initialization است.
 منطق Telegram و UI در handlers.py قرار دارد.
 """
 
@@ -24,18 +30,12 @@ from dataclasses import dataclass, field
 from importlib import import_module
 from typing import Any
 
-from core.database import (
-    init_database,
-    upsert_module,
-    upsert_chapter,
-    upsert_lesson,
-)
-
+from core.database import init_database
 from core.registry import registry
 
 
 # ==========================================================
-# Module Configuration
+# Content Packages
 # ==========================================================
 
 CONTENT_PACKAGES: dict[str, str] = {
@@ -44,6 +44,8 @@ CONTENT_PACKAGES: dict[str, str] = {
     "international_trade": "modules.international_trade.data",
     "psychology_socialwork": "modules.psychology.data",
     "finance": "modules.finance.data",
+    "accounting": "modules.accounting.data",
+    "marketing": "modules.marketing.data",
 }
 
 
@@ -53,6 +55,8 @@ CONTENT_MODULE_IDS: tuple[str, ...] = (
     "international_trade",
     "psychology_socialwork",
     "finance",
+    "accounting",
+    "marketing",
 )
 
 
@@ -98,13 +102,11 @@ class DiscoveredModule:
 # ==========================================================
 
 def _safe_str(value: Any) -> str:
-
     if value is None:
         return ""
 
     try:
         return str(value).strip()
-
     except Exception:
         return ""
 
@@ -116,7 +118,6 @@ def _first_non_empty(
 ) -> str:
 
     for key in keys:
-
         value = data.get(key)
 
         if value is None:
@@ -130,11 +131,18 @@ def _first_non_empty(
     return default
 
 
-def _normalize_id(
-    value: Any,
-) -> str:
+def _safe_list(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return value
 
-    return _safe_str(value)
+    return []
+
+
+def _safe_dict(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+
+    return {}
 
 
 def _get_module_id(
@@ -185,31 +193,12 @@ def _get_module_description(
 
 
 # ==========================================================
-# Quiz Helpers
+# Quiz Normalization
 # ==========================================================
 
 def _normalize_quiz_questions(
     questions: Any,
 ) -> list[dict[str, Any]]:
-    """
-    Normalize quiz questions into a format that the
-    website JavaScript can consume.
-
-    Supported source formats:
-
-    1. answer = numeric index
-    2. correct_answer = option text
-    3. correct_answer = numeric index
-    4. correct_answer = A / B / C / D
-
-    Output always keeps:
-        question
-        options
-        answer
-        explanation
-
-    The original fields are preserved when possible.
-    """
 
     if not isinstance(
         questions,
@@ -217,9 +206,7 @@ def _normalize_quiz_questions(
     ):
         return []
 
-    normalized: list[
-        dict[str, Any]
-    ] = []
+    normalized: list[dict[str, Any]] = []
 
     for question in questions:
 
@@ -229,9 +216,7 @@ def _normalize_quiz_questions(
         ):
             continue
 
-        item = dict(
-            question
-        )
+        item = dict(question)
 
         options = item.get(
             "options",
@@ -251,7 +236,26 @@ def _normalize_quiz_questions(
         )
 
         if answer is None:
+            answer = item.get(
+                "correct_index"
+            )
 
+        if answer is None:
+            answer = item.get(
+                "answer_index"
+            )
+
+        if answer is None:
+            answer = item.get(
+                "correct_answer_index"
+            )
+
+        if answer is None:
+            answer = item.get(
+                "correct_option"
+            )
+
+        if answer is None:
             answer = item.get(
                 "correct_answer"
             )
@@ -268,9 +272,20 @@ def _normalize_quiz_questions(
         ):
 
             if (
-                0 <= answer < len(options)
+                0
+                <= answer
+                < len(options)
             ):
                 normalized_answer = answer
+
+            elif (
+                1
+                <= answer
+                <= len(options)
+            ):
+                normalized_answer = (
+                    answer - 1
+                )
 
         # --------------------------------------------------
         # String answer
@@ -278,11 +293,14 @@ def _normalize_quiz_questions(
 
         elif answer is not None:
 
-            answer_text = str(
+            answer_text = _safe_str(
                 answer
-            ).strip()
+            )
 
-            # A / B / C / D
+            upper_answer = (
+                answer_text.upper()
+            )
+
             letter_map = {
                 "A": 0,
                 "B": 1,
@@ -290,27 +308,36 @@ def _normalize_quiz_questions(
                 "D": 3,
             }
 
-            upper_answer = (
-                answer_text.upper()
-            )
+            persian_map = {
+                "الف": 0,
+                "ب": 1,
+                "ج": 2,
+                "د": 3,
+            }
 
             if (
                 upper_answer
                 in letter_map
             ):
 
-                index = (
-                    letter_map[
-                        upper_answer
-                    ]
-                )
+                index = letter_map[
+                    upper_answer
+                ]
 
-                if (
-                    index < len(options)
-                ):
-                    normalized_answer = (
-                        index
-                    )
+                if index < len(options):
+                    normalized_answer = index
+
+            elif (
+                answer_text
+                in persian_map
+            ):
+
+                index = persian_map[
+                    answer_text
+                ]
+
+                if index < len(options):
+                    normalized_answer = index
 
             # Numeric string
             if (
@@ -320,27 +347,33 @@ def _normalize_quiz_questions(
 
                 try:
 
-                    numeric_answer = int(
+                    numeric = int(
                         answer_text
                     )
 
                     if (
                         0
-                        <= numeric_answer
+                        <= numeric
                         < len(options)
                     ):
+                        normalized_answer = numeric
+
+                    elif (
+                        1
+                        <= numeric
+                        <= len(options)
+                    ):
                         normalized_answer = (
-                            numeric_answer
+                            numeric - 1
                         )
 
                 except (
                     TypeError,
                     ValueError,
                 ):
-
                     pass
 
-            # Answer as option text
+            # Full option text
             if (
                 normalized_answer
                 is None
@@ -351,51 +384,28 @@ def _normalize_quiz_questions(
                 ):
 
                     if (
-                        str(option).strip()
+                        _safe_str(option)
                         == answer_text
                     ):
 
-                        normalized_answer = (
-                            index
-                        )
-
+                        normalized_answer = index
                         break
-
-        # --------------------------------------------------
-        # Preserve question only if valid
-        # --------------------------------------------------
 
         if (
             normalized_answer
             is not None
         ):
+            item["answer"] = normalized_answer
 
-            item["answer"] = (
-                normalized_answer
-            )
+        if "explanation" not in item:
 
-        # --------------------------------------------------
-        # Explanation compatibility
-        # --------------------------------------------------
-
-        if (
-            "explanation"
-            not in item
-        ):
-
-            if (
-                "explain"
-                in item
-            ):
-
-                item["explanation"] = (
-                    item.get("explain")
-                    or ""
+            item["explanation"] = (
+                item.get(
+                    "explain",
+                    "",
                 )
-
-            else:
-
-                item["explanation"] = ""
+                or ""
+            )
 
         normalized.append(
             item
@@ -404,22 +414,15 @@ def _normalize_quiz_questions(
     return normalized
 
 
+# ==========================================================
+# Management Quiz
+# ==========================================================
+
 def _get_management_quiz(
     data_module: Any,
     chapter_id: str,
     lesson_id: str,
 ) -> list[dict[str, Any]]:
-    """
-    Retrieve Management quiz questions.
-
-    Current Management data.py stores questions in:
-
-        MANAGEMENT_QUIZ_QUESTIONS
-
-    with the key:
-
-        (chapter_id, lesson_id)
-    """
 
     quiz_map = getattr(
         data_module,
@@ -427,23 +430,24 @@ def _get_management_quiz(
         None,
     )
 
-    if not isinstance(
+    if isinstance(
         quiz_map,
         dict,
     ):
-        return []
 
-    questions = quiz_map.get(
-        (
-            chapter_id,
-            lesson_id,
-        ),
-        [],
-    )
+        questions = quiz_map.get(
+            (
+                chapter_id,
+                lesson_id,
+            ),
+            [],
+        )
 
-    return _normalize_quiz_questions(
-        questions
-    )
+        return _normalize_quiz_questions(
+            questions
+        )
+
+    return []
 
 
 # ==========================================================
@@ -521,10 +525,17 @@ def _extract_lesson(
     )
 
     if lesson_content:
-
         metadata.setdefault(
             "content",
             lesson_content,
+        )
+
+    if "quiz" in metadata:
+
+        metadata["quiz"] = (
+            _normalize_quiz_questions(
+                metadata.get("quiz")
+            )
         )
 
     return DiscoveredLesson(
@@ -542,6 +553,14 @@ def _extract_chapter_lessons(
     module_id: str,
     chapter_id: str,
 ) -> list[DiscoveredLesson]:
+
+    if isinstance(
+        raw_lessons,
+        dict,
+    ):
+        raw_lessons = list(
+            raw_lessons.values()
+        )
 
     if not isinstance(
         raw_lessons,
@@ -562,13 +581,12 @@ def _extract_chapter_lessons(
             continue
 
         lesson = _extract_lesson(
-            lesson_item=lesson_item,
-            module_id=module_id,
-            chapter_id=chapter_id,
+            lesson_item,
+            module_id,
+            chapter_id,
         )
 
         if lesson is not None:
-
             lessons.append(
                 lesson
             )
@@ -577,7 +595,388 @@ def _extract_chapter_lessons(
 
 
 # ==========================================================
-# International Trade Extraction
+# Generic Chapter Collection
+# ==========================================================
+
+def _discover_numbered_chapters(
+    data_module: Any,
+) -> list[dict[str, Any]]:
+
+    chapters: list[
+        dict[str, Any]
+    ] = []
+
+    for name in dir(
+        data_module
+    ):
+
+        if not name.startswith(
+            "CHAPTER_"
+        ):
+            continue
+
+        value = getattr(
+            data_module,
+            name,
+            None,
+        )
+
+        if not isinstance(
+            value,
+            dict,
+        ):
+            continue
+
+        if not (
+            value.get("id")
+            or value.get("chapter_id")
+        ):
+            continue
+
+        chapters.append(
+            value
+        )
+
+    return chapters
+
+
+def _get_chapters_source(
+    data_module: Any,
+) -> list[dict[str, Any]]:
+
+    candidates = (
+        "CHAPTERS",
+        "CURRICULUM",
+        "MANAGEMENT_CURRICULUM",
+        "MANAGEMENT_CHAPTERS",
+        "MARKETING_CURRICULUM",
+        "ACCOUNTING_CURRICULUM",
+        "PSYCHOLOGY_CURRICULUM",
+        "PSYCHOLOGY_CHAPTERS",
+        "INTERNATIONAL_TRADE_CURRICULUM",
+    )
+
+    for name in candidates:
+
+        value = getattr(
+            data_module,
+            name,
+            None,
+        )
+
+        if isinstance(
+            value,
+            list,
+        ):
+            return value
+
+    numbered = (
+        _discover_numbered_chapters(
+            data_module
+        )
+    )
+
+    if numbered:
+        return numbered
+
+    return []
+
+
+# ==========================================================
+# Generic Lesson Source
+# ==========================================================
+
+def _get_lessons_source(
+    data_module: Any,
+) -> Any:
+
+    candidates = (
+        "LESSONS",
+        "MANAGEMENT_LESSONS",
+        "MARKETING_LESSONS",
+        "ACCOUNTING_LESSONS",
+        "PSYCHOLOGY_LESSONS",
+        "INTERNATIONAL_TRADE_LESSONS",
+    )
+
+    for name in candidates:
+
+        value = getattr(
+            data_module,
+            name,
+            None,
+        )
+
+        if isinstance(
+            value,
+            (list, dict),
+        ):
+            return value
+
+    return []
+
+
+def _build_lessons_by_chapter(
+    lessons_source: Any,
+) -> dict[
+    str,
+    list[dict[str, Any]],
+]:
+
+    result: dict[
+        str,
+        list[dict[str, Any]],
+    ] = {}
+
+    if isinstance(
+        lessons_source,
+        dict,
+    ):
+
+        # ----------------------------------------------
+        # Dictionary may be:
+        # chapter_id -> [lessons]
+        # OR lesson_id -> lesson
+        # ----------------------------------------------
+
+        for key, value in lessons_source.items():
+
+            if isinstance(
+                value,
+                list,
+            ):
+
+                result[
+                    _safe_str(key)
+                ] = [
+                    item
+                    for item in value
+                    if isinstance(
+                        item,
+                        dict,
+                    )
+                ]
+
+            elif isinstance(
+                value,
+                dict,
+            ):
+
+                lesson = dict(
+                    value
+                )
+
+                chapter_id = _first_non_empty(
+                    lesson,
+                    (
+                        "chapter_id",
+                        "original_chapter_id",
+                    ),
+                )
+
+                if chapter_id:
+
+                    result.setdefault(
+                        chapter_id,
+                        [],
+                    ).append(
+                        lesson
+                    )
+
+        return result
+
+    if not isinstance(
+        lessons_source,
+        list,
+    ):
+        return result
+
+    for lesson in lessons_source:
+
+        if not isinstance(
+            lesson,
+            dict,
+        ):
+            continue
+
+        chapter_id = _first_non_empty(
+            lesson,
+            (
+                "chapter_id",
+                "original_chapter_id",
+            ),
+        )
+
+        if not chapter_id:
+            continue
+
+        result.setdefault(
+            chapter_id,
+            [],
+        ).append(
+            lesson
+        )
+
+    return result
+
+
+# ==========================================================
+# Generic Curriculum Extraction
+# ==========================================================
+
+def _extract_generic_curriculum(
+    data_module: Any,
+    module_id: str,
+) -> DiscoveredModule | None:
+
+    module_title = _get_module_title(
+        data_module,
+        module_id,
+    )
+
+    module_description = (
+        _get_module_description(
+            data_module
+        )
+    )
+
+    chapters_data = (
+        _get_chapters_source(
+            data_module
+        )
+    )
+
+    if not chapters_data:
+        return None
+
+    lessons_source = (
+        _get_lessons_source(
+            data_module
+        )
+    )
+
+    lessons_by_chapter = (
+        _build_lessons_by_chapter(
+            lessons_source
+        )
+    )
+
+    chapters: list[
+        DiscoveredChapter
+    ] = []
+
+    for chapter_item in chapters_data:
+
+        if not isinstance(
+            chapter_item,
+            dict,
+        ):
+            continue
+
+        chapter_id = _first_non_empty(
+            chapter_item,
+            (
+                "id",
+                "chapter_id",
+                "key",
+                "slug",
+            ),
+        )
+
+        if not chapter_id:
+            continue
+
+        chapter_title = _first_non_empty(
+            chapter_item,
+            (
+                "title",
+                "name",
+                "chapter_title",
+            ),
+            f"فصل {chapter_id}",
+        )
+
+        chapter_description = _first_non_empty(
+            chapter_item,
+            (
+                "description",
+                "desc",
+            ),
+        )
+
+        nested_lessons = (
+            chapter_item.get(
+                "lessons"
+            )
+        )
+
+        if isinstance(
+            nested_lessons,
+            (list, dict),
+        ):
+
+            raw_lessons = nested_lessons
+
+        else:
+
+            raw_lessons = (
+                lessons_by_chapter.get(
+                    chapter_id,
+                    [],
+                )
+            )
+
+        lessons = (
+            _extract_chapter_lessons(
+                raw_lessons,
+                module_id,
+                chapter_id,
+            )
+        )
+
+        # --------------------------------------------------
+        # Management compatibility:
+        # quiz stored separately in MANAGEMENT_QUIZ_QUESTIONS
+        # --------------------------------------------------
+
+        if module_id == "management":
+
+            for lesson in lessons:
+
+                quiz = _get_management_quiz(
+                    data_module,
+                    chapter_id,
+                    lesson.lesson_id,
+                )
+
+                if quiz:
+                    lesson.metadata[
+                        "quiz"
+                    ] = quiz
+
+        chapters.append(
+            DiscoveredChapter(
+                chapter_id=chapter_id,
+                title=chapter_title,
+                module_id=module_id,
+                description=chapter_description,
+                lessons=lessons,
+            )
+        )
+
+    if not chapters:
+        return None
+
+    return DiscoveredModule(
+        module_id=module_id,
+        title=module_title,
+        description=module_description,
+        chapters=chapters,
+    )
+
+
+# ==========================================================
+# Specialized International Trade
 # ==========================================================
 
 def _extract_international_trade_curriculum(
@@ -641,7 +1040,6 @@ def _extract_international_trade_curriculum(
             (
                 "id",
                 "chapter_id",
-                "original_chapter_id",
             ),
         )
 
@@ -654,7 +1052,7 @@ def _extract_international_trade_curriculum(
                 "title",
                 "name",
             ),
-            f"فصل {chapter_id}",
+            chapter_id,
         )
 
         chapter_description = _first_non_empty(
@@ -670,795 +1068,12 @@ def _extract_international_trade_curriculum(
             [],
         )
 
-        lessons = _extract_chapter_lessons(
-            raw_lessons=raw_lessons,
-            module_id=module_id,
-            chapter_id=chapter_id,
-        )
-
-        chapters.append(
-            DiscoveredChapter(
-                chapter_id=chapter_id,
-                title=chapter_title,
-                module_id=module_id,
-                description=chapter_description,
-                lessons=lessons,
-            )
-        )
-
-    if not chapters:
-        return None
-
-    return DiscoveredModule(
-        module_id=module_id,
-        title=module_title,
-        description=module_description,
-        chapters=chapters,
-    )
-
-
-# ==========================================================
-# Finance Extraction
-# ==========================================================
-
-def _extract_finance_curriculum(
-    data_module: Any,
-) -> DiscoveredModule | None:
-
-    module_id = _get_module_id(
-        data_module,
-        "finance",
-    )
-
-    module_title = _get_module_title(
-        data_module,
-        "💰 مدیریت مالی حرفه‌ای",
-    )
-
-    module_description = (
-        _get_module_description(
-            data_module
-        )
-    )
-
-    chapters_data = getattr(
-        data_module,
-        "CHAPTERS",
-        None,
-    )
-
-    lessons_data = getattr(
-        data_module,
-        "LESSONS",
-        None,
-    )
-
-    if not isinstance(
-        chapters_data,
-        list,
-    ):
-        return None
-
-    if not isinstance(
-        lessons_data,
-        list,
-    ):
-        lessons_data = []
-
-    lessons_by_chapter: dict[
-        str,
-        list[dict[str, Any]],
-    ] = {}
-
-    for lesson in lessons_data:
-
-        if not isinstance(
-            lesson,
-            dict,
-        ):
-            continue
-
-        chapter_id = _first_non_empty(
-            lesson,
-            (
-                "chapter_id",
-                "original_chapter_id",
-            ),
-        )
-
-        if not chapter_id:
-            continue
-
-        lessons_by_chapter.setdefault(
-            chapter_id,
-            [],
-        ).append(
-            lesson
-        )
-
-    chapters: list[
-        DiscoveredChapter
-    ] = []
-
-    for chapter_item in chapters_data:
-
-        if not isinstance(
-            chapter_item,
-            dict,
-        ):
-            continue
-
-        chapter_id = _first_non_empty(
-            chapter_item,
-            (
-                "id",
-                "chapter_id",
-            ),
-        )
-
-        if not chapter_id:
-            continue
-
-        chapter_title = _first_non_empty(
-            chapter_item,
-            (
-                "title",
-                "name",
-            ),
-            f"فصل {chapter_id}",
-        )
-
-        chapter_description = _first_non_empty(
-            chapter_item,
-            (
-                "description",
-                "desc",
-            ),
-        )
-
-        raw_lessons = lessons_by_chapter.get(
-            chapter_id,
-            [],
-        )
-
-        lessons = _extract_chapter_lessons(
-            raw_lessons=raw_lessons,
-            module_id=module_id,
-            chapter_id=chapter_id,
-        )
-
-        chapters.append(
-            DiscoveredChapter(
-                chapter_id=chapter_id,
-                title=chapter_title,
-                module_id=module_id,
-                description=chapter_description,
-                lessons=lessons,
-            )
-        )
-
-    if not chapters:
-        return None
-
-    return DiscoveredModule(
-        module_id=module_id,
-        title=module_title,
-        description=module_description,
-        chapters=chapters,
-    )
-
-
-# ==========================================================
-# Management Extraction
-# ==========================================================
-
-def _extract_management_curriculum(
-    data_module: Any,
-) -> DiscoveredModule | None:
-
-    module_id = _get_module_id(
-        data_module,
-        "management",
-    )
-
-    module_title = _get_module_title(
-        data_module,
-        "📚 آموزش مدیریت",
-    )
-
-    module_description = (
-        _get_module_description(
-            data_module
-        )
-    )
-
-    curriculum = getattr(
-        data_module,
-        "MANAGEMENT_CURRICULUM",
-        None,
-    )
-
-    if not isinstance(
-        curriculum,
-        list,
-    ):
-
-        curriculum = getattr(
-            data_module,
-            "MANAGEMENT_CHAPTERS",
-            None,
-        )
-
-    lessons_map = getattr(
-        data_module,
-        "MANAGEMENT_LESSONS",
-        None,
-    )
-
-    if not isinstance(
-        curriculum,
-        list,
-    ):
-        return None
-
-    if not isinstance(
-        lessons_map,
-        dict,
-    ):
-        lessons_map = {}
-
-    chapters: list[
-        DiscoveredChapter
-    ] = []
-
-    for chapter_item in curriculum:
-
-        if not isinstance(
-            chapter_item,
-            dict,
-        ):
-            continue
-
-        chapter_id = _first_non_empty(
-            chapter_item,
-            (
-                "id",
-                "chapter_id",
-                "original_chapter_id",
-            ),
-        )
-
-        if not chapter_id:
-            continue
-
-        chapter_title = _first_non_empty(
-            chapter_item,
-            (
-                "title",
-                "name",
-            ),
-            f"فصل {chapter_id}",
-        )
-
-        chapter_description = _first_non_empty(
-            chapter_item,
-            (
-                "description",
-                "desc",
-            ),
-        )
-
-        raw_lessons = lessons_map.get(
-            chapter_id,
-            [],
-        )
-
-        lessons = _extract_chapter_lessons(
-            raw_lessons=raw_lessons,
-            module_id=module_id,
-            chapter_id=chapter_id,
-        )
-
-        # --------------------------------------------------
-        # IMPORTANT:
-        # Add quiz questions to every Management lesson.
-        # --------------------------------------------------
-
-        for lesson in lessons:
-
-            quiz_questions = (
-                _get_management_quiz(
-                    data_module=data_module,
-                    chapter_id=chapter_id,
-                    lesson_id=lesson.lesson_id,
-                )
-            )
-
-            if quiz_questions:
-
-                lesson.metadata[
-                    "quiz"
-                ] = quiz_questions
-
-        chapters.append(
-            DiscoveredChapter(
-                chapter_id=chapter_id,
-                title=chapter_title,
-                module_id=module_id,
-                description=chapter_description,
-                lessons=lessons,
-            )
-        )
-
-    if not chapters:
-        return None
-
-    return DiscoveredModule(
-        module_id=module_id,
-        title=module_title,
-        description=module_description,
-        chapters=chapters,
-    )
-
-
-# ==========================================================
-# Banking Extraction
-# ==========================================================
-
-def _extract_banking_curriculum(
-    data_module: Any,
-) -> DiscoveredModule | None:
-
-    module_id = _get_module_id(
-        data_module,
-        "banking",
-    )
-
-    module_title = _get_module_title(
-        data_module,
-        "🏦 بانکداری تخصصی",
-    )
-
-    module_description = (
-        _get_module_description(
-            data_module
-        )
-    )
-
-    chapters_data = getattr(
-        data_module,
-        "CHAPTERS",
-        None,
-    )
-
-    if not isinstance(
-        chapters_data,
-        list,
-    ):
-        return None
-
-    chapters: list[
-        DiscoveredChapter
-    ] = []
-
-    for chapter_item in chapters_data:
-
-        if not isinstance(
-            chapter_item,
-            dict,
-        ):
-            continue
-
-        chapter_id = _first_non_empty(
-            chapter_item,
-            (
-                "id",
-                "chapter_id",
-                "key",
-            ),
-        )
-
-        if not chapter_id:
-            continue
-
-        chapter_title = _first_non_empty(
-            chapter_item,
-            (
-                "title",
-                "name",
-            ),
-            f"فصل {chapter_id}",
-        )
-
-        chapter_description = _first_non_empty(
-            chapter_item,
-            (
-                "description",
-                "desc",
-            ),
-        )
-
-        raw_lessons = chapter_item.get(
-            "lessons",
-            [],
-        )
-
-        lessons = _extract_chapter_lessons(
-            raw_lessons=raw_lessons,
-            module_id=module_id,
-            chapter_id=chapter_id,
-        )
-
-        chapters.append(
-            DiscoveredChapter(
-                chapter_id=chapter_id,
-                title=chapter_title,
-                module_id=module_id,
-                description=chapter_description,
-                lessons=lessons,
-            )
-        )
-
-    if not chapters:
-        return None
-
-    return DiscoveredModule(
-        module_id=module_id,
-        title=module_title,
-        description=module_description,
-        chapters=chapters,
-    )
-
-
-# ==========================================================
-# Generic Extraction
-# ==========================================================
-
-def _extract_generic_curriculum(
-    data_module: Any,
-    module_id: str,
-) -> DiscoveredModule | None:
-
-    module_title = _get_module_title(
-        data_module,
-        module_id,
-    )
-
-    module_description = (
-        _get_module_description(
-            data_module
-        )
-    )
-
-    chapters_data = getattr(
-        data_module,
-        "CHAPTERS",
-        None,
-    )
-
-    lessons_data = getattr(
-        data_module,
-        "LESSONS",
-        None,
-    )
-
-    if not isinstance(
-        chapters_data,
-        list,
-    ):
-        return None
-
-    if not isinstance(
-        lessons_data,
-        list,
-    ):
-        lessons_data = []
-
-    lessons_by_chapter: dict[
-        str,
-        list[dict[str, Any]],
-    ] = {}
-
-    for lesson_item in lessons_data:
-
-        if not isinstance(
-            lesson_item,
-            dict,
-        ):
-            continue
-
-        chapter_id = _first_non_empty(
-            lesson_item,
-            (
-                "chapter_id",
-                "original_chapter_id",
-            ),
-        )
-
-        if not chapter_id:
-            continue
-
-        lessons_by_chapter.setdefault(
-            chapter_id,
-            [],
-        ).append(
-            lesson_item
-        )
-
-    chapters: list[
-        DiscoveredChapter
-    ] = []
-
-    for chapter_item in chapters_data:
-
-        if not isinstance(
-            chapter_item,
-            dict,
-        ):
-            continue
-
-        chapter_id = _first_non_empty(
-            chapter_item,
-            (
-                "id",
-                "chapter_id",
-                "key",
-            ),
-        )
-
-        if not chapter_id:
-            continue
-
-        chapter_title = _first_non_empty(
-            chapter_item,
-            (
-                "title",
-                "name",
-            ),
-            f"فصل {chapter_id}",
-        )
-
-        chapter_description = _first_non_empty(
-            chapter_item,
-            (
-                "description",
-                "desc",
-            ),
-        )
-
-        nested_lessons = chapter_item.get(
-            "lessons",
-        )
-
-        if isinstance(
-            nested_lessons,
-            list,
-        ):
-
-            raw_lessons = nested_lessons
-
-        else:
-
-            raw_lessons = lessons_by_chapter.get(
+        lessons = (
+            _extract_chapter_lessons(
+                raw_lessons,
+                module_id,
                 chapter_id,
-                [],
             )
-
-        lessons = _extract_chapter_lessons(
-            raw_lessons=raw_lessons,
-            module_id=module_id,
-            chapter_id=chapter_id,
-        )
-
-        chapters.append(
-            DiscoveredChapter(
-                chapter_id=chapter_id,
-                title=chapter_title,
-                module_id=module_id,
-                description=chapter_description,
-                lessons=lessons,
-            )
-        )
-
-    if not chapters:
-        return None
-
-    return DiscoveredModule(
-        module_id=module_id,
-        title=module_title,
-        description=module_description,
-        chapters=chapters,
-    )
-
-
-# ==========================================================
-# Psychology / Social Work Extraction
-# ==========================================================
-
-def _extract_psychology_curriculum(
-    data_module: Any,
-) -> DiscoveredModule | None:
-
-    module_id = _get_module_id(
-        data_module,
-        "psychology_socialwork",
-    )
-
-    module_title = _get_module_title(
-        data_module,
-        "🧠 روانشناسی و مددکاری اجتماعی",
-    )
-
-    module_description = (
-        _get_module_description(
-            data_module
-        )
-    )
-
-    candidates = (
-        "PSYCHOLOGY_CURRICULUM",
-        "PSYCHOLOGY_CHAPTERS",
-        "CURRICULUM",
-        "CHAPTERS",
-    )
-
-    curriculum = None
-
-    for attribute_name in candidates:
-
-        value = getattr(
-            data_module,
-            attribute_name,
-            None,
-        )
-
-        if isinstance(
-            value,
-            list,
-        ):
-
-            curriculum = value
-
-            break
-
-    if not isinstance(
-        curriculum,
-        list,
-    ):
-        return None
-
-    lessons_candidates = (
-        "PSYCHOLOGY_LESSONS",
-        "LESSONS",
-    )
-
-    lessons_data = None
-
-    for attribute_name in lessons_candidates:
-
-        value = getattr(
-            data_module,
-            attribute_name,
-            None,
-        )
-
-        if isinstance(
-            value,
-            (list, dict),
-        ):
-
-            lessons_data = value
-
-            break
-
-    chapters: list[
-        DiscoveredChapter
-    ] = []
-
-    lessons_by_chapter: dict[
-        str,
-        list[dict[str, Any]],
-    ] = {}
-
-    if isinstance(
-        lessons_data,
-        list,
-    ):
-
-        for lesson_item in lessons_data:
-
-            if not isinstance(
-                lesson_item,
-                dict,
-            ):
-                continue
-
-            chapter_id = _first_non_empty(
-                lesson_item,
-                (
-                    "chapter_id",
-                    "original_chapter_id",
-                ),
-            )
-
-            if chapter_id:
-
-                lessons_by_chapter.setdefault(
-                    chapter_id,
-                    [],
-                ).append(
-                    lesson_item
-                )
-
-    for chapter_item in curriculum:
-
-        if not isinstance(
-            chapter_item,
-            dict,
-        ):
-            continue
-
-        chapter_id = _first_non_empty(
-            chapter_item,
-            (
-                "id",
-                "chapter_id",
-                "key",
-            ),
-        )
-
-        if not chapter_id:
-            continue
-
-        chapter_title = _first_non_empty(
-            chapter_item,
-            (
-                "title",
-                "name",
-            ),
-            f"فصل {chapter_id}",
-        )
-
-        chapter_description = _first_non_empty(
-            chapter_item,
-            (
-                "description",
-                "desc",
-            ),
-        )
-
-        nested_lessons = chapter_item.get(
-            "lessons",
-        )
-
-        if isinstance(
-            nested_lessons,
-            list,
-        ):
-
-            raw_lessons = nested_lessons
-
-        elif isinstance(
-            lessons_data,
-            dict,
-        ):
-
-            raw_lessons = lessons_data.get(
-                chapter_id,
-                [],
-            )
-
-        else:
-
-            raw_lessons = lessons_by_chapter.get(
-                chapter_id,
-                [],
-            )
-
-        lessons = _extract_chapter_lessons(
-            raw_lessons=raw_lessons,
-            module_id=module_id,
-            chapter_id=chapter_id,
         )
 
         chapters.append(
@@ -1490,7 +1105,7 @@ def discover_module(
     module_id: str,
 ) -> DiscoveredModule | None:
 
-    module_id = _normalize_id(
+    module_id = _safe_str(
         module_id
     )
 
@@ -1513,26 +1128,11 @@ def discover_module(
     except Exception as exc:
 
         print(
-            f"[ContentInitializer] "
+            "[ContentInitializer] "
             f"Failed to import {package_path}: {exc}"
         )
 
         return None
-
-    # ------------------------------------------------------
-    # Specialized extractors
-    # ------------------------------------------------------
-
-    if module_id == "banking":
-
-        result = (
-            _extract_banking_curriculum(
-                data_module
-            )
-        )
-
-        if result is not None:
-            return result
 
     if module_id == "international_trade":
 
@@ -1545,66 +1145,21 @@ def discover_module(
         if result is not None:
             return result
 
-    if module_id == "finance":
-
-        result = (
-            _extract_finance_curriculum(
-                data_module
-            )
-        )
-
-        if result is not None:
-            return result
-
-    if module_id == "management":
-
-        result = (
-            _extract_management_curriculum(
-                data_module
-            )
-        )
-
-        if result is not None:
-            return result
-
-    if module_id == "psychology_socialwork":
-
-        result = (
-            _extract_psychology_curriculum(
-                data_module
-            )
-        )
-
-        if result is not None:
-            return result
-
-    # ------------------------------------------------------
-    # Generic fallback
-    # ------------------------------------------------------
-
-    return _extract_generic_curriculum(
-        data_module=data_module,
-        module_id=module_id,
+    result = _extract_generic_curriculum(
+        data_module,
+        module_id,
     )
+
+    return result
 
 
 # ==========================================================
-# Registration
+# Registry Registration
 # ==========================================================
 
 def _register_module(
     module: DiscoveredModule,
 ) -> int:
-    """
-    Register a complete module in Registry.
-
-    مهم:
-    تمام محتوای درس در data ذخیره می‌شود.
-    آزمون نیز در data["quiz"] ذخیره می‌شود.
-
-    بنابراین API می‌تواند اطلاعات کامل درس را
-    در اختیار frontend قرار دهد.
-    """
 
     try:
 
@@ -1616,11 +1171,20 @@ def _register_module(
 
     except TypeError:
 
-        registry.register_module(
-            module.module_id,
-            module.title,
-            module.description,
-        )
+        try:
+
+            registry.register_module(
+                module.module_id,
+                module.title,
+                module.description,
+            )
+
+        except TypeError:
+
+            registry.register_module(
+                module.module_id,
+                module.title,
+            )
 
     lesson_count = 0
 
@@ -1637,18 +1201,24 @@ def _register_module(
 
         except TypeError:
 
-            registry.register_chapter(
-                chapter.module_id,
-                chapter.chapter_id,
-                chapter.title,
-                chapter.description,
-            )
+            try:
+
+                registry.register_chapter(
+                    chapter.module_id,
+                    chapter.chapter_id,
+                    chapter.title,
+                    chapter.description,
+                )
+
+            except TypeError:
+
+                registry.register_chapter(
+                    chapter.module_id,
+                    chapter.chapter_id,
+                    chapter.title,
+                )
 
         for lesson in chapter.lessons:
-
-            # --------------------------------------------------
-            # Build complete lesson data
-            # --------------------------------------------------
 
             lesson_data: dict[
                 str,
@@ -1664,19 +1234,11 @@ def _register_module(
                     lesson.metadata
                 )
 
-            # --------------------------------------------------
-            # Content is explicitly preserved.
-            # --------------------------------------------------
-
             if lesson.content:
 
                 lesson_data[
                     "content"
                 ] = lesson.content
-
-            # --------------------------------------------------
-            # Standard identifiers
-            # --------------------------------------------------
 
             lesson_data.setdefault(
                 "id",
@@ -1703,39 +1265,15 @@ def _register_module(
                 lesson.chapter_id,
             )
 
-            # --------------------------------------------------
-            # Quiz normalization
-            #
-            # If quiz exists in metadata, normalize it again
-            # to guarantee a frontend-compatible structure.
-            # --------------------------------------------------
-
             if "quiz" in lesson_data:
 
-                normalized_quiz = (
-                    _normalize_quiz_questions(
-                        lesson_data.get(
-                            "quiz"
-                        )
+                lesson_data[
+                    "quiz"
+                ] = _normalize_quiz_questions(
+                    lesson_data.get(
+                        "quiz"
                     )
                 )
-
-                if normalized_quiz:
-
-                    lesson_data[
-                        "quiz"
-                    ] = normalized_quiz
-
-                else:
-
-                    lesson_data.pop(
-                        "quiz",
-                        None,
-                    )
-
-            # --------------------------------------------------
-            # Register lesson with full data
-            # --------------------------------------------------
 
             try:
 
@@ -1763,14 +1301,14 @@ def _register_module(
 
 
 # ==========================================================
-# Initialization
+# Module Initialization
 # ==========================================================
 
 def initialize_module(
     module_id: str,
 ) -> dict[str, Any]:
 
-    module_id = _normalize_id(
+    module_id = _safe_str(
         module_id
     )
 
@@ -1783,17 +1321,6 @@ def initialize_module(
             "chapters": 0,
             "lessons": 0,
         }
-
-    try:
-
-        init_database()
-
-    except Exception as exc:
-
-        print(
-            f"[ContentInitializer] "
-            f"Database initialization warning: {exc}"
-        )
 
     module = discover_module(
         module_id
@@ -1809,9 +1336,27 @@ def initialize_module(
             "lessons": 0,
         }
 
-    lesson_count = _register_module(
-        module
-    )
+    try:
+
+        lesson_count = _register_module(
+            module
+        )
+
+    except Exception as exc:
+
+        print(
+            "[ContentInitializer] "
+            f"Registration failed for {module_id}: {exc}"
+        )
+
+        return {
+            "module_id": module_id,
+            "status": "error",
+            "modules": 0,
+            "chapters": 0,
+            "lessons": 0,
+            "error": str(exc),
+        }
 
     return {
         "module_id": module.module_id,
@@ -1824,21 +1369,17 @@ def initialize_module(
     }
 
 
-def initialize_all_content() -> dict[str, Any]:
-    """
-    Initialize every configured content module.
+# ==========================================================
+# Initialize Everything
+# ==========================================================
 
-    Returns a complete initialization report.
-    """
+def initialize_all_content() -> dict[str, Any]:
 
     try:
-
         init_database()
-
     except Exception as exc:
-
         print(
-            f"[ContentInitializer] "
+            "[ContentInitializer] "
             f"Database initialization warning: {exc}"
         )
 
@@ -1866,19 +1407,25 @@ def initialize_all_content() -> dict[str, Any]:
             == "ok"
         ):
 
-            total_modules += result.get(
-                "modules",
-                0,
+            total_modules += int(
+                result.get(
+                    "modules",
+                    0,
+                )
             )
 
-            total_chapters += result.get(
-                "chapters",
-                0,
+            total_chapters += int(
+                result.get(
+                    "chapters",
+                    0,
+                )
             )
 
-            total_lessons += result.get(
-                "lessons",
-                0,
+            total_lessons += int(
+                result.get(
+                    "lessons",
+                    0,
+                )
             )
 
     return {
@@ -1895,9 +1442,6 @@ def initialize_all_content() -> dict[str, Any]:
 # ==========================================================
 
 def content_health() -> dict[str, Any]:
-    """
-    Return current Registry health.
-    """
 
     try:
 
@@ -1924,9 +1468,6 @@ def content_health() -> dict[str, Any]:
 # ==========================================================
 
 def get_content_statistics() -> dict[str, Any]:
-    """
-    Return detailed content statistics.
-    """
 
     try:
 
@@ -1945,11 +1486,15 @@ def get_content_statistics() -> dict[str, Any]:
             ] = []
 
             for chapter in registry.list_chapters(
-                module.module_id,
+                module.module_id
             ):
 
                 lesson_count = len(
-                    chapter.lessons
+                    getattr(
+                        chapter,
+                        "lessons",
+                        {},
+                    )
                 )
 
                 module_lessons += (
@@ -1991,20 +1536,10 @@ def get_content_statistics() -> dict[str, Any]:
 
 
 # ==========================================================
-# Auto Initialization
+# Compatibility
 # ==========================================================
 
 def auto_initialize_content() -> dict[str, Any]:
-    """
-    Compatibility alias.
-
-    Allows bot.py or other modules to call:
-
-        auto_initialize_content()
-
-    without needing to know the internal initializer name.
-    """
-
     return initialize_all_content()
 
 
